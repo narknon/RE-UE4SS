@@ -1,0 +1,334 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Home - UE4SS Documentation</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="css/custom.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html" class="active">Home</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">1.</strong> FeatureOverview</div><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="feature-overview/blueprint-modloader.html"><strong aria-hidden="true">1.1.</strong> Blueprint Modloading</a></li><li class="chapter-item "><a href="feature-overview/live-view.html"><strong aria-hidden="true">1.2.</strong> Live Property Viewer and Editor</a></li><li class="chapter-item "><a href="feature-overview/dumpers.html"><strong aria-hidden="true">1.3.</strong> Dumpers</a></li><li class="chapter-item "><a href="feature-overview/universal-mods.html"><strong aria-hidden="true">1.4.</strong> Universal UE Mods</a></li><li class="chapter-item "><a href="feature-overview/experimental.html"><strong aria-hidden="true">1.5.</strong> Experimental</a></li></ol></li><li class="chapter-item expanded "><a href="installation-guide.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="custom-game-configs.html"><strong aria-hidden="true">3.</strong> Custom Game Configs</a></li><li class="chapter-item expanded "><a href="lua-api.html"><strong aria-hidden="true">4.</strong> Lua API</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><div><strong aria-hidden="true">4.1.</strong> Table Definitions</div><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="lua-api/table-definitions/key.html"><strong aria-hidden="true">4.1.1.</strong> Key</a></li><li class="chapter-item "><a href="lua-api/table-definitions/modifierkey.html"><strong aria-hidden="true">4.1.2.</strong> ModifierKey</a></li><li class="chapter-item "><a href="lua-api/table-definitions/propertytypes.html"><strong aria-hidden="true">4.1.3.</strong> PropertyTypes</a></li><li class="chapter-item "><a href="lua-api/table-definitions/offsetinternalinfo.html"><strong aria-hidden="true">4.1.4.</strong> OffsetInternalInfo</a></li><li class="chapter-item "><a href="lua-api/table-definitions/arraypropertyinfo.html"><strong aria-hidden="true">4.1.5.</strong> ArrayPropertyInfo</a></li><li class="chapter-item "><a href="lua-api/table-definitions/custompropertyinfo.html"><strong aria-hidden="true">4.1.6.</strong> CustomPropertyInfo</a></li><li class="chapter-item "><a href="lua-api/table-definitions/eobjectflags.html"><strong aria-hidden="true">4.1.7.</strong> EObjectFlags</a></li><li class="chapter-item "><a href="lua-api/table-definitions/einternalobjectflags.html"><strong aria-hidden="true">4.1.8.</strong> EInternalObjectFlags</a></li></ol></li><li class="chapter-item "><div><strong aria-hidden="true">4.2.</strong> Classes</div><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="lua-api/classes/remoteobject.html"><strong aria-hidden="true">4.2.1.</strong> RemoteObject</a></li><li class="chapter-item "><a href="lua-api/classes/localobject.html"><strong aria-hidden="true">4.2.2.</strong> LocalObject</a></li><li class="chapter-item "><a href="lua-api/classes/unrealversion.html"><strong aria-hidden="true">4.2.3.</strong> UnrealVersion</a></li><li class="chapter-item "><a href="lua-api/classes/ue4ss.html"><strong aria-hidden="true">4.2.4.</strong> UE4SS</a></li><li class="chapter-item "><a href="lua-api/classes/mod.html"><strong aria-hidden="true">4.2.5.</strong> Mod</a></li><li class="chapter-item "><a href="lua-api/classes/uobject.html"><strong aria-hidden="true">4.2.6.</strong> UObject</a></li><li class="chapter-item "><a href="lua-api/classes/ustruct.html"><strong aria-hidden="true">4.2.7.</strong> UStruct</a></li><li class="chapter-item "><a href="lua-api/classes/uscriptstruct.html"><strong aria-hidden="true">4.2.8.</strong> UScriptStruct</a></li><li class="chapter-item "><a href="lua-api/classes/uclass.html"><strong aria-hidden="true">4.2.9.</strong> UClass</a></li><li class="chapter-item "><a href="lua-api/classes/ufunction.html"><strong aria-hidden="true">4.2.10.</strong> UFunction</a></li><li class="chapter-item "><a href="lua-api/classes/uenum.html"><strong aria-hidden="true">4.2.11.</strong> UEnum</a></li><li class="chapter-item "><a href="lua-api/classes/aactor.html"><strong aria-hidden="true">4.2.12.</strong> AActor</a></li><li class="chapter-item "><a href="lua-api/classes/fstring.html"><strong aria-hidden="true">4.2.13.</strong> FString</a></li><li class="chapter-item "><a href="lua-api/classes/fname.html"><strong aria-hidden="true">4.2.14.</strong> FName</a></li><li class="chapter-item "><a href="lua-api/classes/fieldclass.html"><strong aria-hidden="true">4.2.15.</strong> FieldClass</a></li><li class="chapter-item "><a href="lua-api/classes/tarray.html"><strong aria-hidden="true">4.2.16.</strong> TArray</a></li><li class="chapter-item "><a href="lua-api/classes/remoteunrealparam.html"><strong aria-hidden="true">4.2.17.</strong> RemoteUnrealParam</a></li><li class="chapter-item "><a href="lua-api/classes/localunrealparam.html"><strong aria-hidden="true">4.2.18.</strong> LocalUnrealParam</a></li><li class="chapter-item "><a href="lua-api/classes/property.html"><strong aria-hidden="true">4.2.19.</strong> Property</a></li><li class="chapter-item "><a href="lua-api/classes/objectproperty.html"><strong aria-hidden="true">4.2.20.</strong> ObjectProperty</a></li><li class="chapter-item "><a href="lua-api/classes/structproperty.html"><strong aria-hidden="true">4.2.21.</strong> StructProperty</a></li><li class="chapter-item "><a href="lua-api/classes/boolproperty.html"><strong aria-hidden="true">4.2.22.</strong> BoolProperty</a></li><li class="chapter-item "><a href="lua-api/classes/arrayproperty.html"><strong aria-hidden="true">4.2.23.</strong> ArrayProperty</a></li><li class="chapter-item "><a href="lua-api/classes/uobjectreflection.html"><strong aria-hidden="true">4.2.24.</strong> UObjectReflection</a></li><li class="chapter-item "><a href="lua-api/classes/foutputdevice.html"><strong aria-hidden="true">4.2.25.</strong> FOutputDevice</a></li><li class="chapter-item "><a href="lua-api/classes/fweakobjectptr.html"><strong aria-hidden="true">4.2.26.</strong> FWeakObjectPtr</a></li></ol></li><li class="chapter-item "><div><strong aria-hidden="true">4.3.</strong> Global Functions</div><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="lua-api/global-functions/print.html"><strong aria-hidden="true">4.3.1.</strong> print</a></li><li class="chapter-item "><a href="lua-api/global-functions/fname.html"><strong aria-hidden="true">4.3.2.</strong> FName</a></li><li class="chapter-item "><a href="lua-api/global-functions/iterategamedirectories.html"><strong aria-hidden="true">4.3.3.</strong> IterateGameDirectories</a></li><li class="chapter-item "><a href="lua-api/global-functions/findobject.html"><strong aria-hidden="true">4.3.4.</strong> FindObject</a></li><li class="chapter-item "><a href="lua-api/global-functions/findobjects.html"><strong aria-hidden="true">4.3.5.</strong> FindObjects</a></li><li class="chapter-item "><a href="lua-api/global-functions/staticfindobject.html"><strong aria-hidden="true">4.3.6.</strong> StaticFindObject</a></li><li class="chapter-item "><a href="lua-api/global-functions/findfirstof.html"><strong aria-hidden="true">4.3.7.</strong> FindFirstOf</a></li><li class="chapter-item "><a href="lua-api/global-functions/findallof.html"><strong aria-hidden="true">4.3.8.</strong> FindAllOf</a></li><li class="chapter-item "><a href="lua-api/global-functions/staticconstructobject.html"><strong aria-hidden="true">4.3.9.</strong> StaticConstructObject</a></li><li class="chapter-item "><a href="lua-api/global-functions/foreachuobject.html"><strong aria-hidden="true">4.3.10.</strong> ForEachUObject</a></li><li class="chapter-item "><a href="lua-api/global-functions/notifyonnewobject.html"><strong aria-hidden="true">4.3.11.</strong> NotifyOnNewObject</a></li><li class="chapter-item "><a href="lua-api/global-functions/executewithdelay.html"><strong aria-hidden="true">4.3.12.</strong> ExecuteWithDelay</a></li><li class="chapter-item "><a href="lua-api/global-functions/executeingamethread.html"><strong aria-hidden="true">4.3.13.</strong> ExecuteInGameThread</a></li><li class="chapter-item "><a href="lua-api/global-functions/executeasync.html"><strong aria-hidden="true">4.3.14.</strong> ExecuteAsync</a></li><li class="chapter-item "><a href="lua-api/global-functions/loopasync.html"><strong aria-hidden="true">4.3.15.</strong> LoopAsync</a></li><li class="chapter-item "><a href="lua-api/global-functions/loadasset.html"><strong aria-hidden="true">4.3.16.</strong> LoadAsset</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerkeybind.html"><strong aria-hidden="true">4.3.17.</strong> RegisterKeyBind</a></li><li class="chapter-item "><a href="lua-api/global-functions/iskeybindregistered.html"><strong aria-hidden="true">4.3.18.</strong> IsKeyBindRegistered</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerhook.html"><strong aria-hidden="true">4.3.19.</strong> RegisterHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/unregisterhook.html"><strong aria-hidden="true">4.3.20.</strong> UnregisterHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registercustomproperty.html"><strong aria-hidden="true">4.3.21.</strong> RegisterCustomProperty</a></li><li class="chapter-item "><a href="lua-api/global-functions/registercustomevent.html"><strong aria-hidden="true">4.3.22.</strong> RegisterCustomEvent</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerinitgamestateprehook.html"><strong aria-hidden="true">4.3.23.</strong> RegisterInitGameStatePreHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerinitgamestateposthook.html"><strong aria-hidden="true">4.3.24.</strong> RegisterInitGameStatePostHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerbeginplayprehook.html"><strong aria-hidden="true">4.3.25.</strong> RegisterBeginPlayPreHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerbeginplayposthook.html"><strong aria-hidden="true">4.3.26.</strong> RegisterBeginPlayPostHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerprocessconsoleexecprehook.html"><strong aria-hidden="true">4.3.27.</strong> RegisterProcessConsoleExecPreHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerprocessconsoleexecposthook.html"><strong aria-hidden="true">4.3.28.</strong> RegisterProcessConsoleExecPostHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registercallfunctionbynamewithargumentsprehook.html"><strong aria-hidden="true">4.3.29.</strong> RegisterCallFunctionByNameWithArgumentsPreHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registercallfunctionbynamewithargumentsposthook.html"><strong aria-hidden="true">4.3.30.</strong> RegisterCallFunctionByNameWithArgumentsPostHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerulocalplayerexecprehook.html"><strong aria-hidden="true">4.3.31.</strong> RegisterULocalPlayerExecPreHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerulocalplayerexecposthook.html"><strong aria-hidden="true">4.3.32.</strong> RegisterULocalPlayerExecPostHook</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerconsolecommandhandler.html"><strong aria-hidden="true">4.3.33.</strong> RegisterConsoleCommandHandler</a></li><li class="chapter-item "><a href="lua-api/global-functions/registerconsolecommandglobalhandler.html"><strong aria-hidden="true">4.3.34.</strong> RegisterConsoleCommandGlobalHandler</a></li></ol></li><li class="chapter-item "><a href="lua-api/examples.html"><strong aria-hidden="true">4.4.</strong> Examples</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.</strong> Guides</div><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="guides/fixing-compatibility-problems.html"><strong aria-hidden="true">5.1.</strong> Fixing missing AOBs</a></li><li class="chapter-item "><a href="guides/generating-uht-compatible-headers.html"><strong aria-hidden="true">5.2.</strong> Generating UHT headers</a></li><li class="chapter-item "><a href="guides/creating-a-c++-mod.html"><strong aria-hidden="true">5.3.</strong> Creating a C++ Mod</a></li><li class="chapter-item "><a href="guides/using-custom-lua-bindings.html"><strong aria-hidden="true">5.4.</strong> Using Custom Lua Bindings</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">UE4SS Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="unreal-engine-45-scripting-system"><a class="header" href="#unreal-engine-45-scripting-system">Unreal Engine 4/5 Scripting System</a></h1>
+<blockquote>
+<p>WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the <a href="../release">latest release</a> instead.
+Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loader, live property editor and other dumping utilities for UE4/5 games.</p>
+</blockquote>
+<h2 id="major-features"><a class="header" href="#major-features">Major features</a></h2>
+<ul>
+<li><a href="lua-api.html">Lua Scripting API</a>: Write lua mods based on the UE object system</li>
+<li><a href="feature-overview/blueprint-modloader.html">Blueprint Modloading</a>: Spawn blueprint mods automatically without editing/replacing game files</li>
+<li><a href="guides/creating-a-c%2B%2B-mod.html">C++ Modding API</a>: Write C++ mods based on the UE object system</li>
+<li><a href="feature-overview/live-view.html">Live Property Viewer and Editor</a>: Search, view, edit &amp; watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime</li>
+<li><a href="feature-overview/dumpers.html#unreal-header-tool-uht-dumper">UHT Dumper</a>: Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game</li>
+<li><a href="feature-overview/dumpers.html#c-header-generator">C++ Header Dumper</a>: Generate standard C++ headers from reflected classes and blueprints, with offsets</li>
+<li><a href="feature-overview/universal-mods.html">Universal UE Mods</a>: Unlock the game console and other universal mods</li>
+<li><a href="feature-overview/dumpers.html#usmap-dumper">Dumpers for File Parsing</a>: Generate <code>.usmap</code> mapping files for unversioned properties</li>
+<li><a href="feature-overview/dumpers.html#umap-recreation-dumper">UMAP Recreation Dumper</a>: Dump all loaded actors to file to generate <code>.umaps</code> in-editor</li>
+<li>Other Features, including <a href="feature-overview/experimental.html">Experimental</a> features at times</li>
+</ul>
+<h2 id="targeting-ue-versions-from-412-to-52"><a class="header" href="#targeting-ue-versions-from-412-to-52">Targeting UE Versions: From 4.12 To 5.2</a></h2>
+<p>The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
+The goal is to have an underlying system that works for most games.
+You may need to update AOBs on your own, and there's a guide for that below.</p>
+<h2 id="basic-installation"><a class="header" href="#basic-installation">Basic Installation</a></h2>
+<p>The easiest installation is via downloading the xinput version of the latest non-experimental build from <a href="https://github.com/UE4SS-RE/RE-UE4SS/releases">Releases</a> and extracting the zip content to <code>/{Gameroot}/GameName/Binaries/Win64/</code>.</p>
+<p>If your game is in the custom config list, extract the contents from the relevant folder to <code>Win64</code> as well.</p>
+<h2 id="links"><a class="header" href="#links">Links</a></h2>
+<p><a href="installation-guide.html">Full installation guide</a></p>
+<p><a href="guides/fixing-compatibility-problems.html">Fixing compatibility problems</a></p>
+<p><a href="lua-api.html">Lua API - Overview</a></p>
+<p><a href="guides/generating-uht-compatible-headers.html">Generating UHT compatible headers</a></p>
+<p><a href="custom-game-configs.html">Custom Game Configs</a></p>
+<p><a href="https://www.youtube.com/watch?v=fB3yT85XhVA">Creating Compatible Blueprint Mods</a></p>
+<p><a href="https://discord.gg/zVvsE9mEEa">Unreal Engine Modding Server Invite</a> - For discussion of UE4SS</p>
+<h2 id="build-requirements"><a class="header" href="#build-requirements">Build requirements</a></h2>
+<ul>
+<li>A computer running Windows.
+<ul>
+<li>Linux support might happen at some point but not soon.</li>
+</ul>
+</li>
+<li>A version of MSVC that supports C++20, including std::format.
+<ul>
+<li>Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.</li>
+<li>More compilers will hopefully be supported in the future.</li>
+</ul>
+</li>
+</ul>
+<h2 id="build-instructions"><a class="header" href="#build-instructions">Build instructions</a></h2>
+<ol>
+<li>Clone the repo.</li>
+<li>Execute this command: <code>git submodule update --init --recursive</code>
+Make sure your Github account is linked to your Epic Games account for UE source access.
+Do not use the <code>--remote</code> option because that will force third-party dependencies to update to the latest commit, and that can break things.
+You will need your github account to be linked to an Epic games account to pull the Unreal pseudo code submodule.</li>
+<li>There are three different ways you can build UE4SS.
+<ol>
+<li>Execute this command: <code>build_auto.bat &lt;BuildMode&gt; &lt;Target&gt;</code>, example: <code>build_auto.bat Release ue4ss</code>
+Valid build modes are <code>Release</code> and <code>Debug</code>, and valid targets are <code>ue4ss</code> and <code>xinput1_3</code>.
+Parallel compilation is enabled for this build method.</li>
+<li>Open the root UE4SS directory in CLion, select <code>ue4ss</code> or <code>xinput1_3</code> from the target list and hit the build button.
+Parallel compilation is <strong>NOT</strong> enabled for this build method.</li>
+<li>Execute <code>VS_Solution/generate_vs_solution.bat</code> to generate a Visual Studio solution file.
+Open the solution with Visual Studio 2019 or Visual Studio 2022, select the build type and build the <code>ue4ss</code> project.
+Parallel compilation is enabled for this build method.</li>
+</ol>
+</li>
+</ol>
+<h2 id="updating-dependencies"><a class="header" href="#updating-dependencies">Updating dependencies</a></h2>
+<p>If you want to update dependencies, you do so one of three ways:</p>
+<ol>
+<li>You can execute <code>remote_update_first_party_submodules.bat</code> to update all first-party dependencies.</li>
+<li>You can also choose to update dependencies one by one, by executing <code>git submodule update --init --recursive vendor/&lt;RepoOwner&gt;/&lt;Repo&gt;</code>.
+Remember to not use the <code>--remote</code> option unless you actually want to update to the latest commit.</li>
+<li>If you would rather pick a specific commit or branch to update a dependency to then <code>cd</code> into the submodule directory for that dependency and execute <code>git checkout &lt;branch name or commit&gt;</code>.</li>
+</ol>
+<p>Note that you should also commit &amp; push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.</p>
+<h2 id="credits"><a class="header" href="#credits">Credits</a></h2>
+<p>All contributors since the project became open source: https://github.com/UE4SS-RE/RE-UE4SS/graphs/contributors</p>
+<ul>
+<li><strong>Original Creator</strong> The original creator no longer wishes to be involved in or connected to  this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.</li>
+<li><a href="https://github.com/Archengius/"><strong>Archengius</strong></a>
+<ul>
+<li>UHT compatible header generator</li>
+</ul>
+</li>
+<li><strong>CasualGamer</strong>
+<ul>
+<li>Injector code &amp; aob scanner is heavily based on his work, 90% of that code is his.</li>
+</ul>
+</li>
+<li><strong>SunBeam</strong>
+<ul>
+<li>Extra signature for function 'GetFullName' for UE4.25.</li>
+<li>Regex to check for proper signature format when loaded from ini.</li>
+<li>Lots and lots of work on signatures</li>
+</ul>
+</li>
+<li><strong>tomsa</strong>
+<ul>
+<li>const char* to vector&lt;int&gt; converter
+<ul>
+<li>tomsa: Idea &amp; most of the code</li>
+<li>Original Creator: Nibblet support</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>boop</strong> / <strong>usize</strong>
+<ul>
+<li>New UFunction hook method</li>
+</ul>
+</li>
+<li><a href="https://github.com/RussellJerome"><strong>RussellJ</strong></a>
+<ul>
+<li>Blueprint Modloader inspiration</li>
+</ul>
+</li>
+<li><a href="https://github.com/narknon"><strong>Narknon</strong></a>
+<ul>
+<li>Certain features and maintenance/rehosting of the project</li>
+</ul>
+</li>
+<li><strong>DeadMor0z</strong>
+<ul>
+<li>Certain features and Lua updates/maintenance</li>
+</ul>
+</li>
+<li><a href="https://github.com/OutTheShade/UnrealMappingsDumper"><strong>OutTheShade</strong></a>
+<ul>
+<li>Unreal Mappings (USMAP) Generator</li>
+</ul>
+</li>
+<li><strong>DmgVol</strong>
+<ul>
+<li>Inspiration for map dumper</li>
+</ul>
+</li>
+<li><a href="https://github.com/Buckminsterfullerene02/"><strong>Buckminsterfullerene</strong></a>
+<ul>
+<li>Rewriting the documentation, various fixes</li>
+</ul>
+</li>
+<li><strong>trumank</strong>
+<ul>
+<li>Lua bindings generator, various fixes, automation &amp; improvements</li>
+</ul>
+</li>
+<li><strong>localcc</strong>
+<ul>
+<li>C++ API</li>
+</ul>
+</li>
+</ul>
+<h2 id="thanks-to-everyone-who-helped-with-testing"><a class="header" href="#thanks-to-everyone-who-helped-with-testing">Thanks to everyone who helped with testing</a></h2>
+<ul>
+<li>GreenHouse</li>
+<li>Otis_Inf</li>
+<li>SunBeam</li>
+<li>Motoson</li>
+<li>hooter</li>
+<li>Synopis</li>
+<li>Buckminsterfullerene</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="next" href="feature-overview/blueprint-modloader.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="next" href="feature-overview/blueprint-modloader.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
