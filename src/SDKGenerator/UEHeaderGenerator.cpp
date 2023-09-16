@@ -1,9 +1,3 @@
-#define NOMINMAX
-#include <Windows.h>
-#ifdef TEXT
-#undef TEXT
-#endif
-
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -482,7 +476,7 @@ namespace RC::UEGenerator
         {
             for (UFunction* interface_function : uinterface.Class->ForEachFunction()) 
             {
-                bool should_skip = (interface_function->GetFunctionFlags() & FUNC_BlueprintEvent);
+                bool should_skip = (interface_function->GetFunctionFlags() & FUNC_BlueprintEvent) != 0;
 
                 if (!implemented_functions.contains(interface_function->GetNamePrivate()) && !should_skip)
                 {

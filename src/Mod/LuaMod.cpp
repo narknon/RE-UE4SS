@@ -2518,7 +2518,7 @@ Overloads:
             bool exact_class{true};
             if (lua.is_integer())
             {
-                exact_class = lua.get_integer();
+                exact_class = lua.get_integer() != 0;
             }
             else if (lua.is_bool())
             {

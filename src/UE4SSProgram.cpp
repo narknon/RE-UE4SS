@@ -21,6 +21,7 @@
 #include <Unreal/TypeChecker.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
+#include <CoreTypes.hpp>
 #include <UnrealDef.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
