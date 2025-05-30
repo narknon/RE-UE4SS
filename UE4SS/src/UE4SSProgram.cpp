@@ -56,7 +56,7 @@
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
-
+#define USE_VERSIONED_CONTAINER_2
 // For VersionedContainer2 performance monitoring
 #ifdef USE_VERSIONED_CONTAINER_2
 #include <Unreal/VersionedContainer2/Performance.hpp>
@@ -1961,7 +1961,7 @@ namespace RC
         for (int i = 0; i < WARMUP_ITERATIONS; ++i)
         {
             Unreal::UObjectGlobals::ForEachUObject([](Unreal::UObject* object, int32_t index, int32_t serial) {
-                return Unreal::LoopAction::Continue;
+                return LoopAction::Continue;
             });
         }
         
@@ -1986,9 +1986,9 @@ namespace RC
                         // Simulate minimal work
                         volatile auto* uobj = object;
                         // Use GetFName() instead of GetNamePrivate()
-                        auto name = uobj->GetFName();
+                        auto name = uobj->StaticClass()->GetNamePrivate();
                     }
-                    return Unreal::LoopAction::Continue;
+                    return LoopAction::Continue;
                 });
             }
             
@@ -2010,7 +2010,7 @@ namespace RC
             {
                 object_ptrs.push_back(object);
             }
-            return object_ptrs.size() < num_objects ? Unreal::LoopAction::Continue : Unreal::LoopAction::Break;
+            return object_ptrs.size() < num_objects ? LoopAction::Continue : LoopAction::Break;
         });
         
         for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
@@ -2026,9 +2026,9 @@ namespace RC
                     if (obj)
                     {
                         // Access object properties
-                        volatile auto flags = obj->GetFlags();
+                        volatile auto flags = obj->GetObjectFlags();
                         volatile auto internal_index = obj->GetInternalIndex();
-                        volatile bool is_valid = obj->IsValidLowLevel();
+                        volatile bool is_valid = !obj->IsUnreachable();
                         if (is_valid)
                         {
                             valid_accesses++;
@@ -2061,7 +2061,7 @@ namespace RC
                             unreachable_count++;
                         }
                     }
-                    return Unreal::LoopAction::Continue;
+                    return LoopAction::Continue;
                 });
             }
             
@@ -2101,7 +2101,7 @@ namespace RC
         {
             Output::send(STR("\n==== VC2 Performance Stats ====\n"));
             try {
-                auto stats = VC2::PerformanceMonitor::GetStats();
+                auto stats = Unreal::VC2::PerformanceMonitor::GetStats();
                 for (const auto& [name, stat] : stats)
                 {
                     Output::send(STR("{}: {} calls, avg {:.2f}us, total {:.2f}ms\n"),
