@@ -1960,8 +1960,8 @@ namespace RC
         // Warmup iterations
         for (int i = 0; i < WARMUP_ITERATIONS; ++i)
         {
-            UObjectGlobals::ForEachUObject([](void* object, int32_t index) {
-                return LoopAction::Continue;
+            Unreal::UObjectGlobals::ForEachUObject([](Unreal::UObject* object, int32_t index, int32_t serial) {
+                return Unreal::LoopAction::Continue;
             });
         }
         
@@ -1978,16 +1978,17 @@ namespace RC
             {
                 ScopedTimer timer{&iteration_time};
                 
-                UObjectGlobals::ForEachUObject([&](void* object, int32_t index) {
+                Unreal::UObjectGlobals::ForEachUObject([&](Unreal::UObject* object, int32_t index, int32_t serial) {
                     total_objects++;
                     if (object)
                     {
                         valid_objects++;
                         // Simulate minimal work
-                        volatile auto* uobj = static_cast<UObject*>(object);
-                        volatile auto name_ptr = uobj->GetNamePrivate();
+                        volatile auto* uobj = object;
+                        // Use GetFName() instead of GetNamePrivate()
+                        auto name = uobj->GetFName();
                     }
-                    return LoopAction::Continue;
+                    return Unreal::LoopAction::Continue;
                 });
             }
             
@@ -1996,18 +1997,21 @@ namespace RC
                         iter + 1, iteration_time * 1000.0, total_objects, valid_objects);
         }
         
-        // Test 2: Random index access
-        Output::send(STR("\nTest 2: Random index access (1000 lookups)\n"));
-        const int num_lookups = 1000;
-        const int max_index = UObjectGlobals::GetGUObjectArray().GetMaxElements();
+        // Test 2: Object name lookup
+        Output::send(STR("\nTest 2: Object name lookup (100 lookups)\n"));
+        const int num_lookups = 100;
         
-        // Generate random indices
-        std::vector<int32_t> random_indices;
-        random_indices.reserve(num_lookups);
-        for (int i = 0; i < num_lookups; ++i)
-        {
-            random_indices.push_back(rand() % max_index);
-        }
+        // Collect some object names to look up
+        std::vector<Unreal::FName> object_names;
+        object_names.reserve(num_lookups);
+        
+        Unreal::UObjectGlobals::ForEachUObject([&](Unreal::UObject* object, int32_t index, int32_t serial) {
+            if (object && object_names.size() < num_lookups)
+            {
+                object_names.push_back(object->GetFName());
+            }
+            return object_names.size() < num_lookups ? Unreal::LoopAction::Continue : Unreal::LoopAction::Break;
+        });
         
         for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
         {
@@ -2017,14 +2021,15 @@ namespace RC
             {
                 ScopedTimer timer{&lookup_time};
                 
-                for (int32_t idx : random_indices)
+                for (const auto& name : object_names)
                 {
-                    auto* item = UObjectGlobals::GetGUObjectArray().IndexToObject(idx);
-                    if (item && item->Object)
+                    // Use FindObject with name
+                    auto* obj = Unreal::UObjectGlobals::StaticFindObject<Unreal::UObject*>(nullptr, nullptr, name.ToString());
+                    if (obj)
                     {
                         valid_lookups++;
                         // Simulate work
-                        volatile auto flags = item->GetFlags();
+                        volatile auto flags = obj->GetFlags();
                     }
                 }
             }
@@ -2035,7 +2040,7 @@ namespace RC
         }
         
         // Test 3: Flag operations
-        Output::send(STR("\nTest 3: Flag operations (check unreachable on all objects)\n"));
+        Output::send(STR("\nTest 3: Flag operations (check transient flag on all objects)\n"));
         for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
         {
             double flag_time = 0.0;
@@ -2044,18 +2049,21 @@ namespace RC
             {
                 ScopedTimer timer{&flag_time};
                 
-                UObjectGlobals::ForEachUObject([&](void* object, int32_t index) {
-                    auto* item = UObjectGlobals::GetGUObjectArray().IndexToObject(index);
-                    if (item && item->IsUnreachable())
+                Unreal::UObjectGlobals::ForEachUObject([&](Unreal::UObject* object, int32_t index, int32_t serial) {
+                    if (object)
                     {
-                        unreachable_count++;
+                        // Check for transient flag as a test of flag operations
+                        if (object->HasAnyFlags(Unreal::EObjectFlags::RF_Transient))
+                        {
+                            unreachable_count++;
+                        }
                     }
-                    return LoopAction::Continue;
+                    return Unreal::LoopAction::Continue;
                 });
             }
             
             flag_test.add_sample(flag_time);
-            Output::send(STR("  Iteration {}: {:.3f}ms ({} unreachable)\n"), 
+            Output::send(STR("  Iteration {}: {:.3f}ms ({} transient)\n"), 
                         iter + 1, flag_time * 1000.0, unreachable_count);
         }
         
@@ -2070,7 +2078,7 @@ namespace RC
         Output::send(STR("  Min:     {:.3f}ms\n"), foreach_test.min_time * 1000.0);
         Output::send(STR("  Max:     {:.3f}ms\n\n"), foreach_test.max_time * 1000.0);
         
-        Output::send(STR("Random index access ({} lookups):\n"), num_lookups);
+        Output::send(STR("Object name lookup ({} lookups):\n"), num_lookups);
         Output::send(STR("  Average: {:.3f}ms\n"), index_access_test.avg_time() * 1000.0);
         Output::send(STR("  Min:     {:.3f}ms\n"), index_access_test.min_time * 1000.0);
         Output::send(STR("  Max:     {:.3f}ms\n\n"), index_access_test.max_time * 1000.0);
@@ -2093,7 +2101,7 @@ namespace RC
                 auto stats = VC2::PerformanceMonitor::GetStats();
                 for (const auto& [name, stat] : stats)
                 {
-                    Output::send(STR("{}: {} calls, avg {:.2f}μs, total {:.2f}ms\n"),
+                    Output::send(STR("{}: {} calls, avg {:.2f}us, total {:.2f}ms\n"),
                                 to_wstring(name), 
                                 stat.call_count,
                                 stat.GetAverageMicroseconds(),
