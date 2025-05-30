@@ -1997,46 +1997,49 @@ namespace RC
                         iter + 1, iteration_time * 1000.0, total_objects, valid_objects);
         }
         
-        // Test 2: Object name lookup
-        Output::send(STR("\nTest 2: Object name lookup (100 lookups)\n"));
-        const int num_lookups = 100;
+        // Test 2: Object pointer access
+        Output::send(STR("\nTest 2: Object pointer access (1000 objects)\n"));
+        const int num_objects = 1000;
         
-        // Collect some object names to look up
-        std::vector<Unreal::FName> object_names;
-        object_names.reserve(num_lookups);
+        // Collect some object pointers
+        std::vector<Unreal::UObject*> object_ptrs;
+        object_ptrs.reserve(num_objects);
         
         Unreal::UObjectGlobals::ForEachUObject([&](Unreal::UObject* object, int32_t index, int32_t serial) {
-            if (object && object_names.size() < num_lookups)
+            if (object && object_ptrs.size() < num_objects)
             {
-                object_names.push_back(object->GetFName());
+                object_ptrs.push_back(object);
             }
-            return object_names.size() < num_lookups ? Unreal::LoopAction::Continue : Unreal::LoopAction::Break;
+            return object_ptrs.size() < num_objects ? Unreal::LoopAction::Continue : Unreal::LoopAction::Break;
         });
         
         for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
         {
-            double lookup_time = 0.0;
-            int valid_lookups = 0;
+            double access_time = 0.0;
+            int valid_accesses = 0;
             
             {
-                ScopedTimer timer{&lookup_time};
+                ScopedTimer timer{&access_time};
                 
-                for (const auto& name : object_names)
+                for (auto* obj : object_ptrs)
                 {
-                    // Use FindObject with name
-                    auto* obj = Unreal::UObjectGlobals::StaticFindObject<Unreal::UObject*>(nullptr, nullptr, name.ToString());
                     if (obj)
                     {
-                        valid_lookups++;
-                        // Simulate work
+                        // Access object properties
                         volatile auto flags = obj->GetFlags();
+                        volatile auto internal_index = obj->GetInternalIndex();
+                        volatile bool is_valid = obj->IsValidLowLevel();
+                        if (is_valid)
+                        {
+                            valid_accesses++;
+                        }
                     }
                 }
             }
             
-            index_access_test.add_sample(lookup_time);
-            Output::send(STR("  Iteration {}: {:.3f}ms ({} valid lookups)\n"), 
-                        iter + 1, lookup_time * 1000.0, valid_lookups);
+            index_access_test.add_sample(access_time);
+            Output::send(STR("  Iteration {}: {:.3f}ms ({} valid accesses)\n"), 
+                        iter + 1, access_time * 1000.0, valid_accesses);
         }
         
         // Test 3: Flag operations
@@ -2078,7 +2081,7 @@ namespace RC
         Output::send(STR("  Min:     {:.3f}ms\n"), foreach_test.min_time * 1000.0);
         Output::send(STR("  Max:     {:.3f}ms\n\n"), foreach_test.max_time * 1000.0);
         
-        Output::send(STR("Object name lookup ({} lookups):\n"), num_lookups);
+        Output::send(STR("Object pointer access ({} objects):\n"), num_objects);
         Output::send(STR("  Average: {:.3f}ms\n"), index_access_test.avg_time() * 1000.0);
         Output::send(STR("  Min:     {:.3f}ms\n"), index_access_test.min_time * 1000.0);
         Output::send(STR("  Max:     {:.3f}ms\n\n"), index_access_test.max_time * 1000.0);
