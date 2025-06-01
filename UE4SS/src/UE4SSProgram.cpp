@@ -60,6 +60,7 @@
 // For VersionedContainer2 performance monitoring
 #ifdef USE_VERSIONED_CONTAINER_2
 #include <Unreal/VersionedContainer2/Performance.hpp>
+#include <Unreal/VersionedContainer2/Base.hpp>
 #endif
 
 #include <random>
@@ -1950,6 +1951,8 @@ namespace RC
         TestResult foreach_test;
         TestResult index_access_test;
         TestResult flag_test;
+        TestResult direct_foreach_test;
+        TestResult direct_raw_foreach_test;
         
         // Count total objects for reference
         int total_objects = 0;
@@ -2070,6 +2073,89 @@ namespace RC
                         iter + 1, flag_time * 1000.0, unreachable_count);
         }
         
+        // Direct VC2 tests (only if using VC2)
+#ifdef USE_VERSIONED_CONTAINER_2
+        if (using_vc2)
+        {
+            Output::send(STR("\n==== Direct VC2::Container Tests ====\n"));
+            
+            // Test 4: Direct VC2 ForEachUObject with std::function
+            Output::send(STR("\nTest 4: Direct VC2::Container::ForEachUObject (std::function)\n"));
+            for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
+            {
+                int direct_total = 0;
+                int direct_valid = 0;
+                
+                double direct_time = 0.0;
+                {
+                    ScopedTimer timer{&direct_time};
+                    
+                    Unreal::VC2::Container::ForEachUObject([&](void* object, int32_t global_idx, int32_t total_elements) {
+                        direct_total++;
+                        if (object)
+                        {
+                            auto* uobj = static_cast<Unreal::UObject*>(object);
+                            if (!uobj->IsUnreachable())
+                            {
+                                direct_valid++;
+                                // Same minimal work as compatibility test
+                                volatile auto* vuobj = uobj;
+                                auto name = vuobj->GetClassPrivate()->GetNamePrivate();
+                            }
+                        }
+                        return LoopAction::Continue;
+                    });
+                }
+                
+                direct_foreach_test.add_sample(direct_time);
+                Output::send(STR("  Iteration {}: {:.3f}ms ({} objects, {} valid)\n"), 
+                            iter + 1, direct_time * 1000.0, direct_total, direct_valid);
+            }
+            
+            // Test 5: Direct VC2 ForEachUObject with raw function pointer
+            Output::send(STR("\nTest 5: Direct VC2::Container::ForEachUObject (raw function pointer)\n"));
+            
+            // Static counters for raw function (can't capture in static function)
+            static int raw_total = 0;
+            static int raw_valid = 0;
+            
+            // Raw function for maximum performance
+            auto raw_callback = [](void* object, int32_t global_idx, int32_t total_elements) -> LoopAction {
+                raw_total++;
+                if (object)
+                {
+                    auto* uobj = static_cast<Unreal::UObject*>(object);
+                    if (!uobj->IsUnreachable())
+                    {
+                        raw_valid++;
+                        // Same minimal work
+                        volatile auto* vuobj = uobj;
+                        auto name = vuobj->GetClassPrivate()->GetNamePrivate();
+                    }
+                }
+                return LoopAction::Continue;
+            };
+            
+            for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
+            {
+                raw_total = 0;
+                raw_valid = 0;
+                
+                double raw_time = 0.0;
+                {
+                    ScopedTimer timer{&raw_time};
+                    
+                    // Call with raw function pointer
+                    Unreal::VC2::Container::ForEachUObject(+raw_callback);
+                }
+                
+                direct_raw_foreach_test.add_sample(raw_time);
+                Output::send(STR("  Iteration {}: {:.3f}ms ({} objects, {} valid)\n"), 
+                            iter + 1, raw_time * 1000.0, raw_total, raw_valid);
+            }
+        }
+#endif
+
         // Print summary
         Output::send(STR("\n==== Performance Summary ====\n"));
         Output::send(STR("System: {}\n"), using_vc2 ? STR("VersionedContainer2") : STR("Original VersionedContainer"));
@@ -2094,6 +2180,35 @@ namespace RC
         // Calculate objects/ms for iteration test
         double objects_per_ms = valid_objects / (foreach_test.avg_time() * 1000.0);
         Output::send(STR("\nPerformance: {:.0f} objects/ms\n"), objects_per_ms);
+        
+#ifdef USE_VERSIONED_CONTAINER_2
+        if (using_vc2)
+        {
+            Output::send(STR("\nDirect VC2::Container::ForEachUObject (std::function):\n"));
+            Output::send(STR("  Average: {:.3f}ms\n"), direct_foreach_test.avg_time() * 1000.0);
+            Output::send(STR("  Min:     {:.3f}ms\n"), direct_foreach_test.min_time * 1000.0);
+            Output::send(STR("  Max:     {:.3f}ms\n"), direct_foreach_test.max_time * 1000.0);
+            double direct_objects_per_ms = valid_objects / (direct_foreach_test.avg_time() * 1000.0);
+            Output::send(STR("  Performance: {:.0f} objects/ms\n"), direct_objects_per_ms);
+            
+            Output::send(STR("\nDirect VC2::Container::ForEachUObject (raw function pointer):\n"));
+            Output::send(STR("  Average: {:.3f}ms\n"), direct_raw_foreach_test.avg_time() * 1000.0);
+            Output::send(STR("  Min:     {:.3f}ms\n"), direct_raw_foreach_test.min_time * 1000.0);
+            Output::send(STR("  Max:     {:.3f}ms\n"), direct_raw_foreach_test.max_time * 1000.0);
+            double raw_objects_per_ms = valid_objects / (direct_raw_foreach_test.avg_time() * 1000.0);
+            Output::send(STR("  Performance: {:.0f} objects/ms\n"), raw_objects_per_ms);
+            
+            // Show improvement percentages
+            double compat_to_direct_improvement = ((foreach_test.avg_time() - direct_foreach_test.avg_time()) / foreach_test.avg_time()) * 100.0;
+            double compat_to_raw_improvement = ((foreach_test.avg_time() - direct_raw_foreach_test.avg_time()) / foreach_test.avg_time()) * 100.0;
+            double direct_to_raw_improvement = ((direct_foreach_test.avg_time() - direct_raw_foreach_test.avg_time()) / direct_foreach_test.avg_time()) * 100.0;
+            
+            Output::send(STR("\nPerformance Improvements:\n"));
+            Output::send(STR("  Compatibility → Direct (std::function): {:.1f}% faster\n"), compat_to_direct_improvement);
+            Output::send(STR("  Compatibility → Direct (raw pointer):    {:.1f}% faster\n"), compat_to_raw_improvement);
+            Output::send(STR("  Direct std::function → raw pointer:      {:.1f}% faster\n"), direct_to_raw_improvement);
+        }
+#endif
         
 #ifdef USE_VERSIONED_CONTAINER_2
         // If using VC2, print additional diagnostics if available
