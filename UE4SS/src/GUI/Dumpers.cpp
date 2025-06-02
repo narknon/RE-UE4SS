@@ -406,5 +406,16 @@ namespace RC::GUI::Dumpers
             File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
             UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
         }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Run VersionedContainer Performance Test"))
+        {
+            UE4SSProgram::get_program().run_versioned_container_performance_test();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Run performance tests comparing VersionedContainer implementations.\nResults will be shown in the console output.");
+        }
     }
 } // namespace RC::GUI::Dumpers
