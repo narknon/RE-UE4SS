@@ -1,0 +1,4247 @@
+#pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <variant>
+#include <functional>
+#include <unordered_map>
+#include <sstream>
+
+#include <imgui.h>
+#include <String/StringType.hpp>
+#include <Helpers/String.hpp>
+#include <fmt/format.h>
+
+namespace RC::GUI
+{
+    // Forward declarations
+    class ImGuiValueContainer;
+
+    // Callback types
+    using ValueChangedCallback = std::function<void()>;
+    using ValueAppliedCallback = std::function<void()>;
+    using ExternalUpdateCallback = std::function<void()>;
+    using CustomTooltipCallback = std::function<void()>;
+    using CustomContextMenuCallback = std::function<void()>;
+
+    // Value source - who last updated the value
+    enum class ValueSource
+    {
+        User,      // User changed via UI
+        External,  // External system (e.g., game engine)
+        Default    // Initial/default value
+    };
+
+    // Edit mode for values
+    enum class EditMode
+    {
+        Editable,     // Normal editable control
+        ReadOnly,     // Display only, no editing
+        ViewOnly      // Minimal display, no controls
+    };
+
+    // Immediate apply mode for containers
+    enum class ImmediateApplyMode
+    {
+        RespectIndividual,  // Container default + individual overrides
+        ForceContainer,     // Container setting overrides all
+        ForceOff           // Disable immediate apply for all
+    };
+
+    // Base interface for all ImGui value types
+    class IImGuiValue
+    {
+    public:
+        using Ptr = std::unique_ptr<IImGuiValue>;
+
+        virtual ~IImGuiValue() = default;
+        
+        // Draw the control and return true if value changed
+        virtual bool draw(const char* label = nullptr) = 0;
+        virtual bool draw(const CharType* label) = 0;
+        
+        // Draw just the value as text (read-only)
+        virtual void draw_value(const char* label = nullptr) = 0;
+        virtual void draw_value(const CharType* label) = 0;
+        
+        // Draw control with optional text representation
+        virtual bool draw_with_text(const char* label = nullptr, bool show_text = true) = 0;
+        virtual bool draw_with_text(const CharType* label, bool show_text = true) = 0;
+        
+        // Check if show text representation is enabled
+        virtual bool should_show_text_representation() const = 0;
+        virtual void set_show_text_representation(bool show) = 0;
+        
+        // Immediate apply control
+        virtual void set_immediate_apply(bool immediate) = 0;
+        virtual bool is_immediate_apply() const = 0;
+        
+        // String conversion
+        virtual void set_from_string(const std::string& value) = 0;
+        virtual std::string get_as_string() const = 0;
+
+        // Container support
+        virtual bool has_pending_changes() const = 0;
+        virtual void apply_changes() = 0;
+        virtual void revert_changes() = 0;
+        virtual void mark_dirty() = 0;
+        
+        // Metadata
+        virtual const std::string& get_name() const = 0;
+        virtual const std::string& get_tooltip() const = 0;
+        virtual void set_tooltip(const std::string& tooltip) = 0;
+        virtual bool is_advanced() const = 0;
+        virtual void set_advanced(bool advanced) = 0;
+        
+        // Callbacks
+        virtual void set_on_change_callback(ValueChangedCallback callback) = 0;
+        virtual void set_on_apply_callback(ValueAppliedCallback callback) = 0;
+        virtual void set_on_external_update_callback(ExternalUpdateCallback callback) = 0;
+        virtual void set_custom_tooltip_callback(CustomTooltipCallback callback) = 0;
+        virtual void set_custom_context_menu_callback(CustomContextMenuCallback callback) = 0;
+        
+        // External update support
+        virtual void update_from_external(bool silent = false) = 0;
+        virtual bool is_externally_controlled() const = 0;
+        virtual void set_externally_controlled(bool controlled) = 0;
+        
+        // Edit mode
+        virtual EditMode get_edit_mode() const = 0;
+        virtual void set_edit_mode(EditMode mode) = 0;
+        
+        // Value source tracking
+        virtual ValueSource get_last_value_source() const = 0;
+    };
+
+    // Base template class for ImGui value types
+    template <typename T>
+    class ImGuiValue : public IImGuiValue
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiValue<T>>;
+
+        ImGuiValue(T default_value, const std::string& name = "")
+            : m_value(default_value)
+            , m_default_value(default_value)
+            , m_pending_value(default_value)
+            , m_external_value(default_value)
+            , m_name(name)
+            , m_tooltip("")
+            , m_is_advanced(false)
+            , m_is_dirty(false)
+            , m_externally_controlled(false)
+            , m_edit_mode(EditMode::Editable)
+            , m_last_value_source(ValueSource::Default)
+            , m_show_text_representation(false)
+            , m_immediate_apply(false)
+        {
+        }
+
+        ImGuiValue(T default_value, const StringType& name)
+            : m_value(default_value)
+            , m_default_value(default_value)
+            , m_pending_value(default_value)
+            , m_external_value(default_value)
+            , m_name(to_string(name))
+            , m_tooltip("")
+            , m_is_advanced(false)
+            , m_is_dirty(false)
+            , m_externally_controlled(false)
+            , m_edit_mode(EditMode::Editable)
+            , m_last_value_source(ValueSource::Default)
+            , m_show_text_representation(false)
+            , m_immediate_apply(false)
+        {
+        }
+
+        virtual ~ImGuiValue() = default;
+
+        // Value access
+        T& value() { return m_value; }
+        const T& value() const { return m_value; }
+        operator T&() { return m_value; }
+        operator const T&() const { return m_value; }
+        
+        // Pending value access (for deferred updates)
+        T& pending_value() { return m_pending_value; }
+        const T& pending_value() const { return m_pending_value; }
+        
+        // External value access (for tracking game engine updates)
+        T& external_value() { return m_external_value; }
+        const T& external_value() const { return m_external_value; }
+        
+        // Default value access
+        const T& default_value() const { return m_default_value; }
+        
+        // Reset to default
+        void reset_to_default() 
+        { 
+            m_pending_value = m_default_value;
+            m_is_dirty = true;
+            m_last_value_source = ValueSource::User;
+            fire_change_callback();
+        }
+        
+        // Update value from external source (e.g., game engine)
+        void set_external_value(const T& new_value)
+        {
+            m_external_value = new_value;
+            
+            // Only update the actual value if we're not dirty (no pending user changes)
+            if (!m_is_dirty && m_externally_controlled)
+            {
+                m_value = new_value;
+                m_pending_value = new_value;
+                m_last_value_source = ValueSource::External;
+                
+                if (m_on_external_update)
+                {
+                    m_on_external_update();
+                }
+            }
+        }
+        
+        // Container support
+        bool has_pending_changes() const override { return m_is_dirty; }
+        
+        void apply_changes() override
+        {
+            if (m_is_dirty)
+            {
+                m_value = m_pending_value;
+                m_is_dirty = false;
+                m_last_value_source = ValueSource::User;
+                fire_apply_callback();
+            }
+        }
+        
+        void revert_changes() override
+        {
+            // When reverting, check if we should revert to external value
+            if (m_externally_controlled && m_external_value != m_value)
+            {
+                m_value = m_external_value;
+                m_pending_value = m_external_value;
+                m_last_value_source = ValueSource::External;
+            }
+            else
+            {
+                m_pending_value = m_value;
+            }
+            m_is_dirty = false;
+        }
+        
+        void mark_dirty() override { m_is_dirty = true; }
+        
+        // Metadata
+        const std::string& get_name() const override { return m_name; }
+        const std::string& get_tooltip() const override { return m_tooltip; }
+        void set_tooltip(const std::string& tooltip) override { m_tooltip = tooltip; }
+        bool is_advanced() const override { return m_is_advanced; }
+        void set_advanced(bool advanced) override { m_is_advanced = advanced; }
+        
+        // Callbacks
+        void set_on_change_callback(ValueChangedCallback callback) override { m_on_change = callback; }
+        void set_on_apply_callback(ValueAppliedCallback callback) override { m_on_apply = callback; }
+        void set_on_external_update_callback(ExternalUpdateCallback callback) override { m_on_external_update = callback; }
+        void set_custom_tooltip_callback(CustomTooltipCallback callback) override { m_custom_tooltip = callback; }
+        void set_custom_context_menu_callback(CustomContextMenuCallback callback) override { m_custom_context_menu = callback; }
+        
+        // External update support
+        void update_from_external(bool silent = false) override
+        {
+            if (m_externally_controlled && !m_is_dirty)
+            {
+                m_value = m_external_value;
+                m_pending_value = m_external_value;
+                m_last_value_source = ValueSource::External;
+                
+                if (!silent && m_on_external_update)
+                {
+                    m_on_external_update();
+                }
+            }
+        }
+        
+        bool is_externally_controlled() const override { return m_externally_controlled; }
+        void set_externally_controlled(bool controlled) override { m_externally_controlled = controlled; }
+        
+        // Edit mode
+        EditMode get_edit_mode() const override { return m_edit_mode; }
+        void set_edit_mode(EditMode mode) override { m_edit_mode = mode; }
+        
+        // Value source tracking
+        ValueSource get_last_value_source() const override { return m_last_value_source; }
+        
+        // Text representation control
+        bool should_show_text_representation() const override { return m_show_text_representation; }
+        void set_show_text_representation(bool show) override { m_show_text_representation = show; }
+        
+        // Immediate apply control
+        void set_immediate_apply(bool immediate) override { m_immediate_apply = immediate; }
+        bool is_immediate_apply() const override { return m_immediate_apply; }
+        
+        // Draw with text representation
+        bool draw_with_text(const char* label = nullptr, bool show_text = true) override
+        {
+            bool changed = draw(label);
+            
+            if (show_text && m_show_text_representation)
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled("(%s)", get_as_string().c_str());
+            }
+            
+            return changed;
+        }
+        
+        bool draw_with_text(const CharType* label, bool show_text = true) override
+        {
+            return draw_with_text(label ? to_string(label).c_str() : nullptr, show_text);
+        }
+        
+        // String conversion
+        std::string get_as_string() const override
+        {
+            if constexpr (std::is_same_v<T, std::string>)
+            {
+                return m_value;
+            }
+            else if constexpr (std::is_same_v<T, bool>)
+            {
+                return m_value ? "true" : "false";
+            }
+            else if constexpr (std::is_arithmetic_v<T>)
+            {
+                return std::to_string(m_value);
+            }
+            else
+            {
+                // For unsupported types, return empty string - derived classes should override
+                return "";
+            }
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            if constexpr (std::is_same_v<T, std::string>)
+            {
+                set_value_internal(value);
+            }
+            else if constexpr (std::is_same_v<T, bool>)
+            {
+                set_value_internal(value == "true" || value == "1");
+            }
+            else if constexpr (std::is_integral_v<T>)
+            {
+                if constexpr (std::is_unsigned_v<T>)
+                {
+                    set_value_internal(static_cast<T>(std::stoul(value)));
+                }
+                else
+                {
+                    set_value_internal(static_cast<T>(std::stol(value)));
+                }
+            }
+            else if constexpr (std::is_floating_point_v<T>)
+            {
+                set_value_internal(static_cast<T>(std::stod(value)));
+            }
+            else
+            {
+                // For unsupported types, do nothing - derived classes should override
+                // This avoids static_assert failures for complex types like std::array
+            }
+        }
+
+    protected:
+        // Helper for setting value with proper callback handling
+        void set_value_internal(const T& new_value)
+        {
+            m_pending_value = new_value;
+            m_is_dirty = true;
+            m_last_value_source = ValueSource::User;
+            fire_change_callback();
+        }
+        
+        // Get the current working value (always pending until applied)
+        T& get_working_value()
+        {
+            return m_pending_value;
+        }
+        
+        const T& get_working_value() const
+        {
+            return m_pending_value;
+        }
+        
+        // Helper for context menu
+        void render_context_menu()
+        {
+            if (m_custom_context_menu)
+            {
+                m_custom_context_menu();
+            }
+            else if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::Button("Reset to default"))
+                {
+                    reset_to_default();
+                }
+                
+                if (m_is_dirty)
+                {
+                    ImGui::Separator();
+                    if (ImGui::Button("Apply changes"))
+                    {
+                        apply_changes();
+                    }
+                    if (ImGui::Button("Revert changes"))
+                    {
+                        revert_changes();
+                    }
+                }
+                
+                ImGui::EndPopup();
+            }
+        }
+
+        // Get display label - returns provided label or stored name
+        const char* get_display_label(const char* override_label = nullptr) const
+        {
+            if (override_label && override_label[0] != '\0')
+            {
+                return override_label;
+            }
+            else if (!m_name.empty())
+            {
+                return m_name.c_str();
+            }
+            else
+            {
+                return "##unnamed"; // Hidden label for ImGui ID
+            }
+        }
+        
+        // Fire callbacks
+        void fire_change_callback()
+        {
+            if (m_on_change)
+            {
+                m_on_change();
+            }
+        }
+        
+        void fire_apply_callback()
+        {
+            if (m_on_apply)
+            {
+                m_on_apply();
+            }
+        }
+
+        // Helper to render tooltip if available
+        void render_tooltip() const
+        {
+            if (m_custom_tooltip && ImGui::IsItemHovered())
+            {
+                m_custom_tooltip();
+            }
+            else if (!m_tooltip.empty() && ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s", m_tooltip.c_str());
+            }
+        }
+
+        T m_value;
+        T m_default_value;
+        T m_pending_value;
+        T m_external_value;
+        std::string m_name;
+        std::string m_tooltip;
+        bool m_is_advanced;
+        bool m_is_dirty;
+        bool m_externally_controlled;
+        EditMode m_edit_mode;
+        bool m_show_text_representation;
+        bool m_immediate_apply;
+        ValueSource m_last_value_source;
+        ValueChangedCallback m_on_change;
+        ValueAppliedCallback m_on_apply;
+        ExternalUpdateCallback m_on_external_update;
+        CustomTooltipCallback m_custom_tooltip;
+        CustomContextMenuCallback m_custom_context_menu;
+    };
+
+    // Boolean toggle
+    class ImGuiToggle : public ImGuiValue<bool>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiToggle>;
+
+        static auto create(bool default_value = false, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiToggle>(default_value, name, tooltip);
+        }
+
+        static auto create(bool default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiToggle>(default_value, name, tooltip);
+        }
+
+        ImGuiToggle(bool default_value = false, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<bool>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiToggle(bool default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<bool>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                bool display_val = get_working_value();
+                ImGui::BeginDisabled();
+                
+                // Make checkbox smaller by reducing frame padding to minimum
+                // This effectively reduces the checkbox size
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 1.0f));
+                
+                ImGui::Checkbox(get_display_label(label), &display_val);
+                
+                ImGui::PopStyleVar(2);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            bool& working_val = get_working_value();
+            
+            // Make checkbox smaller by reducing frame padding to minimum
+            // This effectively reduces the checkbox size
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 1.0f));
+            
+            bool changed = ImGui::Checkbox(get_display_label(label), &working_val);
+            
+            ImGui::PopStyleVar(2);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label) override
+        {
+            ImGui::Text("%s: %s", get_display_label(label), m_value ? "true" : "false");
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        // Specific string representation for booleans
+        std::string get_as_string() const override
+        {
+            return m_value ? "True" : "False";
+        }
+
+        bool toggle() { return m_value = !m_value; }
+    };
+
+    // Float input
+    class ImGuiFloat : public ImGuiValue<float>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiFloat>;
+
+        static auto create(float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiFloat>(default_value, name, tooltip);
+        }
+
+        static auto create(float default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiFloat>(default_value, name, tooltip);
+        }
+
+        ImGuiFloat(float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<float>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiFloat(float default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<float>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputFloat(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            float& working_val = get_working_value();
+            bool changed = ImGui::InputFloat(get_display_label(label), &working_val);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.3f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        // Specific string representation for floats with 3 decimal places
+        std::string get_as_string() const override
+        {
+            return fmt::format("{:.3f}", m_value);
+        }
+    };
+
+    // Double input
+    class ImGuiDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDouble>;
+
+        static auto create(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiDouble>(default_value, name, tooltip);
+        }
+
+        static auto create(double default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiDouble>(default_value, name, tooltip);
+        }
+
+        ImGuiDouble(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<double>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDouble(double default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<double>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                double display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputDouble(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            double& working_val = get_working_value();
+            bool changed = ImGui::InputDouble(get_display_label(label), &working_val);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        // Specific string representation for doubles with 6 decimal places
+        std::string get_as_string() const override
+        {
+            return fmt::format("{:.6f}", m_value);
+        }
+    };
+
+    // Double slider (uses float slider internally but stores as double)
+    class ImGuiSliderDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderDouble>;
+
+        static auto create(double min = 0.0, double max = 1.0, double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiSliderDouble>(min, max, default_value, name, tooltip, show_precision_input);
+        }
+
+        static auto create(double min, double max, double default_value, const StringType& name, const StringType& tooltip = STR(""), bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiSliderDouble>(min, max, default_value, name, tooltip, show_precision_input);
+        }
+
+        ImGuiSliderDouble(double min = 0.0, double max = 1.0, double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderDouble(double min, double max, double default_value, const StringType& name, const StringType& tooltip = STR(""), bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = static_cast<float>(get_working_value());
+                ImGui::BeginDisabled();
+                ImGui::SliderFloat(get_display_label(label), &display_val, static_cast<float>(m_min), static_cast<float>(m_max));
+                if (m_show_precision_input)
+                {
+                    ImGui::SameLine();
+                    double precise_val = get_working_value();
+                    ImGui::InputDouble("##precise", &precise_val);
+                }
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use float slider internally
+            ImGui::PushID(this);
+            bool changed = false;
+            double& working_val = get_working_value();
+            
+            // Slider
+            float float_val = static_cast<float>(working_val);
+            if (ImGui::SliderFloat(get_display_label(label), &float_val, 
+                                  static_cast<float>(m_min), static_cast<float>(m_max)))
+            {
+                working_val = static_cast<double>(float_val);
+                changed = true;
+            }
+            
+            // Optional precision input
+            if (m_show_precision_input)
+            {
+                ImGui::SameLine();
+                if (ImGui::InputDouble("##precise", &working_val))
+                {
+                    // Don't clamp the precision input - allow full double range
+                    changed = true;
+                }
+            }
+            
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            
+            render_tooltip();
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f [%.6f, %.6f]", get_display_label(label), m_value, m_min, m_max);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        double& min() { return m_min; }
+        double& max() { return m_max; }
+        void show_precision_input(bool show) { m_show_precision_input = show; }
+
+    private:
+        double m_min;
+        double m_max;
+        bool m_show_precision_input;
+    };
+
+    // Float slider
+    class ImGuiSlider : public ImGuiValue<float>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSlider>;
+
+        static auto create(float min = 0.0f, float max = 1.0f, float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSlider>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(float min, float max, float default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSlider>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSlider(float min = 0.0f, float max = 1.0f, float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<float>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSlider(float min, float max, float default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<float>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderFloat(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            float& working_val = get_working_value();
+            bool changed = ImGui::SliderFloat(get_display_label(label), &working_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.3f [%.3f, %.3f]", get_display_label(label), m_value, m_min, m_max);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& min() { return m_min; }
+        float& max() { return m_max; }
+
+    private:
+        float m_min;
+        float m_max;
+    };
+
+    // Integer input
+    class ImGuiInt32 : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiInt32>;
+
+        static auto create(int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiInt32>(default_value, name, tooltip);
+        }
+
+        static auto create(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiInt32>(default_value, name, tooltip);
+        }
+
+        ImGuiInt32(int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int32_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiInt32(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int32_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            int32_t& working_val = get_working_value();
+            bool changed = ImGui::InputInt(get_display_label(label), &working_val);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %d", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiInt64 - for int64_t values (use string input since it may be too large for int32_t)
+    class ImGuiInt64 : public ImGuiValue<int64_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiInt64>;
+
+        static auto create(int64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiInt64>(default_value, name, tooltip);
+        }
+
+        static auto create(int64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiInt64>(default_value, name, tooltip);
+        }
+
+        ImGuiInt64(int64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int64_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiInt64(int64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int64_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For int64, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%lld", static_cast<long long>(get_working_value()));
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    long long val = std::stoll(buffer);
+                    get_working_value() = static_cast<int64_t>(val);
+                    m_is_dirty = true;
+                    m_last_value_source = ValueSource::User;
+                    fire_change_callback();
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %lld", get_display_label(label), static_cast<long long>(m_value));
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // Integer slider
+    class ImGuiSliderInt32 : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderInt32>;
+
+        static auto create(int32_t min = 0, int32_t max = 100, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSliderInt32>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(int32_t min, int32_t max, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSliderInt32>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSliderInt32(int32_t min = 0, int32_t max = 100, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderInt32(int32_t min, int32_t max, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            int32_t& working_val = get_working_value();
+            bool changed = ImGui::SliderInt(get_display_label(label), &working_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %d [%d, %d]", get_display_label(label), m_value, m_min, m_max);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        int32_t& min() { return m_min; }
+        int32_t& max() { return m_max; }
+
+    private:
+        int32_t m_min;
+        int32_t m_max;
+    };
+
+    // Unsigned integer types
+    // ImGuiUInt8 - for uint8_t values
+    class ImGuiUInt8 : public ImGuiValue<uint8_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt8>;
+
+        static auto create(uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt8>(default_value, name, tooltip);
+        }
+
+        static auto create(uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt8>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt8(uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint8_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt8(uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint8_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int input and clamp
+            ImGui::PushID(this);
+            uint8_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::InputInt(get_display_label(label), &temp_val);
+            render_tooltip();
+            if (changed)
+            {
+                // Clamp to uint8_t range
+                temp_val = std::clamp(temp_val, 0, 255);
+                working_val = static_cast<uint8_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt16 - for uint16_t values
+    class ImGuiUInt16 : public ImGuiValue<uint16_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt16>;
+
+        static auto create(uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt16>(default_value, name, tooltip);
+        }
+
+        static auto create(uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt16>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt16(uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint16_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt16(uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint16_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int input and clamp
+            ImGui::PushID(this);
+            uint16_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::InputInt(get_display_label(label), &temp_val);
+            render_tooltip();
+            if (changed)
+            {
+                // Clamp to uint16_t range
+                temp_val = std::clamp(temp_val, 0, 65535);
+                working_val = static_cast<uint16_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt32 - for uint32_t values (use string input since it may exceed int32_t range)
+    class ImGuiUInt32 : public ImGuiValue<uint32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt32>;
+
+        static auto create(uint32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt32>(default_value, name, tooltip);
+        }
+
+        static auto create(uint32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt32>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt32(uint32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint32_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt32(uint32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint32_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For uint32, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%u", get_working_value());
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    unsigned long val = std::stoul(buffer);
+                    if (val <= UINT32_MAX)
+                    {
+                        get_working_value() = static_cast<uint32_t>(val);
+                        m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
+                        fire_change_callback();
+                    }
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt64 - for uint64_t values (use string input)
+    class ImGuiUInt64 : public ImGuiValue<uint64_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt64>;
+
+        static auto create(uint64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt64>(default_value, name, tooltip);
+        }
+
+        static auto create(uint64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt64>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt64(uint64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint64_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt64(uint64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint64_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For uint64, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%llu", static_cast<unsigned long long>(get_working_value()));
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    unsigned long long val = std::stoull(buffer);
+                    get_working_value() = static_cast<uint64_t>(val);
+                    m_is_dirty = true;
+                    m_last_value_source = ValueSource::User;
+                    fire_change_callback();
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %llu", get_display_label(label), static_cast<unsigned long long>(m_value));
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // Unsigned integer slider types
+    // ImGuiSliderUInt8 - for uint8_t values with slider
+    class ImGuiSliderUInt8 : public ImGuiValue<uint8_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderUInt8>;
+
+        static auto create(uint8_t min = 0, uint8_t max = 255, uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSliderUInt8>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(uint8_t min, uint8_t max, uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSliderUInt8>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSliderUInt8(uint8_t min = 0, uint8_t max = 255, uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint8_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderUInt8(uint8_t min, uint8_t max, uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint8_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int slider
+            ImGui::PushID(this);
+            uint8_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::SliderInt(get_display_label(label), &temp_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                working_val = static_cast<uint8_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        uint8_t& min() { return m_min; }
+        uint8_t& max() { return m_max; }
+
+    private:
+        uint8_t m_min;
+        uint8_t m_max;
+    };
+
+    // ImGuiSliderUInt16 - for uint16_t values with slider
+    class ImGuiSliderUInt16 : public ImGuiValue<uint16_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderUInt16>;
+
+        static auto create(uint16_t min = 0, uint16_t max = 65535, uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSliderUInt16>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(uint16_t min, uint16_t max, uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSliderUInt16>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSliderUInt16(uint16_t min = 0, uint16_t max = 65535, uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint16_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderUInt16(uint16_t min, uint16_t max, uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint16_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int slider
+            ImGui::PushID(this);
+            uint16_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::SliderInt(get_display_label(label), &temp_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                working_val = static_cast<uint16_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        uint16_t& min() { return m_min; }
+        uint16_t& max() { return m_max; }
+
+    private:
+        uint16_t m_min;
+        uint16_t m_max;
+    };
+
+    // Combo box
+    class ImGuiCombo : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiCombo>;
+
+        static auto create(const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiCombo>(options, default_value, name, tooltip);
+        }
+
+        static auto create(const std::vector<std::string>& options, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiCombo>(options, default_value, name, tooltip);
+        }
+
+        ImGuiCombo(const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_options_strings(options)
+        {
+            m_tooltip = tooltip;
+            update_options_pointers();
+        }
+
+        ImGuiCombo(const std::vector<std::string>& options, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_options_strings(options)
+        {
+            m_tooltip = to_string(tooltip);
+            update_options_pointers();
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // Clamp value to valid range
+            int32_t& working_val = get_working_value();
+            working_val = std::clamp<int32_t>(working_val, 0, static_cast<int32_t>(m_options_pointers.size()) - 1);
+
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = working_val;
+                ImGui::BeginDisabled();
+                ImGui::Combo(get_display_label(label), &display_val, m_options_pointers.data(), static_cast<int32_t>(m_options_pointers.size()));
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            bool changed = ImGui::Combo(get_display_label(label), &working_val, m_options_pointers.data(), static_cast<int32_t>(m_options_pointers.size()));
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            m_value = std::clamp<int32_t>(m_value, 0, static_cast<int32_t>(m_options_pointers.size()) - 1);
+            ImGui::Text("%s: %s", get_display_label(label), m_options_pointers[m_value]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        const std::vector<std::string>& options() const { return m_options_strings; }
+        
+        void set_options(const std::vector<std::string>& options)
+        {
+            m_options_strings = options;
+            update_options_pointers();
+        }
+        
+        // Override to return the selected option string instead of index
+        std::string get_as_string() const override
+        {
+            int32_t index = std::clamp<int32_t>(m_value, 0, static_cast<int32_t>(m_options_strings.size()) - 1);
+            if (index >= 0 && index < static_cast<int32_t>(m_options_strings.size()))
+            {
+                return m_options_strings[index];
+            }
+            return std::to_string(m_value);
+        }
+
+    private:
+        void update_options_pointers()
+        {
+            m_options_pointers.clear();
+            for (const auto& option : m_options_strings)
+            {
+                m_options_pointers.push_back(option.c_str());
+            }
+        }
+
+        std::vector<std::string> m_options_strings;
+        std::vector<const char*> m_options_pointers;
+    };
+
+    // String input
+    class ImGuiString : public ImGuiValue<std::string>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiString>;
+
+        static auto create(const std::string& default_value = "", const std::string& name = "", const std::string& tooltip = "", size_t buffer_size = 256)
+        {
+            return std::make_unique<ImGuiString>(default_value, name, tooltip, buffer_size);
+        }
+
+        static auto create(const std::string& default_value, const StringType& name, const StringType& tooltip = STR(""), size_t buffer_size = 256)
+        {
+            return std::make_unique<ImGuiString>(default_value, name, tooltip, buffer_size);
+        }
+
+        ImGuiString(const std::string& default_value = "", const std::string& name = "", const std::string& tooltip = "", size_t buffer_size = 256)
+            : ImGuiValue<std::string>(default_value, name)
+            , m_buffer_size(buffer_size)
+        {
+            m_tooltip = tooltip;
+            m_buffer.resize(m_buffer_size);
+            std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
+        }
+
+        ImGuiString(const std::string& default_value, const StringType& name, const StringType& tooltip = STR(""), size_t buffer_size = 256)
+            : ImGuiValue<std::string>(default_value, name)
+            , m_buffer_size(buffer_size)
+        {
+            m_tooltip = to_string(tooltip);
+            m_buffer.resize(m_buffer_size);
+            std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // Update buffer with working value
+            const std::string& working_val = get_working_value();
+            std::fill(m_buffer.begin(), m_buffer.end(), 0);
+            std::copy(working_val.begin(), working_val.end(), m_buffer.begin());
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), m_buffer.data(), m_buffer_size);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            bool changed = ImGui::InputText(get_display_label(label), m_buffer.data(), m_buffer_size);
+            render_tooltip();
+            if (changed)
+            {
+                std::string new_value = std::string(m_buffer.data());
+                m_pending_value = new_value;
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %s", get_display_label(label), m_value.c_str());
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+    private:
+        size_t m_buffer_size;
+        std::vector<char> m_buffer;
+    };
+
+    // Multi-line string input
+    class ImGuiTextMultiline : public ImGuiValue<std::string>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiTextMultiline>;
+
+        static auto create(const std::string& default_value = "", const std::string& name = "", const std::string& tooltip = "", ImVec2 size = ImVec2(0, 0), size_t buffer_size = 4096)
+        {
+            return std::make_unique<ImGuiTextMultiline>(default_value, name, tooltip, size, buffer_size);
+        }
+
+        static auto create(const std::string& default_value, const StringType& name, const StringType& tooltip = STR(""), ImVec2 size = ImVec2(0, 0), size_t buffer_size = 4096)
+        {
+            return std::make_unique<ImGuiTextMultiline>(default_value, name, tooltip, size, buffer_size);
+        }
+
+        ImGuiTextMultiline(const std::string& default_value = "", const std::string& name = "", const std::string& tooltip = "", ImVec2 size = ImVec2(0, 0), size_t buffer_size = 4096)
+            : ImGuiValue<std::string>(default_value, name)
+            , m_size(size)
+            , m_buffer_size(buffer_size)
+        {
+            m_tooltip = tooltip;
+            m_buffer.resize(m_buffer_size);
+            std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
+        }
+
+        ImGuiTextMultiline(const std::string& default_value, const StringType& name, const StringType& tooltip = STR(""), ImVec2 size = ImVec2(0, 0), size_t buffer_size = 4096)
+            : ImGuiValue<std::string>(default_value, name)
+            , m_size(size)
+            , m_buffer_size(buffer_size)
+        {
+            m_tooltip = to_string(tooltip);
+            m_buffer.resize(m_buffer_size);
+            std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // Update buffer with working value
+            const std::string& working_val = get_working_value();
+            std::fill(m_buffer.begin(), m_buffer.end(), 0);
+            std::copy(working_val.begin(), working_val.end(), m_buffer.begin());
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                ImGui::BeginDisabled();
+                ImGui::InputTextMultiline(get_display_label(label), m_buffer.data(), m_buffer_size, m_size);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            bool changed = ImGui::InputTextMultiline(get_display_label(label), m_buffer.data(), m_buffer_size, m_size);
+            render_tooltip();
+            if (changed)
+            {
+                std::string new_value = std::string(m_buffer.data());
+                m_pending_value = new_value;
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %s", get_display_label(label), m_value.c_str());
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        ImVec2& size() { return m_size; }
+
+    private:
+        ImVec2 m_size;
+        size_t m_buffer_size;
+        std::vector<char> m_buffer;
+    };
+
+    // Color picker (RGB)
+    class ImGuiColor3 : public ImGuiValue<std::array<float, 3>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiColor3>;
+
+        static auto create(float r = 1.0f, float g = 1.0f, float b = 1.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiColor3>(r, g, b, name, tooltip);
+        }
+
+        static auto create(float r, float g, float b, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiColor3>(r, g, b, name, tooltip);
+        }
+
+        ImGuiColor3(float r = 1.0f, float g = 1.0f, float b = 1.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<float, 3>>({r, g, b}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiColor3(float r, float g, float b, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<float, 3>>({r, g, b}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 3> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::ColorEdit3(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            std::array<float, 3>& working_val = get_working_value();
+            bool changed = ImGui::ColorEdit3(get_display_label(label), working_val.data());
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& r() { return m_value[0]; }
+        float& g() { return m_value[1]; }
+        float& b() { return m_value[2]; }
+        
+        // Override to return color as hex string
+        std::string get_as_string() const override
+        {
+            int r = static_cast<int>(m_value[0] * 255.0f);
+            int g = static_cast<int>(m_value[1] * 255.0f);
+            int b = static_cast<int>(m_value[2] * 255.0f);
+            return fmt::format("#{:02X}{:02X}{:02X}", r, g, b);
+        }
+    };
+
+    // Color picker (RGBA)
+    class ImGuiColor4 : public ImGuiValue<std::array<float, 4>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiColor4>;
+
+        static auto create(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiColor4>(r, g, b, a, name, tooltip);
+        }
+
+        static auto create(float r, float g, float b, float a, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiColor4>(r, g, b, a, name, tooltip);
+        }
+
+        ImGuiColor4(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<float, 4>>({r, g, b, a}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiColor4(float r, float g, float b, float a, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<float, 4>>({r, g, b, a}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 4> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::ColorEdit4(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            std::array<float, 4>& working_val = get_working_value();
+            bool changed = ImGui::ColorEdit4(get_display_label(label), working_val.data());
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.3f, %.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2], m_value[3]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& r() { return m_value[0]; }
+        float& g() { return m_value[1]; }
+        float& b() { return m_value[2]; }
+        float& a() { return m_value[3]; }
+        
+        // Override to return color as hex string with alpha
+        std::string get_as_string() const override
+        {
+            int r = static_cast<int>(m_value[0] * 255.0f);
+            int g = static_cast<int>(m_value[1] * 255.0f);
+            int b = static_cast<int>(m_value[2] * 255.0f);
+            int a = static_cast<int>(m_value[3] * 255.0f);
+            return fmt::format("#{:02X}{:02X}{:02X}{:02X}", r, g, b, a);
+        }
+    };
+
+    // Vector2 input
+    class ImGuiVector2 : public ImGuiValue<std::array<float, 2>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiVector2>;
+
+        static auto create(float x = 0.0f, float y = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiVector2>(x, y, name, tooltip);
+        }
+
+        static auto create(float x, float y, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiVector2>(x, y, name, tooltip);
+        }
+
+        ImGuiVector2(float x = 0.0f, float y = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<float, 2>>({x, y}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiVector2(float x, float y, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<float, 2>>({x, y}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 2> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputFloat2(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            std::array<float, 2>& working_val = get_working_value();
+            bool changed = ImGui::InputFloat2(get_display_label(label), working_val.data());
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.3f, %.3f)", get_display_label(label), m_value[0], m_value[1]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& x() { return m_value[0]; }
+        float& y() { return m_value[1]; }
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {})", m_value[0], m_value[1]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y)" or "x, y"
+            std::array<float, 2> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
+            {
+                set_value_internal(parsed_values);
+            }
+            // else: Invalid format, ignore
+        }
+    };
+
+    // Vector3 input
+    class ImGuiVector3 : public ImGuiValue<std::array<float, 3>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiVector3>;
+
+        static auto create(float x = 0.0f, float y = 0.0f, float z = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiVector3>(x, y, z, name, tooltip);
+        }
+
+        static auto create(float x, float y, float z, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiVector3>(x, y, z, name, tooltip);
+        }
+
+        ImGuiVector3(float x = 0.0f, float y = 0.0f, float z = 0.0f, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<float, 3>>({x, y, z}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiVector3(float x, float y, float z, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<float, 3>>({x, y, z}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 3> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputFloat3(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            std::array<float, 3>& working_val = get_working_value();
+            bool changed = ImGui::InputFloat3(get_display_label(label), working_val.data());
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {}, {})", m_value[0], m_value[1], m_value[2]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y, z)" or "x, y, z"
+            std::array<float, 3> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
+            {
+                set_value_internal(parsed_values);
+            }
+            // else: Invalid format, ignore
+        }
+
+        float& x() { return m_value[0]; }
+        float& y() { return m_value[1]; }
+        float& z() { return m_value[2]; }
+    };
+
+    // Drag float
+    class ImGuiDragFloat : public ImGuiValue<float>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDragFloat>;
+
+        static auto create(float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, float min = 0.0f, float max = 0.0f)
+        {
+            return std::make_unique<ImGuiDragFloat>(default_value, name, tooltip, speed, min, max);
+        }
+
+        static auto create(float default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, float min = 0.0f, float max = 0.0f)
+        {
+            return std::make_unique<ImGuiDragFloat>(default_value, name, tooltip, speed, min, max);
+        }
+
+        ImGuiDragFloat(float default_value = 0.0f, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, float min = 0.0f, float max = 0.0f)
+            : ImGuiValue<float>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDragFloat(float default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, float min = 0.0f, float max = 0.0f)
+            : ImGuiValue<float>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::DragFloat(get_display_label(label), &display_val, m_speed, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            float& working_val = get_working_value();
+            bool changed = ImGui::DragFloat(get_display_label(label), &working_val, m_speed, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.3f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& speed() { return m_speed; }
+        float& min() { return m_min; }
+        float& max() { return m_max; }
+
+    private:
+        float m_speed;
+        float m_min;
+        float m_max;
+    };
+
+    // Drag double (uses float drag internally but stores as double)
+    class ImGuiDragDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDragDouble>;
+
+        static auto create(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, double min = 0.0, double max = 0.0, bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiDragDouble>(default_value, name, tooltip, speed, min, max, show_precision_input);
+        }
+
+        static auto create(double default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, double min = 0.0, double max = 0.0, bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiDragDouble>(default_value, name, tooltip, speed, min, max, show_precision_input);
+        }
+
+        ImGuiDragDouble(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, double min = 0.0, double max = 0.0, bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDragDouble(double default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, double min = 0.0, double max = 0.0, bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = static_cast<float>(get_working_value());
+                ImGui::BeginDisabled();
+                ImGui::DragFloat(get_display_label(label), &display_val, m_speed, static_cast<float>(m_min), static_cast<float>(m_max));
+                if (m_show_precision_input)
+                {
+                    ImGui::SameLine();
+                    double precise_val = get_working_value();
+                    ImGui::InputDouble("##precise", &precise_val);
+                }
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use float drag internally
+            ImGui::PushID(this);
+            bool changed = false;
+            double& working_val = get_working_value();
+            
+            // Drag
+            float float_val = static_cast<float>(working_val);
+            if (ImGui::DragFloat(get_display_label(label), &float_val, m_speed, 
+                                static_cast<float>(m_min), static_cast<float>(m_max)))
+            {
+                working_val = static_cast<double>(float_val);
+                changed = true;
+            }
+            
+            // Optional precision input
+            if (m_show_precision_input)
+            {
+                ImGui::SameLine();
+                if (ImGui::InputDouble("##precise", &working_val))
+                {
+                    if (m_min != 0.0 || m_max != 0.0)
+                    {
+                        working_val = std::clamp(working_val, m_min, m_max);
+                    }
+                    changed = true;
+                }
+            }
+            
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            
+            render_tooltip();
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& speed() { return m_speed; }
+        double& min() { return m_min; }
+        double& max() { return m_max; }
+        void show_precision_input(bool show) { m_show_precision_input = show; }
+
+    private:
+        float m_speed;
+        double m_min;
+        double m_max;
+        bool m_show_precision_input;
+    };
+
+    // Drag int
+    class ImGuiDragInt : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDragInt>;
+
+        static auto create(int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, int32_t min = 0, int32_t max = 0)
+        {
+            return std::make_unique<ImGuiDragInt>(default_value, name, tooltip, speed, min, max);
+        }
+
+        static auto create(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, int32_t min = 0, int32_t max = 0)
+        {
+            return std::make_unique<ImGuiDragInt>(default_value, name, tooltip, speed, min, max);
+        }
+
+        ImGuiDragInt(int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, int32_t min = 0, int32_t max = 0)
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDragInt(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, int32_t min = 0, int32_t max = 0)
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::DragInt(get_display_label(label), &display_val, m_speed, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            int32_t& working_val = get_working_value();
+            bool changed = ImGui::DragInt(get_display_label(label), &working_val, m_speed, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %d", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& speed() { return m_speed; }
+        int32_t& min() { return m_min; }
+        int32_t& max() { return m_max; }
+
+    private:
+        float m_speed;
+        int32_t m_min;
+        int32_t m_max;
+    };
+
+    // Vector2 double input (uses individual double fields)
+    class ImGuiVector2Double : public ImGuiValue<std::array<double, 2>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiVector2Double>;
+
+        static auto create(double x = 0.0, double y = 0.0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiVector2Double>(x, y, name, tooltip);
+        }
+
+        static auto create(double x, double y, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiVector2Double>(x, y, name, tooltip);
+        }
+
+        ImGuiVector2Double(double x = 0.0, double y = 0.0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<double, 2>>({x, y}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiVector2Double(double x, double y, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<double, 2>>({x, y}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            ImGui::Text("%s", get_display_label(label));
+            render_tooltip();
+            
+            bool changed = false;
+            std::array<double, 2>& working_val = get_working_value();
+            
+            // X component
+            ImGui::PushID(0);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f);
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputDouble("X", &working_val[0]);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::InputDouble("X", &working_val[0]))
+                {
+                    changed = true;
+                }
+            }
+            ImGui::PopID();
+            
+            ImGui::SameLine();
+            
+            // Y component
+            ImGui::PushID(1);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputDouble("Y", &working_val[1]);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::InputDouble("Y", &working_val[1]))
+                {
+                    changed = true;
+                }
+            }
+            ImGui::PopID();
+            
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.6f, %.6f)", get_display_label(label), m_value[0], m_value[1]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {})", m_value[0], m_value[1]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y)" or "x, y"
+            std::array<double, 2> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
+            {
+                set_value_internal(parsed_values);
+            }
+            // else: Invalid format, ignore
+        }
+
+        double& x() { return m_value[0]; }
+        double& y() { return m_value[1]; }
+    };
+
+    // Vector3 double input (uses individual double fields)
+    class ImGuiVector3Double : public ImGuiValue<std::array<double, 3>>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiVector3Double>;
+
+        static auto create(double x = 0.0, double y = 0.0, double z = 0.0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiVector3Double>(x, y, z, name, tooltip);
+        }
+
+        static auto create(double x, double y, double z, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiVector3Double>(x, y, z, name, tooltip);
+        }
+
+        ImGuiVector3Double(double x = 0.0, double y = 0.0, double z = 0.0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<std::array<double, 3>>({x, y, z}, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiVector3Double(double x, double y, double z, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<std::array<double, 3>>({x, y, z}, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            ImGui::Text("%s", get_display_label(label));
+            render_tooltip();
+            
+            bool changed = false;
+            std::array<double, 3>& working_val = get_working_value();
+            
+            const float item_width = ImGui::GetContentRegionAvail().x / 3.0f - ImGui::GetStyle().ItemSpacing.x * 2.0f / 3.0f;
+            
+            // X component
+            ImGui::PushID(0);
+            ImGui::SetNextItemWidth(item_width);
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputDouble("X", &working_val[0]);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::InputDouble("X", &working_val[0]))
+                {
+                    changed = true;
+                }
+            }
+            ImGui::PopID();
+            
+            ImGui::SameLine();
+            
+            // Y component
+            ImGui::PushID(1);
+            ImGui::SetNextItemWidth(item_width);
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputDouble("Y", &working_val[1]);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::InputDouble("Y", &working_val[1]))
+                {
+                    changed = true;
+                }
+            }
+            ImGui::PopID();
+            
+            ImGui::SameLine();
+            
+            // Z component
+            ImGui::PushID(2);
+            ImGui::SetNextItemWidth(item_width);
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputDouble("Z", &working_val[2]);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::InputDouble("Z", &working_val[2]))
+                {
+                    changed = true;
+                }
+            }
+            ImGui::PopID();
+            
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: (%.6f, %.6f, %.6f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {}, {})", m_value[0], m_value[1], m_value[2]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y, z)" or "x, y, z"
+            std::array<double, 3> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
+            {
+                set_value_internal(parsed_values);
+            }
+            // else: Invalid format, ignore
+        }
+
+        double& x() { return m_value[0]; }
+        double& y() { return m_value[1]; }
+        double& z() { return m_value[2]; }
+    };
+
+    // Radio button group
+    class ImGuiRadioButton : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiRadioButton>;
+
+        static auto create(const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiRadioButton>(options, default_value, name, tooltip);
+        }
+
+        static auto create(const std::vector<std::string>& options, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiRadioButton>(options, default_value, name, tooltip);
+        }
+
+        ImGuiRadioButton(const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_options(options)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiRadioButton(const std::vector<std::string>& options, int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int32_t>(default_value, name)
+            , m_options(options)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            ImGui::Text("%s", get_display_label(label));
+            render_tooltip();
+            
+            bool changed = false;
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                int32_t display_val = get_working_value();
+                for (size_t i = 0; i < m_options.size(); ++i)
+                {
+                    ImGui::RadioButton(m_options[i].c_str(), &display_val, static_cast<int32_t>(i));
+                    if (i < m_options.size() - 1)
+                    {
+                        ImGui::SameLine();
+                    }
+                }
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                int32_t& working_val = get_working_value();
+                for (size_t i = 0; i < m_options.size(); ++i)
+                {
+                    if (ImGui::RadioButton(m_options[i].c_str(), &working_val, static_cast<int32_t>(i)))
+                    {
+                        changed = true;
+                        m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
+                        fire_change_callback();
+                    }
+                    if (i < m_options.size() - 1)
+                    {
+                        ImGui::SameLine();
+                    }
+                }
+            }
+            
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            if (m_value >= 0 && m_value < static_cast<int32_t>(m_options.size()))
+            {
+                ImGui::Text("%s: %s", get_display_label(label), m_options[m_value].c_str());
+            }
+            else
+            {
+                ImGui::Text("%s: Invalid", get_display_label(label));
+            }
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        const std::vector<std::string>& options() const { return m_options; }
+        
+        // Override to return the selected option string
+        std::string get_as_string() const override
+        {
+            if (m_value >= 0 && m_value < static_cast<int32_t>(m_options.size()))
+            {
+                return m_options[m_value];
+            }
+            return "Invalid";
+        }
+
+    private:
+        std::vector<std::string> m_options;
+    };
+
+    // Key binding selector
+    class ImGuiKey : public ImGuiValue<int32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiKey>;
+
+        static constexpr int32_t UNBOUND_KEY = -1;
+
+        static auto create(int32_t default_value = UNBOUND_KEY, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiKey>(default_value, name, tooltip);
+        }
+
+        static auto create(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiKey>(default_value, name, tooltip);
+        }
+
+        ImGuiKey(int32_t default_value = UNBOUND_KEY, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int32_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiKey(int32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int32_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::Button(get_display_label(label));
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::Button(get_display_label(label)))
+                {
+                    m_waiting_for_key = true;
+                }
+            }
+            render_tooltip();
+            
+            ImGui::SameLine();
+            
+            bool changed = false;
+            int32_t& working_val = get_working_value();
+            
+            if (m_waiting_for_key && m_edit_mode == EditMode::Editable)
+            {
+                ImGui::Text("Press any key...");
+                
+                // Check for key press
+                for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key)
+                {
+                    if (ImGui::IsKeyPressed(static_cast<::ImGuiKey>(key)))
+                    {
+                        // Escape or Backspace clears the binding
+                        if (key == ImGuiKey_Escape || key == ImGuiKey_Backspace)
+                        {
+                            working_val = UNBOUND_KEY;
+                        }
+                        else
+                        {
+                            working_val = key;
+                        }
+                        m_waiting_for_key = false;
+                        changed = true;
+                        
+                        m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
+                        fire_change_callback();
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (working_val != UNBOUND_KEY)
+                {
+                    ImGui::Text("%s", ImGui::GetKeyName(static_cast<::ImGuiKey>(working_val)));
+                }
+                else
+                {
+                    ImGui::Text("Not bound");
+                }
+            }
+            
+            render_context_menu();
+            ImGui::PopID();
+            
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            if (m_value != UNBOUND_KEY)
+            {
+                ImGui::Text("%s: %s", get_display_label(label), ImGui::GetKeyName(static_cast<::ImGuiKey>(m_value)));
+            }
+            else
+            {
+                ImGui::Text("%s: Not bound", get_display_label(label));
+            }
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        bool is_key_down() const
+        {
+            if (m_value == UNBOUND_KEY) return false;
+            return ImGui::IsKeyDown(static_cast<::ImGuiKey>(m_value));
+        }
+
+        bool is_key_pressed() const
+        {
+            if (m_value == UNBOUND_KEY) return false;
+            return ImGui::IsKeyPressed(static_cast<::ImGuiKey>(m_value));
+        }
+        
+        // Override to return the key name
+        std::string get_as_string() const override
+        {
+            if (m_value != UNBOUND_KEY)
+            {
+                return ImGui::GetKeyName(static_cast<::ImGuiKey>(m_value));
+            }
+            return "Not bound";
+        }
+
+    private:
+        bool m_waiting_for_key = false;
+    };
+
+    // Flags editor (checkboxes for bit flags)
+    template<typename FlagType = uint32_t>
+    class ImGuiFlags : public ImGuiValue<FlagType>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiFlags<FlagType>>;
+
+        struct FlagInfo
+        {
+            std::string name;
+            FlagType value;
+        };
+
+        static auto create(const std::vector<FlagInfo>& flags, FlagType default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiFlags<FlagType>>(flags, default_value, name, tooltip);
+        }
+
+        ImGuiFlags(const std::vector<FlagInfo>& flags, FlagType default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<FlagType>(default_value, name)
+            , m_flags(flags)
+        {
+            this->m_tooltip = tooltip;
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (this->m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            ImGui::Text("%s", this->get_display_label(label));
+            this->render_tooltip();
+            
+            bool changed = false;
+            
+            if (this->m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                FlagType display_val = this->get_working_value();
+                for (const auto& flag : m_flags)
+                {
+                    bool checked = (display_val & flag.value) != 0;
+                    ImGui::Checkbox(flag.name.c_str(), &checked);
+                }
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                FlagType& working_val = this->get_working_value();
+                for (const auto& flag : m_flags)
+                {
+                    bool checked = (working_val & flag.value) != 0;
+                    if (ImGui::Checkbox(flag.name.c_str(), &checked))
+                    {
+                        if (checked)
+                        {
+                            working_val |= flag.value;
+                        }
+                        else
+                        {
+                            working_val &= ~flag.value;
+                        }
+                        changed = true;
+                    }
+                }
+            }
+            
+            if (changed)
+            {
+                this->m_is_dirty = true;
+                this->m_last_value_source = ValueSource::User;
+                this->fire_change_callback();
+            }
+            
+            this->render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: 0x%X", this->get_display_label(label), this->m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        const std::vector<FlagInfo>& flags() const { return m_flags; }
+        
+        // Override to return readable flag names
+        std::string get_as_string() const override
+        {
+            std::string result;
+            bool first = true;
+            for (const auto& flag : m_flags)
+            {
+                if ((this->m_value & flag.value) != 0)
+                {
+                    if (!first) result += " | ";
+                    result += flag.name;
+                    first = false;
+                }
+            }
+            if (result.empty())
+            {
+                result = "None";
+            }
+            return result;
+        }
+
+    private:
+        std::vector<FlagInfo> m_flags;
+    };
+
+    // Type-safe enum selector
+    template<typename EnumType>
+    class ImGuiEnum : public ImGuiValue<EnumType>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiEnum<EnumType>>;
+
+        struct EnumOption
+        {
+            std::string name;
+            EnumType value;
+        };
+
+        static auto create(const std::vector<EnumOption>& options, EnumType default_value, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiEnum<EnumType>>(options, default_value, name, tooltip);
+        }
+
+        ImGuiEnum(const std::vector<EnumOption>& options, EnumType default_value, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<EnumType>(default_value, name)
+            , m_options(options)
+        {
+            this->m_tooltip = tooltip;
+            update_option_pointers();
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (this->m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            ImGui::PushID(this);
+            
+            int current_index = find_current_index();
+            bool changed = false;
+            
+            if (this->m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::Combo(this->get_display_label(label), &current_index, m_option_pointers.data(), static_cast<int>(m_option_pointers.size()));
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                if (ImGui::Combo(this->get_display_label(label), &current_index, m_option_pointers.data(), static_cast<int>(m_option_pointers.size())))
+                {
+                    if (current_index >= 0 && current_index < static_cast<int>(m_options.size()))
+                    {
+                        EnumType& working_val = this->get_working_value();
+                        working_val = m_options[current_index].value;
+                        changed = true;
+                        
+                        this->m_is_dirty = true;
+                        this->m_last_value_source = ValueSource::User;
+                        this->fire_change_callback();
+                    }
+                }
+            }
+            this->render_tooltip();
+            
+            this->render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            int index = find_current_index();
+            if (index >= 0 && index < static_cast<int>(m_options.size()))
+            {
+                ImGui::Text("%s: %s", this->get_display_label(label), m_options[index].name.c_str());
+            }
+            else
+            {
+                ImGui::Text("%s: Unknown", this->get_display_label(label));
+            }
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        const std::vector<EnumOption>& options() const { return m_options; }
+        
+        // Override to return the enum name
+        std::string get_as_string() const override
+        {
+            int index = find_current_index();
+            if (index >= 0 && index < static_cast<int>(m_options.size()))
+            {
+                return m_options[index].name;
+            }
+            return "Unknown";
+        }
+
+    private:
+        int find_current_index() const
+        {
+            const EnumType& working_val = this->get_working_value();
+            for (size_t i = 0; i < m_options.size(); ++i)
+            {
+                if (m_options[i].value == working_val)
+                {
+                    return static_cast<int>(i);
+                }
+            }
+            return -1;
+        }
+
+        void update_option_pointers()
+        {
+            m_option_pointers.clear();
+            for (const auto& option : m_options)
+            {
+                m_option_pointers.push_back(option.name.c_str());
+            }
+        }
+
+        std::vector<EnumOption> m_options;
+        std::vector<const char*> m_option_pointers;
+    };
+
+    // Template for creating monitored values that track external changes
+    template<typename T, typename ValueType>
+    class ImGuiMonitoredValue : public ValueType
+    {
+    public:
+        using ValueGetter = std::function<T()>;
+        using ValueSetter = std::function<void(const T&)>;
+        
+        ImGuiMonitoredValue(ValueGetter getter, ValueSetter setter, T default_value, const std::string& name = "")
+            : ValueType(default_value, name)
+            , m_getter(getter)
+            , m_setter(setter)
+        {
+            this->set_externally_controlled(true);
+            this->set_external_value(getter());
+        }
+        
+        // Variadic template constructor that forwards all arguments to ValueType
+        template<typename... Args>
+        ImGuiMonitoredValue(ValueGetter getter, ValueSetter setter, Args&&... args)
+            : ValueType(std::forward<Args>(args)...)
+            , m_getter(getter)
+            , m_setter(setter)
+        {
+            this->set_externally_controlled(true);
+            this->set_external_value(getter());
+        }
+        
+        // Update from external source
+        void refresh()
+        {
+            if (m_getter)
+            {
+                T current_external = m_getter();
+                if (current_external != this->external_value())
+                {
+                    this->set_external_value(current_external);
+                }
+            }
+        }
+        
+        // Override apply to also update external
+        void apply_changes() override
+        {
+            bool had_changes = this->has_pending_changes();
+            ValueType::apply_changes();
+            if (m_setter && had_changes)
+            {
+                m_setter(this->value());
+                // Update external value to match what we just set
+                this->set_external_value(this->value());
+            }
+        }
+        
+        // Legacy method for compatibility
+        void apply_changes_with_external()
+        {
+            apply_changes();
+        }
+        
+    private:
+        ValueGetter m_getter;
+        ValueSetter m_setter;
+    };
+
+    // Helper factory functions for monitored values
+    template<typename T>
+    inline auto make_monitored_float(std::function<float()> getter, std::function<void(float)> setter, 
+                                    float default_value = 0.0f, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_double(std::function<double()> getter, std::function<void(double)> setter, 
+                                     double default_value = 0.0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_bool(std::function<bool()> getter, std::function<void(bool)> setter, 
+                                   bool default_value = false, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<bool, ImGuiToggle>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_int32(std::function<int32_t()> getter, std::function<void(int32_t)> setter, 
+                                    int32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiInt32>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_string(std::function<std::string()> getter, std::function<void(const std::string&)> setter, 
+                                     const std::string& default_value = "", const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_slider(std::function<float()> getter, std::function<void(float)> setter,
+                                     float min, float max, float default_value = 0.0f, const std::string& name = "")
+    {
+        // Now we can properly create a slider with min/max using the variadic constructor
+        return std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(getter, setter, min, max, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_int(std::function<int32_t()> getter, std::function<void(int32_t)> setter,
+                                         int32_t min, int32_t max, int32_t default_value = 0, const std::string& name = "")
+    {
+        // Now we can properly create an int slider with min/max using the variadic constructor
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(getter, setter, min, max, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_double(std::function<double()> getter, std::function<void(double)> setter,
+                                            double min, double max, double default_value = 0.0, const std::string& name = "",
+                                            bool show_precision_input = false)
+    {
+        return std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(getter, setter, min, max, default_value, name, "", show_precision_input);
+    }
+    
+    inline auto make_monitored_text_multiline(std::function<std::string()> getter, std::function<void(const std::string&)> setter,
+                                             const std::string& default_value = "", const std::string& name = "",
+                                             const ImVec2& size = ImVec2(0, 0), const std::string& tooltip = "", size_t buffer_size = 4096)
+    {
+        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiTextMultiline>>(getter, setter, default_value, name, tooltip, size, buffer_size);
+    }
+    
+    template<typename EnumType>
+    inline auto make_monitored_enum(std::function<EnumType()> getter, std::function<void(EnumType)> setter,
+                                   const std::vector<std::pair<EnumType, std::string>>& options,
+                                   EnumType default_value, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<EnumType, ImGuiEnum<EnumType>>>(getter, setter, options, default_value, name);
+    }
+    
+    inline auto make_monitored_combo(std::function<int32_t()> getter, std::function<void(int32_t)> setter,
+                                    const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiCombo>>(getter, setter, options, default_value, name);
+    }
+    
+    // Small unsigned integer monitored value helpers (these use input fields)
+    inline auto make_monitored_uint8(std::function<uint8_t()> getter, std::function<void(uint8_t)> setter, 
+                                    uint8_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiUInt8>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint16(std::function<uint16_t()> getter, std::function<void(uint16_t)> setter, 
+                                     uint16_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiUInt16>>(getter, setter, default_value, name);
+    }
+    
+    // Unsigned slider helpers
+    inline auto make_monitored_slider_uint8(std::function<uint8_t()> getter, std::function<void(uint8_t)> setter,
+                                           uint8_t min, uint8_t max, uint8_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiSliderUInt8>>(getter, setter, min, max, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_uint16(std::function<uint16_t()> getter, std::function<void(uint16_t)> setter,
+                                            uint16_t min, uint16_t max, uint16_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(getter, setter, min, max, default_value, name);
+    }
+    
+    // Large integer helpers
+    inline auto make_monitored_int64(std::function<int64_t()> getter, std::function<void(int64_t)> setter, 
+                                    int64_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<int64_t, ImGuiInt64>>(getter, setter, default_value, name);
+    }
+    
+    // For uint32 and uint64, we use the native ImGuiUInt32/64 classes
+    inline auto make_monitored_uint32(std::function<uint32_t()> getter, std::function<void(uint32_t)> setter, 
+                                     uint32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint32_t, ImGuiUInt32>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint64(std::function<uint64_t()> getter, std::function<void(uint64_t)> setter, 
+                                     uint64_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint64_t, ImGuiUInt64>>(getter, setter, default_value, name);
+    }
+
+    // Container for managing multiple ImGui values with advanced features
+    class ImGuiValueContainer
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiValueContainer>;
+        using ContainerChangedCallback = std::function<void(const std::string& value_id)>;
+        using ContainerAppliedCallback = std::function<void()>;
+
+        ImGuiValueContainer(const std::string& title = "Settings")
+            : m_title(title)
+            , m_show_advanced(false)
+            , m_has_changes(false)
+            , m_visible(true)
+            , m_unique_id(generate_unique_id())
+            , m_global_edit_mode(EditMode::Editable)
+            , m_apply_global_edit_mode(false)
+            , m_show_edit_mode_control(false)
+        {
+        }
+
+        ImGuiValueContainer(const StringType& title)
+            : m_title(to_string(title))
+            , m_show_advanced(false)
+            , m_has_changes(false)
+            , m_visible(true)
+            , m_unique_id(generate_unique_id())
+            , m_global_edit_mode(EditMode::Editable)
+            , m_apply_global_edit_mode(false)
+            , m_show_edit_mode_control(false)
+        {
+        }
+
+        // Add a value to the container
+        template<typename T>
+        T* add_value(const std::string& id, std::unique_ptr<T> value)
+        {
+            static_assert(std::is_base_of_v<IImGuiValue, T>, "T must derive from IImGuiValue");
+            T* ptr = value.get();
+            
+            // Apply global edit mode to new value if enabled
+            if (m_apply_global_edit_mode)
+            {
+                value->set_edit_mode(m_global_edit_mode);
+            }
+            
+            // Set default immediate apply based on container mode
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer)
+            {
+                value->set_immediate_apply(m_container_immediate_apply);
+            }
+            else if (m_immediate_apply_mode == ImmediateApplyMode::ForceOff)
+            {
+                value->set_immediate_apply(false);
+            }
+            // For RespectIndividual, keep whatever the value was created with
+            
+            // Wire up container-level change notification with immediate apply logic
+            update_value_callback(id, ptr);
+            
+            m_values[id] = std::move(value);
+            m_value_order.push_back(id);
+            return ptr;
+        }
+
+        // Get a value by ID
+        template<typename T>
+        T* get_value(const std::string& id)
+        {
+            auto it = m_values.find(id);
+            if (it != m_values.end())
+            {
+                return dynamic_cast<T*>(it->second.get());
+            }
+            return nullptr;
+        }
+
+        // Draw all values
+        void draw(bool show_built_in_apply_button = true)
+        {
+            if (!m_visible) return;
+            
+            ImGui::PushID(m_unique_id);
+            
+            if (!m_title.empty())
+            {
+                ImGui::Text("%s", m_title.c_str());
+                ImGui::Separator();
+            }
+
+            // Edit mode control checkbox
+            if (m_show_edit_mode_control)
+            {
+                bool is_editable = m_global_edit_mode == EditMode::Editable;
+                if (ImGui::Checkbox("Allow Editing", &is_editable))
+                {
+                    set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
+                }
+                ImGui::Spacing();
+            }
+
+            // Advanced toggle
+            if (has_advanced_values())
+            {
+                ImGui::Checkbox("Show Advanced Settings", &m_show_advanced);
+                ImGui::Spacing();
+            }
+
+            // Draw values in order
+            for (const auto& id : m_value_order)
+            {
+                auto& value = m_values[id];
+                
+                // Skip advanced values if not showing
+                if (value->is_advanced() && !m_show_advanced)
+                {
+                    continue;
+                }
+
+                // Apply global edit mode if set
+                if (m_apply_global_edit_mode)
+                {
+                    value->set_edit_mode(m_global_edit_mode);
+                }
+
+                // Visual indicator for pending changes
+                if (value->has_pending_changes())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+                }
+
+                if (value->draw())
+                {
+                    m_has_changes = true;
+                }
+
+                if (value->has_pending_changes())
+                {
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("*");
+                }
+            }
+
+            // Apply/Revert buttons for deferred updates
+            // Show buttons if there are pending changes and we're not forcing immediate apply for all values
+            bool show_apply_buttons = show_built_in_apply_button && has_pending_changes();
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer && m_container_immediate_apply)
+            {
+                show_apply_buttons = false; // Don't show if forcing immediate apply
+            }
+            
+            if (show_apply_buttons)
+            {
+                ImGui::Separator();
+                ImGui::Spacing();
+                
+                if (ImGui::Button("Apply All"))
+                {
+                    apply_all();
+                }
+                
+                ImGui::SameLine();
+                
+                if (ImGui::Button("Revert All"))
+                {
+                    revert_all();
+                }
+            }
+            
+            ImGui::PopID();
+        }
+        
+        // Draw values without built-in apply button
+        void draw_without_apply_button()
+        {
+            draw(false);
+        }
+        
+        // Draw a custom apply button that's bound to this container
+        bool draw_apply_button(const char* label = "Apply", bool show_only_if_changes = true)
+        {
+            if (show_only_if_changes && !has_pending_changes())
+            {
+                return false;
+            }
+            
+            if (ImGui::Button(label))
+            {
+                apply_all();
+                return true;
+            }
+            return false;
+        }
+        
+        // Draw a custom revert button
+        bool draw_revert_button(const char* label = "Revert", bool show_only_if_changes = true)
+        {
+            if (show_only_if_changes && !has_pending_changes())
+            {
+                return false;
+            }
+            
+            if (ImGui::Button(label))
+            {
+                revert_all();
+                return true;
+            }
+            return false;
+        }
+
+        // Check if any values have pending changes
+        bool has_pending_changes() const
+        {
+            for (const auto& [id, value] : m_values)
+            {
+                if (value->has_pending_changes())
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Apply all pending changes
+        void apply_all()
+        {
+            for (auto& [id, value] : m_values)
+            {
+                value->apply_changes();
+            }
+            m_has_changes = false;
+            
+            // Fire container-level callback
+            if (m_on_applied)
+            {
+                m_on_applied();
+            }
+        }
+
+        // Revert all pending changes
+        void revert_all()
+        {
+            for (auto& [id, value] : m_values)
+            {
+                value->revert_changes();
+            }
+            m_has_changes = false;
+        }
+
+        // Check if container has any advanced values
+        bool has_advanced_values() const
+        {
+            for (const auto& [id, value] : m_values)
+            {
+                if (value->is_advanced())
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+
+        // Convenience methods for creating and adding values
+        ImGuiToggle* add_toggle(const std::string& id, bool default_value = false, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiToggle::create(default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiFloat* add_float(const std::string& id, float default_value = 0.0f, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiFloat::create(default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiDouble* add_double(const std::string& id, double default_value = 0.0, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiDouble::create(default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiSlider* add_slider(const std::string& id, float min, float max, float default_value, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiSlider::create(min, max, default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiInt32* add_int(const std::string& id, int32_t default_value = 0, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiInt32::create(default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiString* add_string(const std::string& id, const std::string& default_value = "", const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiString::create(default_value, label.empty() ? id : label, tooltip, 256));
+        }
+
+        template<typename EnumType>
+        ImGuiEnum<EnumType>* add_enum(const std::string& id, 
+                                      const std::vector<typename ImGuiEnum<EnumType>::EnumOption>& options, 
+                                      EnumType default_value, 
+                                      const std::string& label = "",
+                                      const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiEnum<EnumType>::create(options, default_value, label.empty() ? id : label, tooltip));
+        }
+
+        // Visibility control for tab systems
+        bool is_visible() const { return m_visible; }
+        void set_visible(bool visible) { m_visible = visible; }
+        
+        // Get unique ID for ImGui stacking
+        int get_unique_id() const { return m_unique_id; }
+        
+        // Get/set title (useful for dynamic tab names)
+        const std::string& get_title() const { return m_title; }
+        void set_title(const std::string& title) { m_title = title; }
+        
+        // Check if container has any values
+        bool empty() const { return m_values.empty(); }
+        size_t size() const { return m_values.size(); }
+        
+        // Remove a value
+        void remove_value(const std::string& id)
+        {
+            m_values.erase(id);
+            m_value_order.erase(
+                std::remove(m_value_order.begin(), m_value_order.end(), id),
+                m_value_order.end()
+            );
+        }
+        
+        // Clear all values
+        void clear()
+        {
+            m_values.clear();
+            m_value_order.clear();
+            m_has_changes = false;
+        }
+        
+        // Container-level callbacks
+        void set_on_value_changed_callback(ContainerChangedCallback callback) { m_on_value_changed = callback; }
+        void set_on_applied_callback(ContainerAppliedCallback callback) { m_on_applied = callback; }
+        
+        // Global edit mode control
+        void set_global_edit_mode(EditMode mode)
+        {
+            m_global_edit_mode = mode;
+            m_apply_global_edit_mode = true;
+            
+            // Apply to all existing values
+            for (auto& [id, value] : m_values)
+            {
+                value->set_edit_mode(mode);
+            }
+        }
+        
+        EditMode get_global_edit_mode() const { return m_global_edit_mode; }
+        
+        // Enable/disable the "Allow Editing" checkbox
+        void show_edit_mode_control(bool show) { m_show_edit_mode_control = show; }
+        
+        // Set immediate apply mode and container default
+        void set_immediate_apply_mode(ImmediateApplyMode mode, bool container_default = false)
+        {
+            m_immediate_apply_mode = mode;
+            m_container_immediate_apply = container_default;
+            
+            // If enabling immediate apply, apply any pending changes
+            if (mode != ImmediateApplyMode::ForceOff && has_pending_changes())
+            {
+                apply_all();
+            }
+            
+            // Update all existing values based on mode
+            update_all_immediate_apply_callbacks();
+        }
+        
+        ImmediateApplyMode get_immediate_apply_mode() const { return m_immediate_apply_mode; }
+        bool is_container_immediate_apply() const { return m_container_immediate_apply; }
+        
+        // Helper to check if a value should apply immediately
+        bool should_apply_immediately(IImGuiValue* value) const
+        {
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceOff)
+                return false;
+            
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer)
+                return m_container_immediate_apply;
+            
+            // RespectIndividual mode
+            return value->is_immediate_apply();
+        }
+        
+        // Update immediate apply callbacks for all values
+        void update_all_immediate_apply_callbacks()
+        {
+            for (auto& [id, value] : m_values)
+            {
+                update_value_callback(id, value.get());
+            }
+        }
+        
+        // Update callback for a single value
+        void update_value_callback(const std::string& id, IImGuiValue* ptr)
+        {
+            ptr->set_on_change_callback([this, id, ptr]() {
+                if (m_on_value_changed)
+                {
+                    m_on_value_changed(id);
+                }
+                
+                // Apply immediately based on mode and settings
+                if (should_apply_immediately(ptr) && ptr->get_edit_mode() == EditMode::Editable)
+                {
+                    ptr->apply_changes();
+                }
+            });
+        }
+        bool is_showing_edit_mode_control() const { return m_show_edit_mode_control; }
+        
+        // Control whether global edit mode is applied to new values
+        void set_apply_global_edit_mode(bool apply) { m_apply_global_edit_mode = apply; }
+        
+        // Convenience methods for common immediate apply scenarios
+        void enable_immediate_apply() 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::ForceContainer, true); 
+        }
+        
+        void disable_immediate_apply() 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::ForceOff); 
+        }
+        
+        void respect_individual_immediate_apply(bool container_default = false) 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::RespectIndividual, container_default); 
+        }
+
+    private:
+        static int generate_unique_id()
+        {
+            static int counter = 0;
+            return ++counter;
+        }
+
+        std::string m_title;
+        std::unordered_map<std::string, IImGuiValue::Ptr> m_values;
+        std::vector<std::string> m_value_order; // Maintains insertion order
+        bool m_show_advanced;
+        bool m_has_changes;
+        bool m_visible;
+        int m_unique_id;
+        EditMode m_global_edit_mode = EditMode::Editable;
+        bool m_apply_global_edit_mode = false;
+        bool m_show_edit_mode_control = false;
+        ImmediateApplyMode m_immediate_apply_mode = ImmediateApplyMode::RespectIndividual;
+        bool m_container_immediate_apply = false;  // Container's default immediate apply setting
+        ContainerChangedCallback m_on_value_changed;
+        ContainerAppliedCallback m_on_applied;
+    };
+
+} // namespace RC::GUI

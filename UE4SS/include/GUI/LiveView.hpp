@@ -10,6 +10,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/UnrealFlags.hpp>
+#include <GUI/ImGuiValueHelpers.hpp>
 
 namespace RC::Unreal
 {
@@ -91,6 +92,8 @@ namespace RC::GUI
         int64_t m_current_enum_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
+        float m_info_panel_top_size{300.0f};    // Top section size
+        float m_info_panel_bottom_size{300.0f}; // Bottom section size 
         UFunctionCallerWidget* m_function_caller_widget{};
         bool m_is_searching_by_name{};
         bool m_search_field_clear_requested{};
@@ -102,6 +105,10 @@ namespace RC::GUI
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
+        
+        // Property editing container
+        std::unique_ptr<ImGuiValueContainer> m_property_container{};
+        UObject* m_property_container_object{}; // Track which object's properties are in the container
 
       public:
         LiveView();
@@ -180,6 +187,55 @@ namespace RC::GUI
                                    bool* tried_to_open_nullptr_object,
                                    bool is_watchable = true,
                                    int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+
+        // Property type specific renderers
+        auto render_struct_property(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   void* container_ptr,
+                                   const std::string& property_name,
+                                   const std::string& property_text,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   int32_t property_offset,
+                                   int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_array_property(FProperty* property,
+                                  ContainerType container_type,
+                                  void* container,
+                                  void* container_ptr,
+                                  const std::string& property_name,
+                                  const std::string& property_text,
+                                  bool* tried_to_open_nullptr_object,
+                                  int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_enum_property(FProperty* property,
+                                 void* container_ptr,
+                                 const std::string& property_text) -> void;
+        
+        auto render_bool_property(FProperty* property,
+                                 ContainerType container_type,
+                                 void* container,
+                                 void* container_ptr,
+                                 const std::string& property_name,
+                                 const std::string& property_text) -> void;
+        
+        auto render_default_property(FProperty* property,
+                                    const std::string& property_text) -> void;
+        
+        // Unified numeric property renderer
+        auto render_numeric_property(FProperty* property,
+                                    ContainerType container_type,
+                                    void* container,
+                                    void* container_ptr,
+                                    const std::string& property_name,
+                                    const std::string& property_text) -> void;
+        
+        // Type specific renderers
+        auto render_type_specific(UObject* object) -> bool;
+        
+        // Shared helper for property tooltip
+        static auto render_property_details_tooltip(FProperty* property) -> void;
 
       private:
         auto collapse_all_except(void* except_id) -> void;

@@ -13,6 +13,7 @@
 #include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
+#include <GUI/ImGuiValueHelpers.hpp>
 #include <GUI/LiveView.hpp>
 #include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
 #include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
@@ -516,8 +517,12 @@ namespace RC::GUI
     static auto add_watch(const LiveView::WatchIdentifier& watch_id, UObject* object, FProperty* property) -> LiveView::Watch&
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        
+        // Use GetPathName to get the full hierarchical path of the object
+        auto object_path = object->GetPathName();
+        
         auto& watch = *LiveView::s_watches.emplace_back(
-                std::make_unique<LiveView::Watch>(object->GetOuterPrivate()->GetName() + STR(".") + object->GetName(), property->GetName()));
+                std::make_unique<LiveView::Watch>(std::move(object_path), property->GetName()));
         watch.enabled = true;
         watch.property = property;
         watch.container = object;
@@ -537,8 +542,12 @@ namespace RC::GUI
     static auto add_watch(const LiveView::WatchIdentifier& watch_id, UFunction* function) -> LiveView::Watch&
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        
+        // Use GetPathName to get the full hierarchical path of the function
+        auto function_path = function->GetPathName();
+        
         auto& watch =
-                *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(function->GetOuterPrivate()->GetName() + STR(".") + function->GetName(),
+                *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(std::move(function_path),
                                                                                     // Workaround for our JSON parser not being able to parse an empty string.
                                                                                     STR(" ")));
         watch.property = nullptr;
@@ -1690,7 +1699,8 @@ namespace RC::GUI
         }
     };
 
-    LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{})
+    LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{}),
+                           m_property_container(std::make_unique<ImGuiValueContainer>("Properties"))
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
         strncpy_s(m_search_by_name_buffer,
@@ -1698,6 +1708,10 @@ namespace RC::GUI
                   m_default_search_buffer.data(),
                   m_default_search_buffer.size() + sizeof(char));
 
+        // Configure the property container
+        m_property_container->show_edit_mode_control(true);
+        m_property_container->set_apply_global_edit_mode(true);
+        
         s_live_view = this;
     }
 
@@ -2063,76 +2077,93 @@ namespace RC::GUI
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
 
         bool open_edit_value_popup{};
+        
+        // Lambda that renders just the context menu content - can be reused
+        auto render_property_context_menu_items = [&]() {
+            if (ImGui::MenuItem("Copy name"))
+            {
+                ImGui::SetClipboardText(property_name.c_str());
+            }
+            if (ImGui::MenuItem("Copy full name"))
+            {
+                ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+            }
+            if (ImGui::MenuItem("Copy value"))
+            {
+                ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+            }
+            if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
+            {
+                if (ImGui::MenuItem("Edit value"))
+                {
+                    open_edit_value_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+            }
+
+            if (is_watchable)
+            {
+                auto watch_id = WatchIdentifier{container, property};
+                auto property_watcher_it = s_watch_map.find(watch_id);
+                if (property_watcher_it == s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Watch value"))
+                    {
+                        if (container_type == ContainerType::Object && static_cast<UObject*>(container))
+                        {
+                            add_watch(static_cast<UObject*>(container), property);
+                        }
+                    }
+                }
+                else
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Stop watching value"))
+                    {
+                        auto watch = property_watcher_it->second;
+                        s_watch_map.erase(property_watcher_it);
+                        
+                        auto watch_container_it = s_watch_containers.find(container);
+                        if (watch_container_it != s_watch_containers.end())
+                        {
+                            std::erase_if(watch_container_it->second, [&](const Watch* container_watch) {
+                                return container_watch == watch;
+                            });
+                        }
+                        
+                        std::erase_if(s_watches, [&](const std::unique_ptr<Watch>& watch_in_vector) {
+                            return watch_in_vector.get() == watch;
+                        });
+                    }
+                }
+            }
+
+            if (property->IsA<FObjectProperty>())
+            {
+                if (ImGui::MenuItem("Go to object"))
+                {
+                    auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                    if (!hovered_object)
+                    {
+                        *tried_to_open_nullptr_object = true;
+                    }
+                    else
+                    {
+                        // Cannot go to another object in the middle of rendering properties.
+                        // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                        // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                        next_item_to_render = hovered_object;
+                    }
+                }
+            }
+        };
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
             if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : fmt::format("context-menu-{}", id_override).c_str()))
             {
-                if (ImGui::MenuItem("Copy name"))
-                {
-                    ImGui::SetClipboardText(property_name.c_str());
-                }
-                if (ImGui::MenuItem("Copy full name"))
-                {
-                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-                }
-                if (ImGui::MenuItem("Copy value"))
-                {
-                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
-                }
-                if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
-                {
-                    if (ImGui::MenuItem("Edit value"))
-                    {
-                        open_edit_value_popup = true;
-                        m_modal_edit_property_value_is_open = true;
-                    }
-                }
-
-                if (is_watchable)
-                {
-                    auto watch_id = WatchIdentifier{container, property};
-                    auto property_watcher_it = s_watch_map.find(watch_id);
-                    if (property_watcher_it == s_watch_map.end())
-                    {
-                        ImGui::Separator();
-                        if (ImGui::MenuItem("Watch value"))
-                        {
-                            add_watch(watch_id, static_cast<UObject*>(container), property);
-                        }
-                    }
-                    else
-                    {
-                        ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
-                    }
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Go to property"))
-                {
-                    next_item_to_render = property;
-                }
-
-                if (property->IsA<FObjectProperty>())
-                {
-                    if (ImGui::MenuItem("Go to object"))
-                    {
-                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
-
-                        if (!hovered_object)
-                        {
-                            *tried_to_open_nullptr_object = true;
-                        }
-                        else
-                        {
-                            // Cannot go to another object in the middle of rendering properties.
-                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
-                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
-                            next_item_to_render = hovered_object;
-                        }
-                    }
-                }
-
+                render_property_context_menu_items();
                 ImGui::EndPopup();
             }
         };
@@ -2150,102 +2181,30 @@ namespace RC::GUI
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
-                {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
-                    ImGui::Indent();
-                    FProperty* last_struct_prop{};
-                    next_item_to_render = render_property_value(inner_property,
-                                                                ContainerType::Struct,
-                                                                container_ptr,
-                                                                &last_struct_prop,
-                                                                tried_to_open_nullptr_object,
-                                                                false,
-                                                                property_offset + inner_property->GetOffset_Internal());
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            next_item_to_render = render_struct_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()), last_property_in, tried_to_open_nullptr_object, property_offset, first_offset);
         }
         else if (auto array_property = CastField<FArrayProperty>(property); array_property)
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
-                auto inner_property = array_property->GetInner();
-                for (int32_t i = 0; i < script_array->Num(); ++i)
-                {
-                    auto element_offset = inner_property->GetElementSize() * i;
-                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
-                    ImGui::Text("[%i]:", i);
-                    ImGui::Indent();
-                    ImGui::SameLine();
-                    next_item_to_render =
-                            render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset);
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                if (script_array->Num() < 1)
-                {
-                    ImGui::Text("-- Empty --");
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            next_item_to_render = render_array_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()), tried_to_open_nullptr_object, first_offset);
         }
         else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
         {
-            UEnum* uenum{};
-            if (property->IsA<FByteProperty>())
-            {
-                uenum = static_cast<FByteProperty*>(property)->GetEnum();
-            }
-            else
-            {
-                uenum = static_cast<FEnumProperty*>(property)->GetEnum();
-            }
-            auto value_raw = *std::bit_cast<uint8*>(container_ptr);
-            uint8 enum_index{};
-            for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
-            {
-                if (key_value_pair.Value == value_raw)
-                {
-                    enum_index = index;
-                    break;
-                }
-            }
-            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
-            ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
+            render_enum_property(property, container_ptr, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FBoolProperty>())
+        {
+            render_bool_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FNumericProperty>())
+        {
+            render_numeric_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
         else
         {
-            ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
+            render_default_property(property, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
 
@@ -2254,14 +2213,14 @@ namespace RC::GUI
             *last_property_in = property;
         }
 
-        if (ImGui::IsItemHovered())
+        // Only show tooltip if it's not a custom-rendered property that handles its own tooltip
+        if (!property->IsA<FBoolProperty>() && 
+            !property->IsA<FNumericProperty>())
         {
-            ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
-            ImGui::Separator();
-            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-            ImGui::Text("Size: 0x%X", property->GetSize());
-            ImGui::EndTooltip();
+            if (ImGui::IsItemHovered())
+            {
+                render_property_details_tooltip(property);
+            }
         }
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
@@ -2304,6 +2263,81 @@ namespace RC::GUI
                 else
                 {
                     ImGui::CloseCurrentPopup();
+                    
+                    // Force refresh of any monitored values for this property
+                    // This ensures checkboxes and other controls update to reflect the new value
+                    if (property->IsA<FBoolProperty>())
+                    {
+                        auto toggle_id = fmt::format("bool_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id))
+                        {
+                            existing_toggle->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FFloatProperty>())
+                    {
+                        auto slider_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id))
+                        {
+                            existing_slider->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FDoubleProperty>())
+                    {
+                        auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id))
+                        {
+                            existing_double->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FNumericProperty>())
+                    {
+                        // Update numeric property monitored values
+                        std::string type_prefix;
+                        std::string unique_id;
+                        
+                        if (property->IsA<FInt8Property>())
+                        {
+                            type_prefix = "int8";
+                        }
+                        else if (property->IsA<FInt16Property>())
+                        {
+                            type_prefix = "int16";
+                        }
+                        else if (property->IsA<FIntProperty>())
+                        {
+                            type_prefix = "int32";
+                        }
+                        else if (property->IsA<FInt64Property>())
+                        {
+                            type_prefix = "int64";
+                        }
+                        else if (property->IsA<FByteProperty>())
+                        {
+                            type_prefix = "byte";
+                        }
+                        else if (property->IsA<FUInt16Property>())
+                        {
+                            type_prefix = "uint16";
+                        }
+                        else if (property->IsA<FUInt32Property>())
+                        {
+                            type_prefix = "uint32";
+                        }
+                        else if (property->IsA<FUInt64Property>())
+                        {
+                            type_prefix = "uint64";
+                        }
+                        
+                        if (!type_prefix.empty())
+                        {
+                            unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                            if (auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id))
+                            {
+                                existing_value->update_from_external(true);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -2325,6 +2359,739 @@ namespace RC::GUI
             m_modal_edit_property_value_opened_this_frame = false;
         }
         return next_item_to_render;
+    }
+
+    auto LiveView::render_struct_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         void* container_ptr,
+                                         const std::string& property_name,
+                                         const std::string& property_text,
+                                         FProperty** last_property_in,
+                                         bool* tried_to_open_nullptr_object,
+                                         int32_t property_offset,
+                                         int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
+        auto struct_property = CastField<FStructProperty>(property);
+        
+        ImGui::SameLine();
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        if (ImGui_TreeNodeEx(fmt::format("{}", property_text).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+        {
+            // render_property_value_context_menu(tree_node_id);
+
+            for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+            {
+                FString struct_prop_text_item{};
+                auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
+                inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
+
+                ImGui::Indent();
+                FProperty* last_struct_prop{};
+                next_item_to_render = render_property_value(inner_property,
+                                                            ContainerType::Struct,
+                                                            container_ptr,
+                                                            &last_struct_prop,
+                                                            tried_to_open_nullptr_object,
+                                                            false,
+                                                            property_offset + inner_property->GetOffset_Internal());
+                ImGui::Unindent();
+
+                if (!std::holds_alternative<std::monostate>(next_item_to_render))
+                {
+                    break;
+                }
+            }
+            ImGui::TreePop();
+        }
+        // render_property_value_context_menu(tree_node_id);
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_array_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text,
+                                        bool* tried_to_open_nullptr_object,
+                                        int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
+        auto array_property = CastField<FArrayProperty>(property);
+        
+        ImGui::SameLine();
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        if (ImGui_TreeNodeEx(fmt::format("{}", property_text).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+        {
+            // render_property_value_context_menu(tree_node_id);
+
+            auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
+            auto inner_property = array_property->GetInner();
+            for (int32_t i = 0; i < script_array->Num(); ++i)
+            {
+                auto element_offset = inner_property->GetElementSize() * i;
+                auto element_container_ptr = static_cast<uint8_t*>(script_array->GetData()) + element_offset;
+                ImGui::Text("[%i]:", i);
+                ImGui::Indent();
+                ImGui::SameLine();
+                next_item_to_render =
+                        render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset);
+                ImGui::Unindent();
+
+                if (!std::holds_alternative<std::monostate>(next_item_to_render))
+                {
+                    break;
+                }
+            }
+            if (script_array->Num() < 1)
+            {
+                ImGui::Text("-- Empty --");
+            }
+            ImGui::TreePop();
+        }
+        // render_property_value_context_menu(tree_node_id);
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_enum_property(FProperty* property,
+                                       void* container_ptr,
+                                       const std::string& property_text) -> void
+    {
+        UEnum* uenum{};
+        if (property->IsA<FByteProperty>())
+        {
+            uenum = static_cast<FByteProperty*>(property)->GetEnum();
+        }
+        else
+        {
+            uenum = static_cast<FEnumProperty*>(property)->GetEnum();
+        }
+        auto value_raw = *std::bit_cast<uint8*>(container_ptr);
+        uint8 enum_index{};
+        for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
+        {
+            if (key_value_pair.Value == value_raw)
+            {
+                enum_index = index;
+                break;
+            }
+        }
+        auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
+        ImGui::SameLine();
+        ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
+        // render_property_value_context_menu();
+    }
+
+    auto LiveView::render_property_details_tooltip(FProperty* property) -> void
+    {
+        ImGui::BeginTooltip();
+        ImGui::Text("%S", property->GetFullName().c_str());
+        ImGui::Separator();
+        ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+        ImGui::Text("Size: 0x%X", property->GetSize());
+        ImGui::EndTooltip();
+    }
+    
+    auto LiveView::render_bool_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       void* container_ptr,
+                                       const std::string& property_name,
+                                       const std::string& property_text) -> void
+    {
+        auto bool_property = static_cast<FBoolProperty*>(property);
+        
+        // Create a unique ID for this property toggle
+        auto toggle_id = fmt::format("bool_{}_{}", static_cast<void*>(container), property_name);
+        
+        // Check if this toggle already exists in the container
+        auto existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
+        
+        if (!existing_toggle)
+        {
+            // Create monitored toggle that syncs with the property
+            auto toggle = make_monitored_bool(
+                [container_ptr, bool_property]() -> bool {
+                    // Getter - read current value from property
+                    if (bool_property->IsNativeBool())
+                    {
+                        return *static_cast<bool*>(container_ptr);
+                    }
+                    else
+                    {
+                        uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                        return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
+                    }
+                },
+                [container_ptr, bool_property](bool new_value) {
+                    // Setter - write new value to property
+                    if (bool_property->IsNativeBool())
+                    {
+                        *static_cast<bool*>(container_ptr) = new_value;
+                    }
+                    else
+                    {
+                        uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                        if (new_value)
+                        {
+                            *byte_value_ptr |= bool_property->GetByteMask();
+                        }
+                        else
+                        {
+                            *byte_value_ptr &= ~bool_property->GetByteMask();
+                        }
+                    }
+                },
+                false, // default value
+                "" // no display name - we already show property name before the colon
+            );
+            
+            // Add to container
+            m_property_container->add_value(toggle_id, std::move(toggle));
+            existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
+            
+            // Enable text representation display
+            existing_toggle->set_show_text_representation(true);
+            
+            // Set custom tooltip to show property details
+            existing_toggle->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+            
+            // Disable the default context menu - we'll handle it in this function
+            existing_toggle->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+        }
+        
+        // Update from game engine
+        existing_toggle->update_from_external(true);
+        
+        // Render the toggle with text representation
+        ImGui::SameLine();
+        
+        if (existing_toggle->draw_with_text())
+        {
+            // Value changed by user, will be applied when Apply Changes is clicked
+            // Or immediately if edit mode allows
+        }
+        
+        // Check if checkbox was right-clicked
+        bool checkbox_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        
+        // Open context menu if checkbox was right-clicked
+        // This ensures the same context menu appears for both checkbox and text
+        if (checkbox_right_clicked)
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+
+    auto LiveView::render_float_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        // Determine if this is a float or double property
+        bool is_double = property->IsA<FDoubleProperty>();
+        
+        if (is_double)
+        {
+            // For double properties, use ImGuiSliderDouble with unclamped precision input
+            auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+            auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+            
+            if (!existing_double)
+            {
+                // Create a slider with precision input field (now unclamped!)
+                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
+                    [container_ptr]() -> double {
+                        return *static_cast<double*>(container_ptr);
+                    },
+                    [container_ptr](double new_value) {
+                        *static_cast<double*>(container_ptr) = new_value;
+                    },
+                    -1e10,    // min for slider
+                    1e10,     // max for slider
+                    0.0,      // default value
+                    "",       // name
+                    "",       // tooltip
+                    true      // show_precision_input (now unclamped!)
+                );
+                
+                m_property_container->add_value(double_id, std::move(double_value));
+                existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+                
+                existing_double->set_custom_context_menu_callback([]() {
+                    // Empty - prevents default context menu
+                });
+                existing_double->set_custom_tooltip_callback([property]() {
+                    render_property_details_tooltip(property);
+                });
+            }
+            
+            // Update from game engine
+            existing_double->update_from_external(true);
+            
+            // Render slider with unclamped precision input
+            ImGui::SameLine();
+            
+            // Push compact frame padding to reduce height
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+            ImGui::PushItemWidth(200 * font_scale); // Wide enough for both slider and input
+            if (existing_double->draw())
+            {
+                // Value changed by user
+            }
+            ImGui::PopItemWidth();
+            ImGui::PopStyleVar();
+        }
+        else
+        {
+            // For float properties, use ImGuiSlider with monitored value
+            auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+            auto existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+            
+            if (!existing_float)
+            {
+                // Create a slider with wide range
+                auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
+                    [container_ptr]() -> float {
+                        return *static_cast<float*>(container_ptr);
+                    },
+                    [container_ptr](float new_value) {
+                        *static_cast<float*>(container_ptr) = new_value;
+                    },
+                    -1e10f,   // min - large but not FLT_MAX to avoid overflow
+                    1e10f,    // max - large but not FLT_MAX to avoid overflow
+                    0.0f,     // default value
+                    ""        // name
+                );
+                
+                m_property_container->add_value(float_id, std::move(float_value));
+                existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+                
+                existing_float->set_custom_context_menu_callback([]() {
+                    // Empty - prevents default context menu
+                });
+                existing_float->set_custom_tooltip_callback([property]() {
+                    render_property_details_tooltip(property);
+                });
+            }
+            
+            // Update from game engine
+            existing_float->update_from_external(true);
+            
+            // Render slider (Ctrl+Click to input manually)
+            ImGui::SameLine();
+            
+            // Push compact frame padding to reduce height
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+            ImGui::PushItemWidth(120 * font_scale);
+            if (existing_float->draw())
+            {
+                // Value changed by user
+            }
+            ImGui::PopItemWidth();
+            ImGui::PopStyleVar();
+        }
+        
+        // Check if item was right-clicked
+        bool item_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        
+        // Open context menu if right-clicked
+        if (item_right_clicked)
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_numeric_property(FProperty* property,
+                                          ContainerType container_type,
+                                          void* container,
+                                          void* container_ptr,
+                                          const std::string& property_name,
+                                          const std::string& property_text) -> void
+    {
+        // Cast to FNumericProperty to use polymorphic interface
+        auto* numeric_property = static_cast<FNumericProperty*>(property);
+        
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        // Determine if this is a floating point or integer type
+        if (numeric_property->IsFloatingPoint())
+        {
+            // Handle float/double properties inline
+            bool is_double = property->IsA<FDoubleProperty>();
+            
+            if (is_double)
+            {
+                // For double properties, use ImGuiSliderDouble with unclamped precision input
+                auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+                
+                if (!existing_double)
+                {
+                    // Create a slider with precision input field (now unclamped!)
+                    auto double_value = make_monitored_slider_double(
+                        [container_ptr]() -> double {
+                            return *static_cast<double*>(container_ptr);
+                        },
+                        [container_ptr](double new_value) {
+                            *static_cast<double*>(container_ptr) = new_value;
+                        },
+                        -1e10,    // min for slider
+                        1e10,     // max for slider
+                        0.0,      // default value
+                        "",       // name
+                        true      // show_precision_input (now unclamped!)
+                    );
+                    
+                    m_property_container->add_value(double_id, std::move(double_value));
+                    existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+                    
+                    existing_double->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_double->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                }
+                
+                // Update from game engine
+                existing_double->update_from_external(true);
+                
+                // Render slider with unclamped precision input
+                ImGui::SameLine();
+                
+                // Push compact frame padding to reduce height
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                ImGui::PushItemWidth(200 * font_scale); // Wide enough for both slider and input
+                if (existing_double->draw())
+                {
+                    // Value changed by user
+                }
+                ImGui::PopItemWidth();
+                ImGui::PopStyleVar();
+            }
+            else
+            {
+                // For float properties, use ImGuiSlider
+                auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+                auto existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+                
+                if (!existing_float)
+                {
+                    // Create a slider with reasonable range
+                    auto float_value = make_monitored_slider(
+                        [container_ptr]() -> float {
+                            return *static_cast<float*>(container_ptr);
+                        },
+                        [container_ptr](float new_value) {
+                            *static_cast<float*>(container_ptr) = new_value;
+                        },
+                        -100.0f,  // min
+                        100.0f,   // max
+                        0.0f,     // default value
+                        ""        // name
+                    );
+                    
+                    m_property_container->add_value(float_id, std::move(float_value));
+                    existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+                    
+                    existing_float->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_float->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                }
+                
+                // Update from game engine
+                existing_float->update_from_external(true);
+                
+                // Render slider (Ctrl+Click to input manually)
+                ImGui::SameLine();
+                
+                // Push compact frame padding to reduce height
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                ImGui::PushItemWidth(120 * font_scale);
+                if (existing_float->draw())
+                {
+                    // Value changed by user
+                }
+                ImGui::PopItemWidth();
+                ImGui::PopStyleVar();
+            }
+            
+            // Check if item was right-clicked
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                ImGui::OpenPopup(property_name.c_str());
+            }
+            return;
+        }
+        else if (numeric_property->IsInteger())
+        {
+            // Special case for byte enum
+            if (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->GetIntPropertyEnum())
+            {
+                render_enum_property(property, container_ptr, property_text);
+                return;
+            }
+            
+            // For integer types, we need to determine the specific type and whether to use slider or string input
+            bool use_string_input = false;
+            std::string type_prefix;
+            std::string unique_id;
+            
+            // Create appropriate UI based on property type
+            if (property->IsA<FInt8Property>())
+            {
+                type_prefix = "int8";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_slider_int(
+                        [container_ptr]() -> int32_t {
+                            return static_cast<int32_t>(*static_cast<int8_t*>(container_ptr));
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int8_t*>(container_ptr) = static_cast<int8_t>(new_value);
+                        },
+                        -128, 127, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FInt16Property>())
+            {
+                type_prefix = "int16";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_slider_int(
+                        [container_ptr]() -> int32_t {
+                            return static_cast<int32_t>(*static_cast<int16_t*>(container_ptr));
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int16_t*>(container_ptr) = static_cast<int16_t>(new_value);
+                        },
+                        -32768, 32767, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FIntProperty>())
+            {
+                type_prefix = "int32";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_slider_int(
+                        [container_ptr]() -> int32_t {
+                            return *static_cast<int32_t*>(container_ptr);
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int32_t*>(container_ptr) = new_value;
+                        },
+                        -1000000000, 1000000000, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FInt64Property>())
+            {
+                type_prefix = "int64";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiInt64>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_int64(
+                        [container_ptr]() -> int64_t {
+                            return *static_cast<int64_t*>(container_ptr);
+                        },
+                        [container_ptr](int64_t new_value) {
+                            *static_cast<int64_t*>(container_ptr) = new_value;
+                        },
+                        0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiInt64>(unique_id);
+                }
+            }
+            else if (property->IsA<FByteProperty>())
+            {
+                type_prefix = "byte";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderUInt8>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_slider_uint8(
+                        [container_ptr]() -> uint8_t {
+                            return *static_cast<uint8_t*>(container_ptr);
+                        },
+                        [container_ptr](uint8_t new_value) {
+                            *static_cast<uint8_t*>(container_ptr) = new_value;
+                        },
+                        0, 255, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderUInt8>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt16Property>())
+            {
+                type_prefix = "uint16";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderUInt16>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_slider_uint16(
+                        [container_ptr]() -> uint16_t {
+                            return *static_cast<uint16_t*>(container_ptr);
+                        },
+                        [container_ptr](uint16_t new_value) {
+                            *static_cast<uint16_t*>(container_ptr) = new_value;
+                        },
+                        0, 65535, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderUInt16>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt32Property>())
+            {
+                type_prefix = "uint32";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiUInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_uint32(
+                        [container_ptr]() -> uint32_t {
+                            return *static_cast<uint32_t*>(container_ptr);
+                        },
+                        [container_ptr](uint32_t new_value) {
+                            *static_cast<uint32_t*>(container_ptr) = new_value;
+                        },
+                        0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiUInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt64Property>())
+            {
+                type_prefix = "uint64";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiUInt64>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = make_monitored_uint64(
+                        [container_ptr]() -> uint64_t {
+                            return *static_cast<uint64_t*>(container_ptr);
+                        },
+                        [container_ptr](uint64_t new_value) {
+                            *static_cast<uint64_t*>(container_ptr) = new_value;
+                        },
+                        0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiUInt64>(unique_id);
+                }
+            }
+            
+            // Now render the appropriate UI
+            if (!unique_id.empty())
+            {
+                // All types can be handled through the base interface
+                auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id);
+                if (existing_value)
+                {
+                    existing_value->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_value->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                    existing_value->update_from_external(true);
+                    
+                    // Render control
+                    ImGui::SameLine();
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                    
+                    // Use different widths for different types
+                    float item_width = 120 * font_scale;
+                    if (use_string_input || property->IsA<FInt64Property>() || property->IsA<FUInt32Property>() || property->IsA<FUInt64Property>())
+                    {
+                        item_width = 100 * font_scale;  // String inputs are narrower
+                    }
+                    
+                    ImGui::PushItemWidth(item_width);
+                    existing_value->draw();
+                    ImGui::PopItemWidth();
+                    ImGui::PopStyleVar();
+                    
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                    {
+                        ImGui::OpenPopup(property_name.c_str());
+                    }
+                }
+            }
+        }
+    }
+    
+    auto LiveView::render_default_property(FProperty* property,
+                                          const std::string& property_text) -> void
+    {
+        ImGui::SameLine();
+        ImGui::Text(fmt::format("{}", property_text).c_str());
+        // render_property_value_context_menu();
+    }
+
+    auto LiveView::render_type_specific(UObject* object) -> bool
+    {
+        if (!object) return false;
+        
+        // Handle specific types that need custom rendering
+        if (object->IsA<UEnum>())
+        {
+            render_enum();
+            return true;
+        }
+        
+        // Add more type checks here as needed
+        // For example:
+        // - UDataTable for spreadsheet view
+        // - UTexture2D for image preview
+        // - UMaterial for material graph
+        // - USoundWave for audio info
+        // etc.
+        
+        // Return false to use default property rendering
+        return false;
     }
 
     auto LiveView::render_enum() -> void
@@ -2594,12 +3361,11 @@ namespace RC::GUI
             return;
         }
 
-        if (currently_selected_object.second->IsA<UEnum>())
+        auto object = currently_selected_object.second;
+        
+        if (!render_type_specific(object))
         {
-            render_enum();
-        }
-        else
-        {
+            // Default property rendering for types without custom renderers
             render_properties();
         }
     }
@@ -2632,7 +3398,6 @@ namespace RC::GUI
         FProperty* last_property{};
 
         auto render_property_text = [&](UClass* uclass, FProperty* property) {
-            // New
             auto next_item_variant =
                     render_property_value(property, ContainerType::Object, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
             if (auto object_item = std::get_if<UObject*>(&next_item_variant); object_item && *object_item)
@@ -2655,8 +3420,89 @@ namespace RC::GUI
         }
         else
         {
+            // Check if we need to populate the property container for a new object
+            if (m_property_container_object != currently_selected_object.second)
+            {
+                m_property_container->clear();
+                m_property_container_object = currently_selected_object.second;
+                
+                // Note: We'll populate the container as properties are rendered
+                // This allows us to use the existing property rendering logic
+            }
+            
+            // === Fixed Control Panel (not scrollable) ===
+            
+            // Calculate height for the control panel
+            float control_panel_height = 0.0f;
+            control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Single line for checkboxes and buttons
+            control_panel_height += ImGui::GetStyle().ItemSpacing.y * .5; // Minimal padding
+            
+            // Render control panel in a non-scrollable area
+            ImGui::BeginChild("PropertyControlPanel", ImVec2(0, control_panel_height), false, ImGuiWindowFlags_NoScrollbar);
+            {
+                // Push smaller frame padding for more compact checkboxes, scaled with font
+                float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 2 * font_scale));
+                
+                // Render the "Allow Editing Properties" checkbox
+                bool is_editable = m_property_container->get_global_edit_mode() == EditMode::Editable;
+                if (ImGui::Checkbox("Allow Editing Properties", &is_editable))
+                {
+                    m_property_container->set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
+                }
+                
+                // Render the "Immediate Apply" checkbox
+                ImGui::SameLine();
+                bool is_immediate = m_property_container->get_immediate_apply_mode() == ImmediateApplyMode::ForceContainer && 
+                                   m_property_container->is_container_immediate_apply();
+                if (ImGui::Checkbox("Immediate Apply", &is_immediate))
+                {
+                    if (is_immediate)
+                    {
+                        m_property_container->enable_immediate_apply();
+                    }
+                    else
+                    {
+                        m_property_container->disable_immediate_apply();
+                    }
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("When enabled, property changes are applied immediately without needing to press Apply");
+                }
+                
+                // Pop the style var
+                // Render apply/reset buttons on the same line if there are pending changes
+                if (m_property_container->has_pending_changes())
+                {
+                    ImGui::SameLine();
+                    
+                    // Make buttons smaller to fit on same line
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                    
+                    if (ImGui::Button("Apply"))
+                    {
+                        m_property_container->apply_all();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset"))
+                    {
+                        m_property_container->revert_all();
+                    }
+                    
+                    ImGui::PopStyleVar(); // Pop frame padding for buttons
+                }
+                
+                ImGui::PopStyleVar(); // Pop frame padding for checkboxes
+            }
+            ImGui::EndChild();
+            
             ImGui::Separator();
-            for (FProperty* property : uclass->ForEachProperty())
+            
+            // === Scrollable Properties Area ===
+            ImGui::BeginChild("PropertiesScrollArea", ImVec2(0, 0), false);
+            {
+                for (FProperty* property : uclass->ForEachProperty())
             {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
             }
@@ -2699,6 +3545,8 @@ namespace RC::GUI
             {
                 select_property(0, next_property_to_render, AffectsHistory::Yes);
             }
+            }
+            ImGui::EndChild(); // End PropertiesScrollArea
         }
     }
 
@@ -2812,6 +3660,18 @@ namespace RC::GUI
             return;
         }
 
+        // This function should be called within the info panel, which already has proper bounds
+        // The splitter divides the available space between top (basic info) and bottom (collapsible content)
+
+        // Use the existing ImGui_Splitter at the correct level
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 10.0f, 50.0f);
+
+        // === Top Section ===
+        // Enable vertical scrolling when content is larger than the visible area
+        ImGui::BeginChild("InfoPanelTop",
+                          ImVec2(0, m_info_panel_top_size),
+                          false);
+
         auto object_full_name = get_object_full_name(object);
 
         ImGui::Text("Selected: %s", to_string(object->GetName()).c_str());
@@ -2843,8 +3703,12 @@ namespace RC::GUI
             render_flags<FunctionFlagsStringifier>(as_function, "FunctionFlags");
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
-        ImGui::Separator();
-        // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
+
+        ImGui::EndChild();
+
+        // === Bottom Section ===
+        ImGui::BeginChild("InfoPanelBottom", ImVec2(0, 0), false);
+
         if (ImGui::CollapsingHeader("Size (total size of class + parents in parentheses)"))
         {
             auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
@@ -2883,6 +3747,8 @@ namespace RC::GUI
         }
 
         render_bottom_panel();
+
+        ImGui::EndChild();
     }
 
     static auto render_fname(FName name) -> void
@@ -2943,20 +3809,23 @@ namespace RC::GUI
                 if (ImGui::MenuItem("Copy flags"))
                 {
                     std::string flags_string_for_copy{};
-                    std::for_each(property_flags_stringifier.flag_parts.begin(), property_flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
-                        if (!flags_string_for_copy.empty())
-                        {
-                            flags_string_for_copy.append(" | ");
-                        }
-                        flags_string_for_copy.append(std::move(flag_part));
-                    });
+                    std::for_each(property_flags_stringifier.flag_parts.begin(),
+                                  property_flags_stringifier.flag_parts.end(),
+                                  [&](const std::string& flag_part) {
+                                      if (!flags_string_for_copy.empty())
+                                      {
+                                          flags_string_for_copy.append(" | ");
+                                      }
+                                      flags_string_for_copy.append(std::move(flag_part));
+                                  });
                     ImGui::SetClipboardText(flags_string_for_copy.c_str());
                 }
                 ImGui::EndPopup();
             }
         };
         ImGui::Text("PropertyFlags:");
-        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
+        create_menu_for_copy_flags(99);
+        // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
         ImGui::Indent();
         for (size_t i = 0; i < property_flags_stringifier.flag_parts.size(); ++i)
         {
@@ -3098,72 +3967,89 @@ namespace RC::GUI
     }
 
     auto LiveView::render_info_panel() -> void
+{
+    // Get the size of the info panel child window
+    ImVec2 info_panel_size = ImVec2(-16.0f, m_bottom_size);
+    
+    ImGui::BeginChild("LiveView_InfoPanel", info_panel_size, true, ImGuiWindowFlags_HorizontalScrollbar);
+
+    // Initialize splitter sizes based on available content region
+    ImVec2 available = ImGui::GetContentRegionAvail();
+    
+    // Account for the header buttons and separator (approximately 60 pixels)
+    float content_height = available.y - 60.0f;
+    
+    // Initialize sizes if they don't match the available space
+    if (m_info_panel_top_size + m_info_panel_bottom_size < content_height - 10.0f || 
+        m_info_panel_top_size + m_info_panel_bottom_size > content_height + 10.0f)
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {-16.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        m_info_panel_top_size = content_height * 0.4f;
+        m_info_panel_bottom_size = content_height - m_info_panel_top_size - 4.0f;
+    }
 
-        size_t next_object_index_to_select{};
+    size_t next_object_index_to_select{};
 
-        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_LEFT))
+    if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_LEFT))
+    {
+        next_object_index_to_select = s_currently_selected_object_index;
+        if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
         {
-            next_object_index_to_select = s_currently_selected_object_index;
-            if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
-            {
-                next_object_index_to_select = s_currently_selected_object_index - 1;
-            }
-        }
-        auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
-        if (selected_next_object.second)
-        {
-            next_object_index_to_select = selected_next_object.first;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_RIGHT))
-        {
-            next_object_index_to_select = s_currently_selected_object_index;
-            if (s_currently_selected_object_index + 1 < s_object_view_history.size())
-            {
-                next_object_index_to_select = s_currently_selected_object_index + 1;
-            }
-        }
-        auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
-        if (selected_prev_object.second)
-        {
-            next_object_index_to_select = selected_prev_object.first;
-        }
-
-        auto currently_selected_object = get_selected_object_or_property();
-
-        ImGui::SameLine();
-        if (!currently_selected_object.is_object)
-        {
-            ImGui::BeginDisabled();
-        }
-        if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
-        {
-            m_function_caller_widget->open_widget_deferred();
-        }
-        if (!currently_selected_object.is_object)
-        {
-            ImGui::EndDisabled();
-        }
-        ImGui::Separator();
-
-        if (currently_selected_object.is_object)
-        {
-            render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
-        }
-        else
-        {
-            render_info_panel_as_property(currently_selected_object.property);
-        }
-
-        ImGui::EndChild();
-
-        if (next_object_index_to_select > 0)
-        {
-            select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
+            next_object_index_to_select = s_currently_selected_object_index - 1;
         }
     }
+    auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
+    if (selected_next_object.second)
+    {
+        next_object_index_to_select = selected_next_object.first;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_RIGHT))
+    {
+        next_object_index_to_select = s_currently_selected_object_index;
+        if (s_currently_selected_object_index + 1 < s_object_view_history.size())
+        {
+            next_object_index_to_select = s_currently_selected_object_index + 1;
+        }
+    }
+    auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
+    if (selected_prev_object.second)
+    {
+        next_object_index_to_select = selected_prev_object.first;
+    }
+
+    auto currently_selected_object = get_selected_object_or_property();
+
+    ImGui::SameLine();
+    if (!currently_selected_object.is_object)
+    {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+    {
+        m_function_caller_widget->open_widget_deferred();
+    }
+    if (!currently_selected_object.is_object)
+    {
+        ImGui::EndDisabled();
+    }
+    ImGui::Separator();
+
+    if (currently_selected_object.is_object)
+    {
+        render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
+    }
+    else
+    {
+        render_info_panel_as_property(currently_selected_object.property);
+    }
+
+    ImGui::EndChild();
+
+    if (next_object_index_to_select > 0)
+    {
+        select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
+    }
+}
 
     static auto object_search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
     {

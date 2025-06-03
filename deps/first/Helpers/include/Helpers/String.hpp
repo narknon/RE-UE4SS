@@ -625,4 +625,285 @@ namespace RC
             return iequal(std::basic_string_view<CharT>{a}, std::basic_string_view<CharT>{b});
         }
     } // namespace String
+
+    // Numeric array parsing utilities
+    namespace String
+    {
+        // Helper to trim whitespace from string_view
+        template <typename CharT>
+        auto inline trim(std::basic_string_view<CharT> sv) -> std::basic_string_view<CharT>
+        {
+            const CharT* whitespace = nullptr;
+            if constexpr (std::is_same_v<CharT, char>)
+            {
+                whitespace = " \t\n\r";
+            }
+            else
+            {
+                whitespace = L" \t\n\r";
+            }
+            
+            size_t start = sv.find_first_not_of(whitespace);
+            if (start == std::basic_string_view<CharT>::npos) return {};
+
+            size_t end = sv.find_last_not_of(whitespace);
+
+            // Optimization: avoid substr if already trimmed
+            if (start == 0 && end == sv.size() - 1)
+            {
+                return sv;
+            }
+
+            return sv.substr(start, end - start + 1);
+        }
+
+        // Helper to remove parentheses if present
+        template <typename CharT>
+        auto inline remove_parentheses(std::basic_string_view<CharT> sv) -> std::basic_string_view<CharT>
+        {
+            if (sv.size() >= 2 && sv.front() == static_cast<CharT>('(') && sv.back() == static_cast<CharT>(')'))
+            {
+                return sv.substr(1, sv.size() - 2);
+            }
+            return sv;
+        }
+
+        // Convert string to numeric type with proper bounds checking
+        template <typename T, typename CharT>
+        auto string_to_numeric(const std::basic_string<CharT>& s) -> T
+        {
+            if constexpr (std::is_same_v<T, float>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    return std::stof(to_string(s));
+                }
+                else
+                {
+                    return std::stof(s);
+                }
+            }
+            else if constexpr (std::is_same_v<T, double>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    return std::stod(to_string(s));
+                }
+                else
+                {
+                    return std::stod(s);
+                }
+            }
+            else if constexpr (std::is_same_v<T, int32_t>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    return std::stoi(to_string(s));
+                }
+                else
+                {
+                    return std::stoi(s);
+                }
+            }
+            else if constexpr (std::is_same_v<T, int64_t>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    return std::stoll(to_string(s));
+                }
+                else
+                {
+                    return std::stoll(s);
+                }
+            }
+            else if constexpr (std::is_same_v<T, uint32_t>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    auto val = std::stoul(to_string(s));
+                    if (val > std::numeric_limits<uint32_t>::max())
+                    {
+                        throw std::out_of_range("Value too large for uint32_t");
+                    }
+                    return static_cast<uint32_t>(val);
+                }
+                else
+                {
+                    auto val = std::stoul(s);
+                    if (val > std::numeric_limits<uint32_t>::max())
+                    {
+                        throw std::out_of_range("Value too large for uint32_t");
+                    }
+                    return static_cast<uint32_t>(val);
+                }
+            }
+            else if constexpr (std::is_same_v<T, uint64_t>)
+            {
+                if constexpr (std::is_same_v<CharT, wchar_t>)
+                {
+                    return std::stoull(to_string(s));
+                }
+                else
+                {
+                    return std::stoull(s);
+                }
+            }
+            else
+            {
+                static_assert(sizeof(T) == 0, "Unsupported numeric type");
+            }
+        }
+
+        // Core parsing result structure
+        template <typename NumericType, size_t N>
+        struct ParseResult
+        {
+            bool success = false;
+            std::string error;
+            size_t components_parsed = 0;
+        };
+
+        // Core parsing implementation
+        template <typename NumericType, size_t N, typename CharT>
+        auto parse_numeric_array_impl(const std::basic_string<CharT>& s, std::array<NumericType, N>& out_array) -> ParseResult<NumericType, N>
+        {
+            ParseResult<NumericType, N> result;
+
+            if (s.empty())
+            {
+                result.error = "Input string is empty";
+                return result;
+            }
+
+            // Preprocessing
+            std::basic_string_view<CharT> sv = trim(std::basic_string_view<CharT>{s});
+            if (sv.empty())
+            {
+                result.error = "Input contains only whitespace";
+                return result;
+            }
+
+            sv = remove_parentheses(sv);
+
+            // Parse components
+            std::basic_string<CharT> sv_string{sv};
+            size_t start = 0;
+            size_t pos = 0;
+
+            while (pos != std::basic_string<CharT>::npos && result.components_parsed < N)
+            {
+                pos = sv_string.find(static_cast<CharT>(','), start);
+                std::basic_string_view<CharT> component = (pos == std::basic_string<CharT>::npos) 
+                    ? std::basic_string_view<CharT>{sv_string}.substr(start)
+                    : std::basic_string_view<CharT>{sv_string}.substr(start, pos - start);
+
+                component = trim(component);
+                if (component.empty())
+                {
+                    result.error = "Empty component at position " + std::to_string(result.components_parsed);
+                    return result;
+                }
+
+                try
+                {
+                    out_array[result.components_parsed] = string_to_numeric<NumericType>(std::basic_string<CharT>{component});
+                    result.components_parsed++;
+                }
+                catch (const std::invalid_argument&)
+                {
+                    std::string component_str;
+                    if constexpr (std::is_same_v<CharT, char>)
+                    {
+                        component_str = std::basic_string<CharT>{component};
+                    }
+                    else
+                    {
+                        component_str = to_string(std::basic_string<CharT>{component});
+                    }
+                    result.error = "Invalid number format at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
+                    return result;
+                }
+                catch (const std::out_of_range&)
+                {
+                    std::string component_str;
+                    if constexpr (std::is_same_v<CharT, char>)
+                    {
+                        component_str = std::basic_string<CharT>{component};
+                    }
+                    else
+                    {
+                        component_str = to_string(std::basic_string<CharT>{component});
+                    }
+                    result.error = "Number out of range at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
+                    return result;
+                }
+
+                if (pos != std::basic_string<CharT>::npos)
+                {
+                    start = pos + 1;
+                }
+            }
+
+            if (result.components_parsed != N)
+            {
+                result.error = "Wrong number of components: expected " + std::to_string(N) + ", found " + std::to_string(result.components_parsed);
+                return result;
+            }
+
+            result.success = true;
+            return result;
+        }
+
+        /**
+         * Parses a comma-separated string of numeric values into a fixed-size array.
+         * Supports optional parentheses around the values.
+         *
+         * Examples:
+         *   "1.0, 2.0, 3.0" -> {1.0f, 2.0f, 3.0f}
+         *   "(1, 2, 3)"      -> {1, 2, 3}
+         *   " ( 1.5 , 2.5 , 3.5 ) " -> {1.5f, 2.5f, 3.5f}
+         *
+         * @param s The input string to parse
+         * @param out_array The array to fill with parsed values
+         * @return true if parsing succeeded, false otherwise
+         */
+        template <typename NumericType, size_t N, typename CharT>
+        auto try_parse_numeric_array(const std::basic_string<CharT>& s, std::array<NumericType, N>& out_array) -> bool
+        {
+            return parse_numeric_array_impl(s, out_array).success;
+        }
+
+        /**
+         * Parses a comma-separated string of numeric values with detailed error reporting.
+         *
+         * @param s The input string to parse
+         * @param out_array The array to fill with parsed values
+         * @param error_msg Will be filled with error description if parsing fails
+         * @return true if parsing succeeded, false otherwise
+         */
+        template <typename NumericType, size_t N, typename CharT>
+        auto try_parse_numeric_array(const std::basic_string<CharT>& s, std::array<NumericType, N>& out_array, std::string& error_msg) -> bool
+        {
+            auto result = parse_numeric_array_impl(s, out_array);
+            error_msg = result.error;
+            return result.success;
+        }
+
+        /**
+         * Parses a comma-separated string of numeric values, returning an optional result.
+         *
+         * @param s The input string to parse
+         * @return An optional containing the parsed array if successful, nullopt otherwise
+         */
+        template <typename NumericType, size_t N, typename CharT>
+        auto parse_numeric_array(const std::basic_string<CharT>& s) -> std::optional<std::array<NumericType, N>>
+        {
+            std::array<NumericType, N> result;
+            if (parse_numeric_array_impl(s, result).success)
+            {
+                return result;
+            }
+            return std::nullopt;
+        }
+    } // namespace String
 } // namespace RC
