@@ -2163,6 +2163,7 @@ namespace RC::GUI
             {
                 render_property_context_menu_items();
                 ImGui::EndPopup();
+            }
         };
 
         if (first_offset == -1)
