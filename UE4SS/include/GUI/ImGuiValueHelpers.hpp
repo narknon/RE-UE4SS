@@ -1653,6 +1653,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 2> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputFloat2(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             std::array<float, 2>& working_val = get_working_value();
             bool changed = ImGui::InputFloat2(get_display_label(label), working_val.data());
@@ -1660,6 +1679,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1745,6 +1765,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 3> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputFloat3(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             std::array<float, 3>& working_val = get_working_value();
             bool changed = ImGui::InputFloat3(get_display_label(label), working_val.data());
@@ -1752,6 +1791,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
