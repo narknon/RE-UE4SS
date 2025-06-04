@@ -1151,16 +1151,37 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             // Clamp value to valid range
             int32_t& working_val = get_working_value();
             working_val = std::clamp<int32_t>(working_val, 0, static_cast<int32_t>(m_options_pointers.size()) - 1);
 
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = working_val;
+                ImGui::BeginDisabled();
+                ImGui::Combo(get_display_label(label), &display_val, m_options_pointers.data(), static_cast<int32_t>(m_options_pointers.size()));
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             bool changed = ImGui::Combo(get_display_label(label), &working_val, m_options_pointers.data(), static_cast<int32_t>(m_options_pointers.size()));
             render_tooltip();
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1190,6 +1211,17 @@ namespace RC::GUI
         {
             m_options_strings = options;
             update_options_pointers();
+        }
+        
+        // Override to return the selected option string instead of index
+        std::string get_as_string() const override
+        {
+            int32_t index = std::clamp<int32_t>(m_value, 0, static_cast<int32_t>(m_options_strings.size()) - 1);
+            if (index >= 0 && index < static_cast<int32_t>(m_options_strings.size()))
+            {
+                return m_options_strings[index];
+            }
+            return std::to_string(m_value);
         }
 
     private:
@@ -1445,6 +1477,15 @@ namespace RC::GUI
         float& r() { return m_value[0]; }
         float& g() { return m_value[1]; }
         float& b() { return m_value[2]; }
+        
+        // Override to return color as hex string
+        std::string get_as_string() const override
+        {
+            int r = static_cast<int>(m_value[0] * 255.0f);
+            int g = static_cast<int>(m_value[1] * 255.0f);
+            int b = static_cast<int>(m_value[2] * 255.0f);
+            return fmt::format("#{:02X}{:02X}{:02X}", r, g, b);
+        }
     };
 
     // Color picker (RGBA)
@@ -1510,6 +1551,16 @@ namespace RC::GUI
         float& g() { return m_value[1]; }
         float& b() { return m_value[2]; }
         float& a() { return m_value[3]; }
+        
+        // Override to return color as hex string with alpha
+        std::string get_as_string() const override
+        {
+            int r = static_cast<int>(m_value[0] * 255.0f);
+            int g = static_cast<int>(m_value[1] * 255.0f);
+            int b = static_cast<int>(m_value[2] * 255.0f);
+            int a = static_cast<int>(m_value[3] * 255.0f);
+            return fmt::format("#{:02X}{:02X}{:02X}{:02X}", r, g, b, a);
+        }
     };
 
     // Vector2 input
