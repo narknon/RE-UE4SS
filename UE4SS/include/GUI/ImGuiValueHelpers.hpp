@@ -2432,23 +2432,50 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             ImGui::PushID(this);
             ImGui::Text("%s", get_display_label(label));
             render_tooltip();
             
             bool changed = false;
-            int32_t& working_val = get_working_value();
-            for (size_t i = 0; i < m_options.size(); ++i)
+            
+            if (m_edit_mode == EditMode::ReadOnly)
             {
-                if (ImGui::RadioButton(m_options[i].c_str(), &working_val, static_cast<int32_t>(i)))
+                ImGui::BeginDisabled();
+                int32_t display_val = get_working_value();
+                for (size_t i = 0; i < m_options.size(); ++i)
                 {
-                    changed = true;
-                    m_is_dirty = true;
-                    fire_change_callback();
+                    ImGui::RadioButton(m_options[i].c_str(), &display_val, static_cast<int32_t>(i));
+                    if (i < m_options.size() - 1)
+                    {
+                        ImGui::SameLine();
+                    }
                 }
-                if (i < m_options.size() - 1)
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                int32_t& working_val = get_working_value();
+                for (size_t i = 0; i < m_options.size(); ++i)
                 {
-                    ImGui::SameLine();
+                    if (ImGui::RadioButton(m_options[i].c_str(), &working_val, static_cast<int32_t>(i)))
+                    {
+                        changed = true;
+                        m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
+                        fire_change_callback();
+                    }
+                    if (i < m_options.size() - 1)
+                    {
+                        ImGui::SameLine();
+                    }
                 }
             }
             
@@ -2480,6 +2507,16 @@ namespace RC::GUI
         }
 
         const std::vector<std::string>& options() const { return m_options; }
+        
+        // Override to return the selected option string
+        std::string get_as_string() const override
+        {
+            if (m_value >= 0 && m_value < static_cast<int32_t>(m_options.size()))
+            {
+                return m_options[m_value];
+            }
+            return "Invalid";
+        }
 
     private:
         std::vector<std::string> m_options;
