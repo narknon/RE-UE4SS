@@ -1372,11 +1372,30 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             // Update buffer with working value
             const std::string& working_val = get_working_value();
             std::fill(m_buffer.begin(), m_buffer.end(), 0);
             std::copy(working_val.begin(), working_val.end(), m_buffer.begin());
             
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                ImGui::BeginDisabled();
+                ImGui::InputTextMultiline(get_display_label(label), m_buffer.data(), m_buffer_size, m_size);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             bool changed = ImGui::InputTextMultiline(get_display_label(label), m_buffer.data(), m_buffer_size, m_size);
             render_tooltip();
@@ -1385,6 +1404,7 @@ namespace RC::GUI
                 std::string new_value = std::string(m_buffer.data());
                 m_pending_value = new_value;
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1787,6 +1807,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::DragFloat(get_display_label(label), &display_val, m_speed, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             float& working_val = get_working_value();
             bool changed = ImGui::DragFloat(get_display_label(label), &working_val, m_speed, m_min, m_max);
@@ -1794,6 +1833,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1992,6 +2032,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::DragInt(get_display_label(label), &display_val, m_speed, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             int32_t& working_val = get_working_value();
             bool changed = ImGui::DragInt(get_display_label(label), &working_val, m_speed, m_min, m_max);
@@ -1999,6 +2058,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
