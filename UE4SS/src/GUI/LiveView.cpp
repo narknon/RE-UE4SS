@@ -518,10 +518,8 @@ namespace RC::GUI
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
         
-        // Get the full name and extract just the path without the type prefix
-        auto object_full_name = object->GetFullName();
-        auto object_type_space_location = object_full_name.find(STR(" "));
-        auto object_path = StringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
+        // Use GetPathName to get the full hierarchical path of the object
+        auto object_path = object->GetPathName();
         
         auto& watch = *LiveView::s_watches.emplace_back(
                 std::make_unique<LiveView::Watch>(std::move(object_path), property->GetName()));
@@ -545,10 +543,8 @@ namespace RC::GUI
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
         
-        // Get the full name and extract just the path without the type prefix
-        auto function_full_name = function->GetFullName();
-        auto function_type_space_location = function_full_name.find(STR(" "));
-        auto function_path = StringType{function_full_name.begin() + function_type_space_location + 1, function_full_name.end()};
+        // Use GetPathName to get the full hierarchical path of the function
+        auto function_path = function->GetPathName();
         
         auto& watch =
                 *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(std::move(function_path),
@@ -2114,16 +2110,10 @@ namespace RC::GUI
                     ImGui::Separator();
                     if (ImGui::MenuItem("Watch value"))
                     {
-                        auto property_name_local = property->GetName();
-                        auto container_name = (container_type == ContainerType::Object && static_cast<UObject*>(container))
-                            ? static_cast<UObject*>(container)->GetName()
-                            : STR("N/A");
-                        s_watches.emplace_back(std::make_unique<Watch>(std::move(container_name), std::move(property_name_local)));
-                        auto& watch = s_watches.back();
-                        watch->property = property;
-                        watch->container = static_cast<UObject*>(container);
-                        s_watch_map.emplace(watch_id, watch.get());
-                        s_watch_containers[container].emplace_back(watch.get());
+                        if (container_type == ContainerType::Object && static_cast<UObject*>(container))
+                        {
+                            add_watch(static_cast<UObject*>(container), property);
+                        }
                     }
                 }
                 else
