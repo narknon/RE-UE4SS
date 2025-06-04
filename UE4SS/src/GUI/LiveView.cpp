@@ -1691,7 +1691,8 @@ namespace RC::GUI
         }
     };
 
-    LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{})
+    LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{}),
+                           m_property_container(std::make_unique<ImGuiValueContainer>("Properties"))
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
         strncpy_s(m_search_by_name_buffer,
@@ -1699,6 +1700,10 @@ namespace RC::GUI
                   m_default_search_buffer.data(),
                   m_default_search_buffer.size() + sizeof(char));
 
+        // Configure the property container
+        m_property_container->show_edit_mode_control(true);
+        m_property_container->set_apply_global_edit_mode(true);
+        
         s_live_view = this;
     }
 
@@ -2386,54 +2391,65 @@ namespace RC::GUI
         auto bool_property = static_cast<FBoolProperty*>(property);
         
         // Create a unique ID for this property toggle
-        auto toggle_id = fmt::format("##bool_{}_{}", static_cast<void*>(container), property_name);
+        auto toggle_id = fmt::format("bool_{}_{}", static_cast<void*>(container), property_name);
         
-        // Create monitored toggle that syncs with the property
-        auto toggle = make_monitored_bool(
-            [container_ptr, bool_property]() -> bool {
-                // Getter - read current value from property
-                if (bool_property->IsNativeBool())
-                {
-                    return *static_cast<bool*>(container_ptr);
-                }
-                else
-                {
-                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
-                    return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
-                }
-            },
-            [container_ptr, bool_property](bool new_value) {
-                // Setter - write new value to property
-                if (bool_property->IsNativeBool())
-                {
-                    *static_cast<bool*>(container_ptr) = new_value;
-                }
-                else
-                {
-                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
-                    if (new_value)
+        // Check if this toggle already exists in the container
+        auto existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
+        
+        if (!existing_toggle)
+        {
+            // Create monitored toggle that syncs with the property
+            auto toggle = make_monitored_bool(
+                [container_ptr, bool_property]() -> bool {
+                    // Getter - read current value from property
+                    if (bool_property->IsNativeBool())
                     {
-                        *byte_value_ptr |= bool_property->GetByteMask();
+                        return *static_cast<bool*>(container_ptr);
                     }
                     else
                     {
-                        *byte_value_ptr &= ~bool_property->GetByteMask();
+                        uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                        return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
                     }
-                }
-            },
-            false, // default value
-            toggle_id // name
-        );
+                },
+                [container_ptr, bool_property](bool new_value) {
+                    // Setter - write new value to property
+                    if (bool_property->IsNativeBool())
+                    {
+                        *static_cast<bool*>(container_ptr) = new_value;
+                    }
+                    else
+                    {
+                        uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                        if (new_value)
+                        {
+                            *byte_value_ptr |= bool_property->GetByteMask();
+                        }
+                        else
+                        {
+                            *byte_value_ptr &= ~bool_property->GetByteMask();
+                        }
+                    }
+                },
+                false, // default value
+                property_name, // display name
+                property_name  // tooltip
+            );
+            
+            // Add to container
+            m_property_container->add_value(toggle_id, std::move(toggle));
+            existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
+        }
         
         // Update from game engine
-        toggle->refresh();
+        existing_toggle->refresh();
         
         // Render the toggle
         ImGui::SameLine();
-        if (toggle->draw())
+        if (existing_toggle->draw())
         {
-            // Value changed by user, apply immediately
-            toggle->apply_changes_with_external();
+            // Value changed by user, will be applied when Apply Changes is clicked
+            // Or immediately if edit mode allows
         }
         
         // Show tooltip when hovering over the checkbox
@@ -2813,6 +2829,44 @@ namespace RC::GUI
         else
         {
             ImGui::Separator();
+            
+            // Check if we need to populate the property container for a new object
+            if (m_property_container_object != currently_selected_object.second)
+            {
+                m_property_container->clear();
+                m_property_container_object = currently_selected_object.second;
+                
+                // Note: We'll populate the container as properties are rendered
+                // This allows us to use the existing property rendering logic
+            }
+            
+            // Render the "Allow Editing Properties" checkbox manually
+            bool is_editable = m_property_container->get_global_edit_mode() == EditMode::Editable;
+            if (ImGui::Checkbox("Allow Editing Properties", &is_editable))
+            {
+                m_property_container->set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
+            }
+            
+            // Add some spacing
+            ImGui::Spacing();
+            
+            // Render apply/reset buttons if there are pending changes
+            if (m_property_container->has_pending_changes())
+            {
+                if (ImGui::Button("Apply Changes"))
+                {
+                    m_property_container->apply_all();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Reset"))
+                {
+                    m_property_container->revert_all();
+                }
+                ImGui::Spacing();
+            }
+            
+            ImGui::Separator();
+            
             for (FProperty* property : uclass->ForEachProperty())
             {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});

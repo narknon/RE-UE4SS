@@ -10,6 +10,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/UnrealFlags.hpp>
+#include <GUI/ImGuiValueHelpers.hpp>
 
 namespace RC::Unreal
 {
@@ -102,6 +103,10 @@ namespace RC::GUI
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
+        
+        // Property editing container
+        std::unique_ptr<ImGuiValueContainer> m_property_container{};
+        UObject* m_property_container_object{}; // Track which object's properties are in the container
 
       public:
         LiveView();
