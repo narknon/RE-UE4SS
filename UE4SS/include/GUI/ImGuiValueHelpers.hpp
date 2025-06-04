@@ -1465,6 +1465,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 3> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::ColorEdit3(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             std::array<float, 3>& working_val = get_working_value();
             bool changed = ImGui::ColorEdit3(get_display_label(label), working_val.data());
@@ -1472,6 +1491,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1538,6 +1558,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                std::array<float, 4> display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::ColorEdit4(get_display_label(label), display_val.data());
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             std::array<float, 4>& working_val = get_working_value();
             bool changed = ImGui::ColorEdit4(get_display_label(label), working_val.data());
@@ -1545,6 +1584,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -2554,11 +2594,27 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             ImGui::PushID(this);
             
-            if (ImGui::Button(get_display_label(label)))
+            if (m_edit_mode == EditMode::ReadOnly)
             {
-                m_waiting_for_key = true;
+                ImGui::BeginDisabled();
+                ImGui::Button(get_display_label(label));
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                if (ImGui::Button(get_display_label(label)))
+                {
+                    m_waiting_for_key = true;
+                }
             }
             render_tooltip();
             
@@ -2567,7 +2623,7 @@ namespace RC::GUI
             bool changed = false;
             int32_t& working_val = get_working_value();
             
-            if (m_waiting_for_key)
+            if (m_waiting_for_key && m_edit_mode == EditMode::Editable)
             {
                 ImGui::Text("Press any key...");
                 
@@ -2589,6 +2645,7 @@ namespace RC::GUI
                         changed = true;
                         
                         m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
                         fire_change_callback();
                         break;
                     }
@@ -2645,6 +2702,16 @@ namespace RC::GUI
             if (m_value == UNBOUND_KEY) return false;
             return ImGui::IsKeyPressed(static_cast<::ImGuiKey>(m_value));
         }
+        
+        // Override to return the key name
+        std::string get_as_string() const override
+        {
+            if (m_value != UNBOUND_KEY)
+            {
+                return ImGui::GetKeyName(static_cast<::ImGuiKey>(m_value));
+            }
+            return "Not bound";
+        }
 
     private:
         bool m_waiting_for_key = false;
@@ -2677,32 +2744,56 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (this->m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             ImGui::PushID(this);
             ImGui::Text("%s", this->get_display_label(label));
             this->render_tooltip();
             
             bool changed = false;
-            FlagType& working_val = this->get_working_value();
-            for (const auto& flag : m_flags)
+            
+            if (this->m_edit_mode == EditMode::ReadOnly)
             {
-                bool checked = (working_val & flag.value) != 0;
-                if (ImGui::Checkbox(flag.name.c_str(), &checked))
+                ImGui::BeginDisabled();
+                FlagType display_val = this->get_working_value();
+                for (const auto& flag : m_flags)
                 {
-                    if (checked)
+                    bool checked = (display_val & flag.value) != 0;
+                    ImGui::Checkbox(flag.name.c_str(), &checked);
+                }
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                FlagType& working_val = this->get_working_value();
+                for (const auto& flag : m_flags)
+                {
+                    bool checked = (working_val & flag.value) != 0;
+                    if (ImGui::Checkbox(flag.name.c_str(), &checked))
                     {
-                        working_val |= flag.value;
+                        if (checked)
+                        {
+                            working_val |= flag.value;
+                        }
+                        else
+                        {
+                            working_val &= ~flag.value;
+                        }
+                        changed = true;
                     }
-                    else
-                    {
-                        working_val &= ~flag.value;
-                    }
-                    changed = true;
                 }
             }
             
             if (changed)
             {
                 this->m_is_dirty = true;
+                this->m_last_value_source = ValueSource::User;
                 this->fire_change_callback();
             }
             
@@ -2727,6 +2818,27 @@ namespace RC::GUI
         }
 
         const std::vector<FlagInfo>& flags() const { return m_flags; }
+        
+        // Override to return readable flag names
+        std::string get_as_string() const override
+        {
+            std::string result;
+            bool first = true;
+            for (const auto& flag : m_flags)
+            {
+                if ((this->m_value & flag.value) != 0)
+                {
+                    if (!first) result += " | ";
+                    result += flag.name;
+                    first = false;
+                }
+            }
+            if (result.empty())
+            {
+                result = "None";
+            }
+            return result;
+        }
 
     private:
         std::vector<FlagInfo> m_flags;
@@ -2760,21 +2872,39 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (this->m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             ImGui::PushID(this);
             
             int current_index = find_current_index();
             bool changed = false;
             
-            if (ImGui::Combo(this->get_display_label(label), &current_index, m_option_pointers.data(), static_cast<int>(m_option_pointers.size())))
+            if (this->m_edit_mode == EditMode::ReadOnly)
             {
-                if (current_index >= 0 && current_index < static_cast<int>(m_options.size()))
+                ImGui::BeginDisabled();
+                ImGui::Combo(this->get_display_label(label), &current_index, m_option_pointers.data(), static_cast<int>(m_option_pointers.size()));
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                // Normal editable mode
+                if (ImGui::Combo(this->get_display_label(label), &current_index, m_option_pointers.data(), static_cast<int>(m_option_pointers.size())))
                 {
-                    EnumType& working_val = this->get_working_value();
-                    working_val = m_options[current_index].value;
-                    changed = true;
-                    
-                    this->m_is_dirty = true;
-                    this->fire_change_callback();
+                    if (current_index >= 0 && current_index < static_cast<int>(m_options.size()))
+                    {
+                        EnumType& working_val = this->get_working_value();
+                        working_val = m_options[current_index].value;
+                        changed = true;
+                        
+                        this->m_is_dirty = true;
+                        this->m_last_value_source = ValueSource::User;
+                        this->fire_change_callback();
+                    }
                 }
             }
             this->render_tooltip();
@@ -2808,6 +2938,17 @@ namespace RC::GUI
         }
 
         const std::vector<EnumOption>& options() const { return m_options; }
+        
+        // Override to return the enum name
+        std::string get_as_string() const override
+        {
+            int index = find_current_index();
+            if (index >= 0 && index < static_cast<int>(m_options.size()))
+            {
+                return m_options[index].name;
+            }
+            return "Unknown";
+        }
 
     private:
         int find_current_index() const
