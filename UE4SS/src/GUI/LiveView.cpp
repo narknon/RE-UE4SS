@@ -2894,6 +2894,26 @@ namespace RC::GUI
                 m_property_container->set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
             }
             
+            // Render the "Immediate Apply" checkbox
+            ImGui::SameLine();
+            bool is_immediate = m_property_container->get_immediate_apply_mode() == ImmediateApplyMode::ForceContainer && 
+                               m_property_container->is_container_immediate_apply();
+            if (ImGui::Checkbox("Immediate Apply", &is_immediate))
+            {
+                if (is_immediate)
+                {
+                    m_property_container->enable_immediate_apply();
+                }
+                else
+                {
+                    m_property_container->disable_immediate_apply();
+                }
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("When enabled, property changes are applied immediately without needing to press Apply");
+            }
+            
             // Add some spacing
             ImGui::Spacing();
             
