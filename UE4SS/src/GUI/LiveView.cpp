@@ -2445,27 +2445,48 @@ namespace RC::GUI
         
         // Render the toggle
         ImGui::SameLine();
+        
+        // Push an ID for the whole bool property group
+        ImGui::PushID(property);
+        
         if (existing_toggle->draw())
         {
             // Value changed by user, will be applied when Apply Changes is clicked
             // Or immediately if edit mode allows
         }
         
-        // Show tooltip when hovering over the checkbox
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("%s", property_name.c_str());
-        }
+        // Check if checkbox was right-clicked for context menu
+        bool checkbox_context_requested = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        
+        // Store if checkbox is hovered
+        bool checkbox_hovered = ImGui::IsItemHovered();
         
         // Show the text representation next to the checkbox
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", property_text.c_str());
         
-        // Also show tooltip when hovering over the text
-        if (ImGui::IsItemHovered())
+        // Store if text is hovered
+        bool text_hovered = ImGui::IsItemHovered();
+        
+        // Show property details tooltip if either checkbox or text is hovered
+        // This duplicates the tooltip from render_property_value but ensures it works for both elements
+        if (checkbox_hovered || text_hovered)
         {
-            ImGui::SetTooltip("%s", property_name.c_str());
+            ImGui::BeginTooltip();
+            ImGui::Text("%S", property->GetFullName().c_str());
+            ImGui::Separator();
+            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+            ImGui::Text("Size: 0x%X", property->GetSize());
+            ImGui::EndTooltip();
         }
+        
+        // If checkbox was right-clicked, open the context menu
+        if (checkbox_context_requested)
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+        
+        ImGui::PopID();
     }
 
     auto LiveView::render_default_property(FProperty* property,
