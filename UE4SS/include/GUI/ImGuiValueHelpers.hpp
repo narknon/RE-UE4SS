@@ -2578,6 +2578,8 @@ namespace RC::GUI
             if (m_setter && had_changes)
             {
                 m_setter(this->value());
+                // Update external value to match what we just set
+                this->set_external_value(this->value());
             }
         }
         
