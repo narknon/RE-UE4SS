@@ -801,13 +801,29 @@ namespace RC
                 }
                 catch (const std::invalid_argument&)
                 {
-                    std::string component_str = to_generic_string(std::basic_string<CharT>{component});
+                    std::string component_str;
+                    if constexpr (std::is_same_v<CharT, char>)
+                    {
+                        component_str = std::basic_string<CharT>{component};
+                    }
+                    else
+                    {
+                        component_str = to_string(std::basic_string<CharT>{component});
+                    }
                     result.error = "Invalid number format at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
                     return result;
                 }
                 catch (const std::out_of_range&)
                 {
-                    std::string component_str = to_generic_string(std::basic_string<CharT>{component});
+                    std::string component_str;
+                    if constexpr (std::is_same_v<CharT, char>)
+                    {
+                        component_str = std::basic_string<CharT>{component};
+                    }
+                    else
+                    {
+                        component_str = to_string(std::basic_string<CharT>{component});
+                    }
                     result.error = "Number out of range at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
                     return result;
                 }
