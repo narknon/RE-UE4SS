@@ -2501,7 +2501,7 @@ namespace RC::GUI
         // This ensures the same context menu appears for both checkbox and text
         if (checkbox_right_clicked)
         {
-            ImGui::OpenPopupContextItem(property_name.c_str());
+            ImGui::OpenPopup(property_name.c_str());
         }
     }
 
