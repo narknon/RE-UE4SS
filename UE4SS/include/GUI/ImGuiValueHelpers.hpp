@@ -448,13 +448,14 @@ namespace RC::GUI
                 bool display_val = get_working_value();
                 ImGui::BeginDisabled();
                 
-                // Make checkbox smaller to match font size better
-                // Reduce frame padding to make the checkbox more compact
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
+                // Make checkbox smaller by reducing frame padding to minimum
+                // This effectively reduces the checkbox size
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 1.0f));
                 
                 ImGui::Checkbox(get_display_label(label), &display_val);
                 
-                ImGui::PopStyleVar();
+                ImGui::PopStyleVar(2);
                 ImGui::EndDisabled();
                 render_tooltip();
                 ImGui::PopID();
@@ -465,13 +466,14 @@ namespace RC::GUI
             ImGui::PushID(this);
             bool& working_val = get_working_value();
             
-            // Make checkbox smaller to match font size better
-            // Reduce frame padding to make the checkbox more compact
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
+            // Make checkbox smaller by reducing frame padding to minimum
+            // This effectively reduces the checkbox size
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 1.0f));
             
             bool changed = ImGui::Checkbox(get_display_label(label), &working_val);
             
-            ImGui::PopStyleVar();
+            ImGui::PopStyleVar(2);
             render_tooltip();
             if (changed)
             {
