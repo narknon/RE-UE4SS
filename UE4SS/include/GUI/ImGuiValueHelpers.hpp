@@ -1711,7 +1711,7 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y)" or "x, y" using the new parser
+            // Parse format like "(x, y)" or "x, y"
             std::array<float, 2> parsed_values;
             if (String::try_parse_numeric_array(value, parsed_values))
             {
@@ -1807,7 +1807,7 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y, z)" or "x, y, z" using the new parser
+            // Parse format like "(x, y, z)" or "x, y, z"
             std::array<float, 3> parsed_values;
             if (String::try_parse_numeric_array(value, parsed_values))
             {
@@ -2256,7 +2256,7 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y)" or "x, y" using the new parser
+            // Parse format like "(x, y)" or "x, y"
             std::array<double, 2> parsed_values;
             if (String::try_parse_numeric_array(value, parsed_values))
             {
@@ -2406,7 +2406,7 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y, z)" or "x, y, z" using the new parser
+            // Parse format like "(x, y, z)" or "x, y, z"
             std::array<double, 3> parsed_values;
             if (String::try_parse_numeric_array(value, parsed_values))
             {
