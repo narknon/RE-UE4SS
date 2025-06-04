@@ -2472,76 +2472,9 @@ namespace RC::GUI
                 ImGui::EndTooltip();
             });
             
-            // Set custom context menu to show the same menu as the property text
-            existing_toggle->set_custom_context_menu_callback([this, property, container_type, container, property_name, &property_text]() {
-                // We need to replicate the context menu from render_property_value_context_menu
-                if (ImGui::BeginPopupContextItem())
-                {
-                    if (ImGui::MenuItem("Copy name"))
-                    {
-                        ImGui::SetClipboardText(property_name.c_str());
-                    }
-                    if (ImGui::MenuItem("Copy full name"))
-                    {
-                        ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-                    }
-                    if (ImGui::MenuItem("Copy value"))
-                    {
-                        ImGui::SetClipboardText(property_text.c_str());
-                    }
-                    if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
-                    {
-                        if (ImGui::MenuItem("Edit value"))
-                        {
-                            // Note: This would need access to open_edit_value_popup flag
-                            // For now, we'll just show the menu item
-                        }
-                    }
-                    
-                    // Watch functionality
-                    auto watch_id = WatchIdentifier{container, property};
-                    auto property_watcher_it = s_watch_map.find(watch_id);
-                    if (property_watcher_it == s_watch_map.end())
-                    {
-                        ImGui::Separator();
-                        if (ImGui::MenuItem("Watch value"))
-                        {
-                            auto property_name_local = property->GetName();
-                            auto container_name = (container_type == ContainerType::Object && static_cast<UObject*>(container))
-                                ? static_cast<UObject*>(container)->GetName()
-                                : STR("N/A");
-                            s_watches.emplace_back(std::make_unique<Watch>(std::move(container_name), std::move(property_name_local)));
-                            auto& watch = s_watches.back();
-                            watch->property = property;
-                            watch->container = static_cast<UObject*>(container);
-                            s_watch_map.emplace(watch_id, watch.get());
-                            s_watch_containers[container].emplace_back(watch.get());
-                        }
-                    }
-                    else
-                    {
-                        ImGui::Separator();
-                        if (ImGui::MenuItem("Stop watching value"))
-                        {
-                            auto watch = property_watcher_it->second;
-                            s_watch_map.erase(property_watcher_it);
-                            
-                            auto watch_container_it = s_watch_containers.find(container);
-                            if (watch_container_it != s_watch_containers.end())
-                            {
-                                std::erase_if(watch_container_it->second, [&](const Watch* container_watch) {
-                                    return container_watch == watch;
-                                });
-                            }
-                            
-                            std::erase_if(s_watches, [&](const std::unique_ptr<Watch>& watch_in_vector) {
-                                return watch_in_vector.get() == watch;
-                            });
-                        }
-                    }
-                    
-                    ImGui::EndPopup();
-                }
+            // Disable the default context menu - we'll handle it in this function
+            existing_toggle->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
             });
         }
         
@@ -2557,9 +2490,19 @@ namespace RC::GUI
             // Or immediately if edit mode allows
         }
         
+        // Check if checkbox was right-clicked
+        bool checkbox_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        
         // Show the text representation next to the checkbox
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", property_text.c_str());
+        
+        // Open context menu if checkbox was right-clicked
+        // This ensures the same context menu appears for both checkbox and text
+        if (checkbox_right_clicked)
+        {
+            ImGui::OpenPopupContextItem(property_name.c_str());
+        }
     }
 
     auto LiveView::render_default_property(FProperty* property,
