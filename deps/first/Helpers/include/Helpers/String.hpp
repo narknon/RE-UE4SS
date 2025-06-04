@@ -677,12 +677,14 @@ namespace RC
                 }
                 catch (const std::invalid_argument&)
                 {
-                    result.error = "Invalid number format at position " + std::to_string(result.components_parsed) + ": '" + to_string(std::basic_string<CharT>{component}) + "'";
+                    std::string component_str = to_generic_string(std::basic_string<CharT>{component});
+                    result.error = "Invalid number format at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
                     return result;
                 }
                 catch (const std::out_of_range&)
                 {
-                    result.error = "Number out of range at position " + std::to_string(result.components_parsed) + ": '" + to_string(std::basic_string<CharT>{component}) + "'";
+                    std::string component_str = to_generic_string(std::basic_string<CharT>{component});
+                    result.error = "Number out of range at position " + std::to_string(result.components_parsed) + ": '" + component_str + "'";
                     return result;
                 }
 
