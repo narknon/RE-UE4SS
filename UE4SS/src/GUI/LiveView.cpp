@@ -2432,8 +2432,7 @@ namespace RC::GUI
                     }
                 },
                 false, // default value
-                property_name, // display name
-                property_name  // tooltip
+                property_name // display name
             );
             
             // Add to container
@@ -2442,7 +2441,7 @@ namespace RC::GUI
         }
         
         // Update from game engine
-        existing_toggle->refresh();
+        existing_toggle->update_from_external(true);
         
         // Render the toggle
         ImGui::SameLine();
@@ -2769,7 +2768,6 @@ namespace RC::GUI
 
         auto object = currently_selected_object.second;
         
-        // Check if this object type needs custom rendering
         if (!render_type_specific(object))
         {
             // Default property rendering for types without custom renderers
