@@ -1711,27 +1711,13 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y)" or "x, y"
-            std::string clean = value;
-            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
-            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
-            
-            std::istringstream iss(clean);
-            std::string x_str, y_str;
-            if (std::getline(iss, x_str, ',') && 
-                std::getline(iss, y_str))
+            // Parse format like "(x, y)" or "x, y" using the new parser
+            std::array<float, 2> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
             {
-                try
-                {
-                    float x = std::stof(x_str);
-                    float y = std::stof(y_str);
-                    set_value_internal({x, y});
-                }
-                catch (...)
-                {
-                    // Invalid format, ignore
-                }
+                set_value_internal(parsed_values);
             }
+            // else: Invalid format, ignore
         }
     };
 
@@ -1821,29 +1807,13 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y, z)" or "x, y, z"
-            std::string clean = value;
-            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
-            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
-            
-            std::istringstream iss(clean);
-            std::string x_str, y_str, z_str;
-            if (std::getline(iss, x_str, ',') && 
-                std::getline(iss, y_str, ',') && 
-                std::getline(iss, z_str))
+            // Parse format like "(x, y, z)" or "x, y, z" using the new parser
+            std::array<float, 3> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
             {
-                try
-                {
-                    float x = std::stof(x_str);
-                    float y = std::stof(y_str);
-                    float z = std::stof(z_str);
-                    set_value_internal({x, y, z});
-                }
-                catch (...)
-                {
-                    // Invalid format, ignore
-                }
+                set_value_internal(parsed_values);
             }
+            // else: Invalid format, ignore
         }
 
         float& x() { return m_value[0]; }
@@ -2286,27 +2256,13 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y)" or "x, y"
-            std::string clean = value;
-            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
-            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
-            
-            std::istringstream iss(clean);
-            std::string x_str, y_str;
-            if (std::getline(iss, x_str, ',') && 
-                std::getline(iss, y_str))
+            // Parse format like "(x, y)" or "x, y" using the new parser
+            std::array<double, 2> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
             {
-                try
-                {
-                    double x = std::stod(x_str);
-                    double y = std::stod(y_str);
-                    set_value_internal({x, y});
-                }
-                catch (...)
-                {
-                    // Invalid format, ignore
-                }
+                set_value_internal(parsed_values);
             }
+            // else: Invalid format, ignore
         }
 
         double& x() { return m_value[0]; }
@@ -2450,29 +2406,13 @@ namespace RC::GUI
         
         void set_from_string(const std::string& value) override
         {
-            // Parse format like "(x, y, z)" or "x, y, z"
-            std::string clean = value;
-            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
-            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
-            
-            std::istringstream iss(clean);
-            std::string x_str, y_str, z_str;
-            if (std::getline(iss, x_str, ',') && 
-                std::getline(iss, y_str, ',') && 
-                std::getline(iss, z_str))
+            // Parse format like "(x, y, z)" or "x, y, z" using the new parser
+            std::array<double, 3> parsed_values;
+            if (String::try_parse_numeric_array(value, parsed_values))
             {
-                try
-                {
-                    double x = std::stod(x_str);
-                    double y = std::stod(y_str);
-                    double z = std::stod(z_str);
-                    set_value_internal({x, y, z});
-                }
-                catch (...)
-                {
-                    // Invalid format, ignore
-                }
+                set_value_internal(parsed_values);
             }
+            // else: Invalid format, ignore
         }
 
         double& x() { return m_value[0]; }
