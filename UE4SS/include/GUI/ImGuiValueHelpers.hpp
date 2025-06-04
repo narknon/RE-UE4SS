@@ -889,6 +889,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderFloat(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             float& working_val = get_working_value();
             bool changed = ImGui::SliderFloat(get_display_label(label), &working_val, m_min, m_max);
@@ -896,6 +915,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -956,6 +976,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             int32_t& working_val = get_working_value();
             bool changed = ImGui::InputInt(get_display_label(label), &working_val);
@@ -963,6 +1002,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
@@ -1020,6 +1060,25 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int32_t display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             int32_t& working_val = get_working_value();
             bool changed = ImGui::SliderInt(get_display_label(label), &working_val, m_min, m_max);
@@ -1027,6 +1086,7 @@ namespace RC::GUI
             if (changed)
             {
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
