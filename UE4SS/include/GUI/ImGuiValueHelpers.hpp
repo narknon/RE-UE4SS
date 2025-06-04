@@ -1242,11 +1242,30 @@ namespace RC::GUI
 
         bool draw(const char* label = nullptr) override
         {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
             // Update buffer with working value
             const std::string& working_val = get_working_value();
             std::fill(m_buffer.begin(), m_buffer.end(), 0);
             std::copy(working_val.begin(), working_val.end(), m_buffer.begin());
             
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), m_buffer.data(), m_buffer_size);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
             ImGui::PushID(this);
             bool changed = ImGui::InputText(get_display_label(label), m_buffer.data(), m_buffer_size);
             render_tooltip();
@@ -1255,6 +1274,7 @@ namespace RC::GUI
                 std::string new_value = std::string(m_buffer.data());
                 m_pending_value = new_value;
                 m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
                 fire_change_callback();
             }
             render_context_menu();
