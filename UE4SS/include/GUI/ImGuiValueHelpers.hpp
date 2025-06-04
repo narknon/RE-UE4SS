@@ -3105,10 +3105,16 @@ namespace RC::GUI
             }
             
             // Wire up container-level change notification
-            value->set_on_change_callback([this, id]() {
+            value->set_on_change_callback([this, id, ptr]() {
                 if (m_on_value_changed)
                 {
                     m_on_value_changed(id);
+                }
+                
+                // Apply immediately if in immediate mode and value is editable
+                if (m_immediate_apply_mode && ptr->get_edit_mode() == EditMode::Editable)
+                {
+                    ptr->apply_changes();
                 }
             });
             
@@ -3196,8 +3202,8 @@ namespace RC::GUI
                 }
             }
 
-            // Apply/Revert buttons for deferred updates
-            if (show_built_in_apply_button && has_pending_changes())
+            // Apply/Revert buttons for deferred updates (only show if not in immediate mode)
+            if (show_built_in_apply_button && has_pending_changes() && !m_immediate_apply_mode)
             {
                 ImGui::Separator();
                 ImGui::Spacing();
@@ -3404,6 +3410,38 @@ namespace RC::GUI
         
         // Enable/disable the "Allow Editing" checkbox
         void show_edit_mode_control(bool show) { m_show_edit_mode_control = show; }
+        
+        // Enable/disable immediate apply mode
+        void set_immediate_apply_mode(bool immediate)
+        {
+            m_immediate_apply_mode = immediate;
+            
+            // If enabling immediate apply mode, apply any pending changes
+            if (immediate && has_pending_changes())
+            {
+                apply_all();
+            }
+            
+            // Update callbacks for all existing values
+            for (auto& [id, value] : m_values)
+            {
+                // Re-wire the callback to include immediate apply logic
+                value->set_on_change_callback([this, id, ptr = value.get()]() {
+                    if (m_on_value_changed)
+                    {
+                        m_on_value_changed(id);
+                    }
+                    
+                    // Apply immediately if in immediate mode and value is editable
+                    if (m_immediate_apply_mode && ptr->get_edit_mode() == EditMode::Editable)
+                    {
+                        ptr->apply_changes();
+                    }
+                });
+            }
+        }
+        
+        bool is_immediate_apply_mode() const { return m_immediate_apply_mode; }
         bool is_showing_edit_mode_control() const { return m_show_edit_mode_control; }
         
         // Control whether global edit mode is applied to new values
@@ -3426,6 +3464,7 @@ namespace RC::GUI
         EditMode m_global_edit_mode = EditMode::Editable;
         bool m_apply_global_edit_mode = false;
         bool m_show_edit_mode_control = false;
+        bool m_immediate_apply_mode = false;
         ContainerChangedCallback m_on_value_changed;
         ContainerAppliedCallback m_on_applied;
     };
