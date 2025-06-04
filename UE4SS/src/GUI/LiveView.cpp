@@ -2436,9 +2436,21 @@ namespace RC::GUI
             toggle->apply_changes_with_external();
         }
         
+        // Show tooltip when hovering over the checkbox
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s", property_name.c_str());
+        }
+        
         // Show the text representation next to the checkbox
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", property_text.c_str());
+        
+        // Also show tooltip when hovering over the text
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s", property_name.c_str());
+        }
     }
 
     auto LiveView::render_default_property(FProperty* property,
