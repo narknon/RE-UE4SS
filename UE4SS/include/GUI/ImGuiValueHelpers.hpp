@@ -42,6 +42,14 @@ namespace RC::GUI
         ViewOnly      // Minimal display, no controls
     };
 
+    // Immediate apply mode for containers
+    enum class ImmediateApplyMode
+    {
+        RespectIndividual,  // Container default + individual overrides
+        ForceContainer,     // Container setting overrides all
+        ForceOff           // Disable immediate apply for all
+    };
+
     // Base interface for all ImGui value types
     class IImGuiValue
     {
@@ -65,6 +73,10 @@ namespace RC::GUI
         // Check if show text representation is enabled
         virtual bool should_show_text_representation() const = 0;
         virtual void set_show_text_representation(bool show) = 0;
+        
+        // Immediate apply control
+        virtual void set_immediate_apply(bool immediate) = 0;
+        virtual bool is_immediate_apply() const = 0;
         
         // String conversion
         virtual void set_from_string(const std::string& value) = 0;
@@ -123,6 +135,7 @@ namespace RC::GUI
             , m_edit_mode(EditMode::Editable)
             , m_last_value_source(ValueSource::Default)
             , m_show_text_representation(false)
+            , m_immediate_apply(false)
         {
         }
 
@@ -139,6 +152,7 @@ namespace RC::GUI
             , m_edit_mode(EditMode::Editable)
             , m_last_value_source(ValueSource::Default)
             , m_show_text_representation(false)
+            , m_immediate_apply(false)
         {
         }
 
@@ -264,6 +278,10 @@ namespace RC::GUI
         // Text representation control
         bool should_show_text_representation() const override { return m_show_text_representation; }
         void set_show_text_representation(bool show) override { m_show_text_representation = show; }
+        
+        // Immediate apply control
+        void set_immediate_apply(bool immediate) override { m_immediate_apply = immediate; }
+        bool is_immediate_apply() const override { return m_immediate_apply; }
         
         // Draw with text representation
         bool draw_with_text(const char* label = nullptr, bool show_text = true) override
@@ -448,6 +466,7 @@ namespace RC::GUI
         bool m_externally_controlled;
         EditMode m_edit_mode;
         bool m_show_text_representation;
+        bool m_immediate_apply;
         ValueSource m_last_value_source;
         ValueChangedCallback m_on_change;
         ValueAppliedCallback m_on_apply;
@@ -3104,19 +3123,19 @@ namespace RC::GUI
                 value->set_edit_mode(m_global_edit_mode);
             }
             
-            // Wire up container-level change notification
-            value->set_on_change_callback([this, id, ptr]() {
-                if (m_on_value_changed)
-                {
-                    m_on_value_changed(id);
-                }
-                
-                // Apply immediately if in immediate mode and value is editable
-                if (m_immediate_apply_mode && ptr->get_edit_mode() == EditMode::Editable)
-                {
-                    ptr->apply_changes();
-                }
-            });
+            // Set default immediate apply based on container mode
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer)
+            {
+                value->set_immediate_apply(m_container_immediate_apply);
+            }
+            else if (m_immediate_apply_mode == ImmediateApplyMode::ForceOff)
+            {
+                value->set_immediate_apply(false);
+            }
+            // For RespectIndividual, keep whatever the value was created with
+            
+            // Wire up container-level change notification with immediate apply logic
+            update_value_callback(id, ptr);
             
             m_values[id] = std::move(value);
             m_value_order.push_back(id);
@@ -3202,8 +3221,15 @@ namespace RC::GUI
                 }
             }
 
-            // Apply/Revert buttons for deferred updates (only show if not in immediate mode)
-            if (show_built_in_apply_button && has_pending_changes() && !m_immediate_apply_mode)
+            // Apply/Revert buttons for deferred updates
+            // Show buttons if there are pending changes and we're not forcing immediate apply for all values
+            bool show_apply_buttons = show_built_in_apply_button && has_pending_changes();
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer && m_container_immediate_apply)
+            {
+                show_apply_buttons = false; // Don't show if forcing immediate apply
+            }
+            
+            if (show_apply_buttons)
             {
                 ImGui::Separator();
                 ImGui::Spacing();
@@ -3411,41 +3437,83 @@ namespace RC::GUI
         // Enable/disable the "Allow Editing" checkbox
         void show_edit_mode_control(bool show) { m_show_edit_mode_control = show; }
         
-        // Enable/disable immediate apply mode
-        void set_immediate_apply_mode(bool immediate)
+        // Set immediate apply mode and container default
+        void set_immediate_apply_mode(ImmediateApplyMode mode, bool container_default = false)
         {
-            m_immediate_apply_mode = immediate;
+            m_immediate_apply_mode = mode;
+            m_container_immediate_apply = container_default;
             
-            // If enabling immediate apply mode, apply any pending changes
-            if (immediate && has_pending_changes())
+            // If enabling immediate apply, apply any pending changes
+            if (mode != ImmediateApplyMode::ForceOff && has_pending_changes())
             {
                 apply_all();
             }
             
-            // Update callbacks for all existing values
+            // Update all existing values based on mode
+            update_all_immediate_apply_callbacks();
+        }
+        
+        ImmediateApplyMode get_immediate_apply_mode() const { return m_immediate_apply_mode; }
+        bool is_container_immediate_apply() const { return m_container_immediate_apply; }
+        
+        // Helper to check if a value should apply immediately
+        bool should_apply_immediately(IImGuiValue* value) const
+        {
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceOff)
+                return false;
+            
+            if (m_immediate_apply_mode == ImmediateApplyMode::ForceContainer)
+                return m_container_immediate_apply;
+            
+            // RespectIndividual mode
+            return value->is_immediate_apply();
+        }
+        
+        // Update immediate apply callbacks for all values
+        void update_all_immediate_apply_callbacks()
+        {
             for (auto& [id, value] : m_values)
             {
-                // Re-wire the callback to include immediate apply logic
-                value->set_on_change_callback([this, id, ptr = value.get()]() {
-                    if (m_on_value_changed)
-                    {
-                        m_on_value_changed(id);
-                    }
-                    
-                    // Apply immediately if in immediate mode and value is editable
-                    if (m_immediate_apply_mode && ptr->get_edit_mode() == EditMode::Editable)
-                    {
-                        ptr->apply_changes();
-                    }
-                });
+                update_value_callback(id, value.get());
             }
         }
         
-        bool is_immediate_apply_mode() const { return m_immediate_apply_mode; }
+        // Update callback for a single value
+        void update_value_callback(const std::string& id, IImGuiValue* ptr)
+        {
+            ptr->set_on_change_callback([this, id, ptr]() {
+                if (m_on_value_changed)
+                {
+                    m_on_value_changed(id);
+                }
+                
+                // Apply immediately based on mode and settings
+                if (should_apply_immediately(ptr) && ptr->get_edit_mode() == EditMode::Editable)
+                {
+                    ptr->apply_changes();
+                }
+            });
+        }
         bool is_showing_edit_mode_control() const { return m_show_edit_mode_control; }
         
         // Control whether global edit mode is applied to new values
         void set_apply_global_edit_mode(bool apply) { m_apply_global_edit_mode = apply; }
+        
+        // Convenience methods for common immediate apply scenarios
+        void enable_immediate_apply() 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::ForceContainer, true); 
+        }
+        
+        void disable_immediate_apply() 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::ForceOff); 
+        }
+        
+        void respect_individual_immediate_apply(bool container_default = false) 
+        { 
+            set_immediate_apply_mode(ImmediateApplyMode::RespectIndividual, container_default); 
+        }
 
     private:
         static int generate_unique_id()
@@ -3464,7 +3532,8 @@ namespace RC::GUI
         EditMode m_global_edit_mode = EditMode::Editable;
         bool m_apply_global_edit_mode = false;
         bool m_show_edit_mode_control = false;
-        bool m_immediate_apply_mode = false;
+        ImmediateApplyMode m_immediate_apply_mode = ImmediateApplyMode::RespectIndividual;
+        bool m_container_immediate_apply = false;  // Container's default immediate apply setting
         ContainerChangedCallback m_on_value_changed;
         ContainerAppliedCallback m_on_applied;
     };
