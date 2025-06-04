@@ -434,7 +434,7 @@ namespace RC::GUI
             m_tooltip = to_string(tooltip);
         }
 
-        bool draw(const char* label) override
+        bool draw(const char* label = nullptr) override
         {
             // Handle different edit modes
             if (m_edit_mode == EditMode::ViewOnly)
