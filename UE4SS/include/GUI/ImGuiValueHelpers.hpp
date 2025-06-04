@@ -448,11 +448,9 @@ namespace RC::GUI
                 bool display_val = get_working_value();
                 ImGui::BeginDisabled();
                 
-                // Adjust frame padding to scale checkbox with font
-                ImVec2 original_padding = ImGui::GetStyle().FramePadding;
-                float font_size = ImGui::GetFontSize();
-                float checkbox_scale = font_size / 16.0f; // Assuming 16px as default font size
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(original_padding.x * checkbox_scale, original_padding.y * checkbox_scale));
+                // Make checkbox smaller to match font size better
+                // Reduce frame padding to make the checkbox more compact
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
                 
                 ImGui::Checkbox(get_display_label(label), &display_val);
                 
@@ -467,11 +465,9 @@ namespace RC::GUI
             ImGui::PushID(this);
             bool& working_val = get_working_value();
             
-            // Adjust frame padding to scale checkbox with font
-            ImVec2 original_padding = ImGui::GetStyle().FramePadding;
-            float font_size = ImGui::GetFontSize();
-            float checkbox_scale = font_size / 16.0f; // Assuming 16px as default font size
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(original_padding.x * checkbox_scale, original_padding.y * checkbox_scale));
+            // Make checkbox smaller to match font size better
+            // Reduce frame padding to make the checkbox more compact
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
             
             bool changed = ImGui::Checkbox(get_display_label(label), &working_val);
             
