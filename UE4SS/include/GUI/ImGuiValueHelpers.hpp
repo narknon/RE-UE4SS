@@ -2587,20 +2587,20 @@ namespace RC::GUI
 
     // Helper factory functions for monitored values
     template<typename T>
-    auto make_monitored_float(std::function<float()> getter, std::function<void(float)> setter, 
-                             float default_value = 0.0f, const std::string& name = "")
+    inline auto make_monitored_float(std::function<float()> getter, std::function<void(float)> setter, 
+                                    float default_value = 0.0f, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(getter, setter, default_value, name);
     }
     
-    auto make_monitored_double(std::function<double()> getter, std::function<void(double)> setter, 
-                              double default_value = 0.0, const std::string& name = "")
+    inline auto make_monitored_double(std::function<double()> getter, std::function<void(double)> setter, 
+                                     double default_value = 0.0, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(getter, setter, default_value, name);
     }
     
-    auto make_monitored_bool(std::function<bool()> getter, std::function<void(bool)> setter, 
-                            bool default_value = false, const std::string& name = "")
+    inline auto make_monitored_bool(std::function<bool()> getter, std::function<void(bool)> setter, 
+                                   bool default_value = false, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<bool, ImGuiToggle>>(getter, setter, default_value, name);
     }
