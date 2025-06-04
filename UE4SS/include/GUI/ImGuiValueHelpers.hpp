@@ -23,6 +23,8 @@ namespace RC::GUI
     using ValueChangedCallback = std::function<void()>;
     using ValueAppliedCallback = std::function<void()>;
     using ExternalUpdateCallback = std::function<void()>;
+    using CustomTooltipCallback = std::function<void()>;
+    using CustomContextMenuCallback = std::function<void()>;
 
     // Value source - who last updated the value
     enum class ValueSource
@@ -77,6 +79,8 @@ namespace RC::GUI
         virtual void set_on_change_callback(ValueChangedCallback callback) = 0;
         virtual void set_on_apply_callback(ValueAppliedCallback callback) = 0;
         virtual void set_on_external_update_callback(ExternalUpdateCallback callback) = 0;
+        virtual void set_custom_tooltip_callback(CustomTooltipCallback callback) = 0;
+        virtual void set_custom_context_menu_callback(CustomContextMenuCallback callback) = 0;
         
         // External update support
         virtual void update_from_external(bool silent = false) = 0;
@@ -218,6 +222,8 @@ namespace RC::GUI
         void set_on_change_callback(ValueChangedCallback callback) override { m_on_change = callback; }
         void set_on_apply_callback(ValueAppliedCallback callback) override { m_on_apply = callback; }
         void set_on_external_update_callback(ExternalUpdateCallback callback) override { m_on_external_update = callback; }
+        void set_custom_tooltip_callback(CustomTooltipCallback callback) override { m_custom_tooltip = callback; }
+        void set_custom_context_menu_callback(CustomContextMenuCallback callback) override { m_custom_context_menu = callback; }
         
         // External update support
         void update_from_external(bool silent = false) override
@@ -323,7 +329,11 @@ namespace RC::GUI
         // Helper for context menu
         void render_context_menu()
         {
-            if (ImGui::BeginPopupContextItem())
+            if (m_custom_context_menu)
+            {
+                m_custom_context_menu();
+            }
+            else if (ImGui::BeginPopupContextItem())
             {
                 if (ImGui::Button("Reset to default"))
                 {
@@ -384,7 +394,11 @@ namespace RC::GUI
         // Helper to render tooltip if available
         void render_tooltip() const
         {
-            if (!m_tooltip.empty() && ImGui::IsItemHovered())
+            if (m_custom_tooltip && ImGui::IsItemHovered())
+            {
+                m_custom_tooltip();
+            }
+            else if (!m_tooltip.empty() && ImGui::IsItemHovered())
             {
                 ImGui::SetTooltip("%s", m_tooltip.c_str());
             }
@@ -404,6 +418,8 @@ namespace RC::GUI
         ValueChangedCallback m_on_change;
         ValueAppliedCallback m_on_apply;
         ExternalUpdateCallback m_on_external_update;
+        CustomTooltipCallback m_custom_tooltip;
+        CustomContextMenuCallback m_custom_context_menu;
     };
 
     // Boolean toggle

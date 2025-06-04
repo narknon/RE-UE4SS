@@ -2432,12 +2432,27 @@ namespace RC::GUI
                     }
                 },
                 false, // default value
-                property_name // display name
+                "" // no display name - we already show property name before the colon
             );
             
             // Add to container
             m_property_container->add_value(toggle_id, std::move(toggle));
             existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
+            
+            // Set custom tooltip to show property details
+            existing_toggle->set_custom_tooltip_callback([property]() {
+                ImGui::BeginTooltip();
+                ImGui::Text("%S", property->GetFullName().c_str());
+                ImGui::Separator();
+                ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+                ImGui::Text("Size: 0x%X", property->GetSize());
+                ImGui::EndTooltip();
+            });
+            
+            // Disable the default context menu - we'll use the one from render_property_value_context_menu
+            existing_toggle->set_custom_context_menu_callback([]() {
+                // Empty - this prevents the default context menu from showing
+            });
         }
         
         // Update from game engine
@@ -2446,47 +2461,15 @@ namespace RC::GUI
         // Render the toggle
         ImGui::SameLine();
         
-        // Push an ID for the whole bool property group
-        ImGui::PushID(property);
-        
         if (existing_toggle->draw())
         {
             // Value changed by user, will be applied when Apply Changes is clicked
             // Or immediately if edit mode allows
         }
         
-        // Check if checkbox was right-clicked for context menu
-        bool checkbox_context_requested = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-        
-        // Store if checkbox is hovered
-        bool checkbox_hovered = ImGui::IsItemHovered();
-        
         // Show the text representation next to the checkbox
         ImGui::SameLine();
         ImGui::TextDisabled("(%s)", property_text.c_str());
-        
-        // Store if text is hovered
-        bool text_hovered = ImGui::IsItemHovered();
-        
-        // Show property details tooltip if either checkbox or text is hovered
-        // This duplicates the tooltip from render_property_value but ensures it works for both elements
-        if (checkbox_hovered || text_hovered)
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
-            ImGui::Separator();
-            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-            ImGui::Text("Size: 0x%X", property->GetSize());
-            ImGui::EndTooltip();
-        }
-        
-        // If checkbox was right-clicked, open the context menu
-        if (checkbox_context_requested)
-        {
-            ImGui::OpenPopup(property_name.c_str());
-        }
-        
-        ImGui::PopID();
     }
 
     auto LiveView::render_default_property(FProperty* property,
