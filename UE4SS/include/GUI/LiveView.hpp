@@ -223,6 +223,9 @@ namespace RC::GUI
         
         // Type specific renderers
         auto render_type_specific(UObject* object) -> bool;
+        
+        // Shared helper for property tooltip
+        static auto render_property_details_tooltip(FProperty* property) -> void;
 
       private:
         auto collapse_all_except(void* except_id) -> void;
