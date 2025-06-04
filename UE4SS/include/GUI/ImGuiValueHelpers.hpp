@@ -58,6 +58,14 @@ namespace RC::GUI
         virtual void draw_value(const char* label = nullptr) = 0;
         virtual void draw_value(const CharType* label = nullptr) = 0;
         
+        // Draw control with optional text representation
+        virtual bool draw_with_text(const char* label = nullptr, bool show_text = true) = 0;
+        virtual bool draw_with_text(const CharType* label, bool show_text = true) = 0;
+        
+        // Check if show text representation is enabled
+        virtual bool should_show_text_representation() const = 0;
+        virtual void set_show_text_representation(bool show) = 0;
+        
         // String conversion
         virtual void set_from_string(const std::string& value) = 0;
         virtual std::string get_as_string() const = 0;
@@ -114,6 +122,7 @@ namespace RC::GUI
             , m_externally_controlled(false)
             , m_edit_mode(EditMode::Editable)
             , m_last_value_source(ValueSource::Default)
+            , m_show_text_representation(false)
         {
         }
 
@@ -129,6 +138,7 @@ namespace RC::GUI
             , m_externally_controlled(false)
             , m_edit_mode(EditMode::Editable)
             , m_last_value_source(ValueSource::Default)
+            , m_show_text_representation(false)
         {
         }
 
@@ -250,6 +260,29 @@ namespace RC::GUI
         
         // Value source tracking
         ValueSource get_last_value_source() const override { return m_last_value_source; }
+        
+        // Text representation control
+        bool should_show_text_representation() const override { return m_show_text_representation; }
+        void set_show_text_representation(bool show) override { m_show_text_representation = show; }
+        
+        // Draw with text representation
+        bool draw_with_text(const char* label = nullptr, bool show_text = true) override
+        {
+            bool changed = draw(label);
+            
+            if (show_text && m_show_text_representation)
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled("(%s)", get_as_string().c_str());
+            }
+            
+            return changed;
+        }
+        
+        bool draw_with_text(const CharType* label, bool show_text = true) override
+        {
+            return draw_with_text(label ? to_string(label).c_str() : nullptr, show_text);
+        }
         
         // String conversion
         std::string get_as_string() const override
@@ -414,6 +447,7 @@ namespace RC::GUI
         bool m_is_dirty;
         bool m_externally_controlled;
         EditMode m_edit_mode;
+        bool m_show_text_representation;
         ValueSource m_last_value_source;
         ValueChangedCallback m_on_change;
         ValueAppliedCallback m_on_apply;
@@ -516,6 +550,12 @@ namespace RC::GUI
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
+        
+        // Specific string representation for booleans
+        std::string get_as_string() const override
+        {
+            return m_value ? "True" : "False";
+        }
 
         bool toggle() { return m_value = !m_value; }
     };
@@ -598,6 +638,12 @@ namespace RC::GUI
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
+        
+        // Specific string representation for floats with 3 decimal places
+        std::string get_as_string() const override
+        {
+            return fmt::format("{:.3f}", m_value);
+        }
     };
 
     // Double input
@@ -677,6 +723,12 @@ namespace RC::GUI
         void draw_value(const CharType* label = nullptr) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        // Specific string representation for doubles with 6 decimal places
+        std::string get_as_string() const override
+        {
+            return fmt::format("{:.6f}", m_value);
         }
     };
 

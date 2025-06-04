@@ -517,8 +517,14 @@ namespace RC::GUI
     static auto add_watch(const LiveView::WatchIdentifier& watch_id, UObject* object, FProperty* property) -> LiveView::Watch&
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        
+        // Get the full name and extract just the path without the type prefix
+        auto object_full_name = object->GetFullName();
+        auto object_type_space_location = object_full_name.find(STR(" "));
+        auto object_path = StringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
+        
         auto& watch = *LiveView::s_watches.emplace_back(
-                std::make_unique<LiveView::Watch>(object->GetOuterPrivate()->GetName() + STR(".") + object->GetName(), property->GetName()));
+                std::make_unique<LiveView::Watch>(std::move(object_path), property->GetName()));
         watch.enabled = true;
         watch.property = property;
         watch.container = object;
@@ -538,8 +544,14 @@ namespace RC::GUI
     static auto add_watch(const LiveView::WatchIdentifier& watch_id, UFunction* function) -> LiveView::Watch&
     {
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        
+        // Get the full name and extract just the path without the type prefix
+        auto function_full_name = function->GetFullName();
+        auto function_type_space_location = function_full_name.find(STR(" "));
+        auto function_path = StringType{function_full_name.begin() + function_type_space_location + 1, function_full_name.end()};
+        
         auto& watch =
-                *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(function->GetOuterPrivate()->GetName() + STR(".") + function->GetName(),
+                *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(std::move(function_path),
                                                                                     // Workaround for our JSON parser not being able to parse an empty string.
                                                                                     STR(" ")));
         watch.property = nullptr;
@@ -2208,12 +2220,7 @@ namespace RC::GUI
 
         if (ImGui::IsItemHovered())
         {
-            ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
-            ImGui::Separator();
-            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-            ImGui::Text("Size: 0x%X", property->GetSize());
-            ImGui::EndTooltip();
+            render_property_details_tooltip(property);
         }
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
@@ -2256,6 +2263,17 @@ namespace RC::GUI
                 else
                 {
                     ImGui::CloseCurrentPopup();
+                    
+                    // Force refresh of any monitored values for this property
+                    // This ensures checkboxes and other controls update to reflect the new value
+                    if (property->IsA<FBoolProperty>())
+                    {
+                        auto toggle_id = fmt::format("bool_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id))
+                        {
+                            existing_toggle->update_from_external(true);
+                        }
+                    }
                 }
             }
 
@@ -2404,6 +2422,16 @@ namespace RC::GUI
         // render_property_value_context_menu();
     }
 
+    auto LiveView::render_property_details_tooltip(FProperty* property) -> void
+    {
+        ImGui::BeginTooltip();
+        ImGui::Text("%S", property->GetFullName().c_str());
+        ImGui::Separator();
+        ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+        ImGui::Text("Size: 0x%X", property->GetSize());
+        ImGui::EndTooltip();
+    }
+    
     auto LiveView::render_bool_property(FProperty* property,
                                        ContainerType container_type,
                                        void* container,
@@ -2462,14 +2490,12 @@ namespace RC::GUI
             m_property_container->add_value(toggle_id, std::move(toggle));
             existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id);
             
+            // Enable text representation display
+            existing_toggle->set_show_text_representation(true);
+            
             // Set custom tooltip to show property details
             existing_toggle->set_custom_tooltip_callback([property]() {
-                ImGui::BeginTooltip();
-                ImGui::Text("%S", property->GetFullName().c_str());
-                ImGui::Separator();
-                ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-                ImGui::Text("Size: 0x%X", property->GetSize());
-                ImGui::EndTooltip();
+                render_property_details_tooltip(property);
             });
             
             // Disable the default context menu - we'll handle it in this function
@@ -2481,10 +2507,10 @@ namespace RC::GUI
         // Update from game engine
         existing_toggle->update_from_external(true);
         
-        // Render the toggle
+        // Render the toggle with text representation
         ImGui::SameLine();
         
-        if (existing_toggle->draw())
+        if (existing_toggle->draw_with_text())
         {
             // Value changed by user, will be applied when Apply Changes is clicked
             // Or immediately if edit mode allows
@@ -2492,10 +2518,6 @@ namespace RC::GUI
         
         // Check if checkbox was right-clicked
         bool checkbox_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-        
-        // Show the text representation next to the checkbox
-        ImGui::SameLine();
-        ImGui::TextDisabled("(%s)", property_text.c_str());
         
         // Open context menu if checkbox was right-clicked
         // This ensures the same context menu appears for both checkbox and text
