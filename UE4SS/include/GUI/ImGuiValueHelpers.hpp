@@ -2571,13 +2571,20 @@ namespace RC::GUI
         }
         
         // Override apply to also update external
-        void apply_changes_with_external()
+        void apply_changes() override
         {
-            this->apply_changes();
-            if (m_setter && this->get_last_value_source() == ValueSource::User)
+            bool had_changes = this->has_pending_changes();
+            ValueType::apply_changes();
+            if (m_setter && had_changes)
             {
                 m_setter(this->value());
             }
+        }
+        
+        // Legacy method for compatibility
+        void apply_changes_with_external()
+        {
+            apply_changes();
         }
         
     private:
@@ -2603,6 +2610,34 @@ namespace RC::GUI
                                    bool default_value = false, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<bool, ImGuiToggle>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_int32(std::function<int32_t()> getter, std::function<void(int32_t)> setter, 
+                                    int32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiInt32>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_string(std::function<std::string()> getter, std::function<void(const std::string&)> setter, 
+                                     const std::string& default_value = "", const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_slider(std::function<float()> getter, std::function<void(float)> setter,
+                                     float min, float max, float default_value = 0.0f, const std::string& name = "")
+    {
+        // Note: ImGuiSlider needs min/max passed to constructor, not set later
+        // For now, we'll just use regular float input until we update ImGuiMonitoredValue to support custom constructors
+        return std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_int(std::function<int32_t()> getter, std::function<void(int32_t)> setter,
+                                         int32_t min, int32_t max, int32_t default_value = 0, const std::string& name = "")
+    {
+        // Note: ImGuiSliderInt32 needs min/max passed to constructor, not set later
+        // For now, we'll just use regular int input until we update ImGuiMonitoredValue to support custom constructors
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiInt32>>(getter, setter, default_value, name);
     }
 
     // Container for managing multiple ImGui values with advanced features
