@@ -633,10 +633,20 @@ namespace RC
         template <typename CharT>
         auto inline trim(std::basic_string_view<CharT> sv) -> std::basic_string_view<CharT>
         {
-            size_t start = sv.find_first_not_of(STR(" \t\n\r"));
+            const CharT* whitespace = nullptr;
+            if constexpr (std::is_same_v<CharT, char>)
+            {
+                whitespace = " \t\n\r";
+            }
+            else
+            {
+                whitespace = L" \t\n\r";
+            }
+            
+            size_t start = sv.find_first_not_of(whitespace);
             if (start == std::basic_string_view<CharT>::npos) return {};
 
-            size_t end = sv.find_last_not_of(STR(" \t\n\r"));
+            size_t end = sv.find_last_not_of(whitespace);
 
             // Optimization: avoid substr if already trimmed
             if (start == 0 && end == sv.size() - 1)
@@ -651,7 +661,7 @@ namespace RC
         template <typename CharT>
         auto inline remove_parentheses(std::basic_string_view<CharT> sv) -> std::basic_string_view<CharT>
         {
-            if (sv.size() >= 2 && sv.front() == STR('(') && sv.back() == STR(')'))
+            if (sv.size() >= 2 && sv.front() == static_cast<CharT>('(') && sv.back() == static_cast<CharT>(')'))
             {
                 return sv.substr(1, sv.size() - 2);
             }
@@ -782,7 +792,7 @@ namespace RC
 
             while (pos != std::basic_string<CharT>::npos && result.components_parsed < N)
             {
-                pos = sv_string.find(STR(','), start);
+                pos = sv_string.find(static_cast<CharT>(','), start);
                 std::basic_string_view<CharT> component = (pos == std::basic_string<CharT>::npos) 
                     ? std::basic_string_view<CharT>{sv_string}.substr(start)
                     : std::basic_string_view<CharT>{sv_string}.substr(start, pos - start);
