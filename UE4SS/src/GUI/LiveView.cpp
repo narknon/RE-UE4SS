@@ -2069,78 +2069,100 @@ namespace RC::GUI
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
 
         bool open_edit_value_popup{};
+        
+        // Lambda that renders just the context menu content - can be reused
+        auto render_property_context_menu_items = [&]() {
+            if (ImGui::MenuItem("Copy name"))
+            {
+                ImGui::SetClipboardText(property_name.c_str());
+            }
+            if (ImGui::MenuItem("Copy full name"))
+            {
+                ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+            }
+            if (ImGui::MenuItem("Copy value"))
+            {
+                ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+            }
+            if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
+            {
+                if (ImGui::MenuItem("Edit value"))
+                {
+                    open_edit_value_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+            }
+
+            if (is_watchable)
+            {
+                auto watch_id = WatchIdentifier{container, property};
+                auto property_watcher_it = s_watch_map.find(watch_id);
+                if (property_watcher_it == s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Watch value"))
+                    {
+                        auto property_name_local = property->GetName();
+                        auto container_name = (container_type == ContainerType::Object && static_cast<UObject*>(container))
+                            ? static_cast<UObject*>(container)->GetName()
+                            : STR("N/A");
+                        s_watches.emplace_back(std::make_unique<Watch>(std::move(container_name), std::move(property_name_local)));
+                        auto& watch = s_watches.back();
+                        watch->property = property;
+                        watch->container = static_cast<UObject*>(container);
+                        s_watch_map.emplace(watch_id, watch.get());
+                        s_watch_containers[container].emplace_back(watch.get());
+                    }
+                }
+                else
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Stop watching value"))
+                    {
+                        auto watch = property_watcher_it->second;
+                        s_watch_map.erase(property_watcher_it);
+                        
+                        auto watch_container_it = s_watch_containers.find(container);
+                        if (watch_container_it != s_watch_containers.end())
+                        {
+                            std::erase_if(watch_container_it->second, [&](const Watch* container_watch) {
+                                return container_watch == watch;
+                            });
+                        }
+                        
+                        std::erase_if(s_watches, [&](const std::unique_ptr<Watch>& watch_in_vector) {
+                            return watch_in_vector.get() == watch;
+                        });
+                    }
+                }
+            }
+
+            if (property->IsA<FObjectProperty>())
+            {
+                if (ImGui::MenuItem("Go to object"))
+                {
+                    auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                    if (!hovered_object)
+                    {
+                        *tried_to_open_nullptr_object = true;
+                    }
+                    else
+                    {
+                        // Cannot go to another object in the middle of rendering properties.
+                        // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                        // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                        next_item_to_render = hovered_object;
+                    }
+                }
+            }
+        };
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
             if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : fmt::format("context-menu-{}", id_override).c_str()))
             {
-                if (ImGui::MenuItem("Copy name"))
-                {
-                    ImGui::SetClipboardText(property_name.c_str());
-                }
-                if (ImGui::MenuItem("Copy full name"))
-                {
-                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-                }
-                if (ImGui::MenuItem("Copy value"))
-                {
-                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
-                }
-                if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
-                {
-                    if (ImGui::MenuItem("Edit value"))
-                    {
-                        open_edit_value_popup = true;
-                        m_modal_edit_property_value_is_open = true;
-                    }
-                }
-
-                if (is_watchable)
-                {
-                    auto watch_id = WatchIdentifier{container, property};
-                    auto property_watcher_it = s_watch_map.find(watch_id);
-                    if (property_watcher_it == s_watch_map.end())
-                    {
-                        ImGui::Separator();
-                        if (ImGui::MenuItem("Watch value"))
-                        {
-                            add_watch(watch_id, static_cast<UObject*>(container), property);
-                        }
-                    }
-                    else
-                    {
-                        ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
-                    }
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Go to property"))
-                {
-                    next_item_to_render = property;
-                }
-
-                if (property->IsA<FObjectProperty>())
-                {
-                    if (ImGui::MenuItem("Go to object"))
-                    {
-                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
-
-                        if (!hovered_object)
-                        {
-                            *tried_to_open_nullptr_object = true;
-                        }
-                        else
-                        {
-                            // Cannot go to another object in the middle of rendering properties.
-                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
-                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
-                            next_item_to_render = hovered_object;
-                        }
-                    }
-                }
-
+                render_property_context_menu_items();
                 ImGui::EndPopup();
-            }
         };
 
         if (first_offset == -1)
