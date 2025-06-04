@@ -447,7 +447,16 @@ namespace RC::GUI
                 ImGui::PushID(this);
                 bool display_val = get_working_value();
                 ImGui::BeginDisabled();
+                
+                // Adjust frame padding to scale checkbox with font
+                ImVec2 original_padding = ImGui::GetStyle().FramePadding;
+                float font_size = ImGui::GetFontSize();
+                float checkbox_scale = font_size / 16.0f; // Assuming 16px as default font size
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(original_padding.x * checkbox_scale, original_padding.y * checkbox_scale));
+                
                 ImGui::Checkbox(get_display_label(label), &display_val);
+                
+                ImGui::PopStyleVar();
                 ImGui::EndDisabled();
                 render_tooltip();
                 ImGui::PopID();
@@ -457,7 +466,16 @@ namespace RC::GUI
             // Normal editable mode
             ImGui::PushID(this);
             bool& working_val = get_working_value();
+            
+            // Adjust frame padding to scale checkbox with font
+            ImVec2 original_padding = ImGui::GetStyle().FramePadding;
+            float font_size = ImGui::GetFontSize();
+            float checkbox_scale = font_size / 16.0f; // Assuming 16px as default font size
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(original_padding.x * checkbox_scale, original_padding.y * checkbox_scale));
+            
             bool changed = ImGui::Checkbox(get_display_label(label), &working_val);
+            
+            ImGui::PopStyleVar();
             render_tooltip();
             if (changed)
             {
