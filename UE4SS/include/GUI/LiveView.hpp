@@ -92,6 +92,8 @@ namespace RC::GUI
         int64_t m_current_enum_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
+        float m_info_panel_top_size{300.0f};    // Top section size
+        float m_info_panel_bottom_size{300.0f}; // Bottom section size 
         UFunctionCallerWidget* m_function_caller_widget{};
         bool m_is_searching_by_name{};
         bool m_search_field_clear_requested{};
