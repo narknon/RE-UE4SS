@@ -2875,8 +2875,6 @@ namespace RC::GUI
         }
         else
         {
-            ImGui::Separator();
-            
             // Check if we need to populate the property container for a new object
             if (m_property_container_object != currently_selected_object.second)
             {
@@ -2887,54 +2885,75 @@ namespace RC::GUI
                 // This allows us to use the existing property rendering logic
             }
             
-            // Render the "Allow Editing Properties" checkbox manually
-            bool is_editable = m_property_container->get_global_edit_mode() == EditMode::Editable;
-            if (ImGui::Checkbox("Allow Editing Properties", &is_editable))
-            {
-                m_property_container->set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
-            }
+            // === Fixed Control Panel (not scrollable) ===
             
-            // Render the "Immediate Apply" checkbox
-            ImGui::SameLine();
-            bool is_immediate = m_property_container->get_immediate_apply_mode() == ImmediateApplyMode::ForceContainer && 
-                               m_property_container->is_container_immediate_apply();
-            if (ImGui::Checkbox("Immediate Apply", &is_immediate))
-            {
-                if (is_immediate)
-                {
-                    m_property_container->enable_immediate_apply();
-                }
-                else
-                {
-                    m_property_container->disable_immediate_apply();
-                }
-            }
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("When enabled, property changes are applied immediately without needing to press Apply");
-            }
-            
-            // Add some spacing
-            ImGui::Spacing();
-            
-            // Render apply/reset buttons if there are pending changes
+            // Calculate height for the control panel
+            float control_panel_height = 0.0f;
+            control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Checkboxes line
+            control_panel_height += ImGui::GetStyle().ItemSpacing.y; // Spacing
             if (m_property_container->has_pending_changes())
             {
-                if (ImGui::Button("Apply Changes"))
-                {
-                    m_property_container->apply_all();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Reset"))
-                {
-                    m_property_container->revert_all();
-                }
-                ImGui::Spacing();
+                control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Apply/Reset buttons
+                control_panel_height += ImGui::GetStyle().ItemSpacing.y; // Spacing
             }
+            control_panel_height += ImGui::GetStyle().ItemSpacing.y * 2; // Extra padding
+            
+            // Render control panel in a non-scrollable area
+            ImGui::BeginChild("PropertyControlPanel", ImVec2(0, control_panel_height), false, ImGuiWindowFlags_NoScrollbar);
+            {
+                // Render the "Allow Editing Properties" checkbox
+                bool is_editable = m_property_container->get_global_edit_mode() == EditMode::Editable;
+                if (ImGui::Checkbox("Allow Editing Properties", &is_editable))
+                {
+                    m_property_container->set_global_edit_mode(is_editable ? EditMode::Editable : EditMode::ReadOnly);
+                }
+                
+                // Render the "Immediate Apply" checkbox
+                ImGui::SameLine();
+                bool is_immediate = m_property_container->get_immediate_apply_mode() == ImmediateApplyMode::ForceContainer && 
+                                   m_property_container->is_container_immediate_apply();
+                if (ImGui::Checkbox("Immediate Apply", &is_immediate))
+                {
+                    if (is_immediate)
+                    {
+                        m_property_container->enable_immediate_apply();
+                    }
+                    else
+                    {
+                        m_property_container->disable_immediate_apply();
+                    }
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("When enabled, property changes are applied immediately without needing to press Apply");
+                }
+                
+                // Add some spacing
+                ImGui::Spacing();
+                
+                // Render apply/reset buttons if there are pending changes
+                if (m_property_container->has_pending_changes())
+                {
+                    if (ImGui::Button("Apply Changes"))
+                    {
+                        m_property_container->apply_all();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset"))
+                    {
+                        m_property_container->revert_all();
+                    }
+                    ImGui::Spacing();
+                }
+            }
+            ImGui::EndChild();
             
             ImGui::Separator();
             
-            for (FProperty* property : uclass->ForEachProperty())
+            // === Scrollable Properties Area ===
+            ImGui::BeginChild("PropertiesScrollArea", ImVec2(0, 0), false);
+            {
+                for (FProperty* property : uclass->ForEachProperty())
             {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
             }
@@ -2977,6 +2996,8 @@ namespace RC::GUI
             {
                 select_property(0, next_property_to_render, AffectsHistory::Yes);
             }
+            }
+            ImGui::EndChild(); // End PropertiesScrollArea
         }
     }
 
@@ -3090,6 +3111,18 @@ namespace RC::GUI
             return;
         }
 
+        // This function should be called within the info panel, which already has proper bounds
+        // The splitter divides the available space between top (basic info) and bottom (collapsible content)
+
+        // Use the existing ImGui_Splitter at the correct level
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
+
+        // === Top Section ===
+        ImGui::BeginChild("InfoPanelTop",
+                          ImVec2(0, m_info_panel_top_size),
+                          false,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
         auto object_full_name = get_object_full_name(object);
 
         ImGui::Text("Selected: %s", to_string(object->GetName()).c_str());
@@ -3121,8 +3154,12 @@ namespace RC::GUI
             render_flags<FunctionFlagsStringifier>(as_function, "FunctionFlags");
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
-        ImGui::Separator();
-        // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
+
+        ImGui::EndChild();
+
+        // === Bottom Section ===
+        ImGui::BeginChild("InfoPanelBottom", ImVec2(0, 0), false);
+
         if (ImGui::CollapsingHeader("Size (total size of class + parents in parentheses)"))
         {
             auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
@@ -3161,6 +3198,8 @@ namespace RC::GUI
         }
 
         render_bottom_panel();
+
+        ImGui::EndChild();
     }
 
     static auto render_fname(FName name) -> void
@@ -3221,20 +3260,23 @@ namespace RC::GUI
                 if (ImGui::MenuItem("Copy flags"))
                 {
                     std::string flags_string_for_copy{};
-                    std::for_each(property_flags_stringifier.flag_parts.begin(), property_flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
-                        if (!flags_string_for_copy.empty())
-                        {
-                            flags_string_for_copy.append(" | ");
-                        }
-                        flags_string_for_copy.append(std::move(flag_part));
-                    });
+                    std::for_each(property_flags_stringifier.flag_parts.begin(),
+                                  property_flags_stringifier.flag_parts.end(),
+                                  [&](const std::string& flag_part) {
+                                      if (!flags_string_for_copy.empty())
+                                      {
+                                          flags_string_for_copy.append(" | ");
+                                      }
+                                      flags_string_for_copy.append(std::move(flag_part));
+                                  });
                     ImGui::SetClipboardText(flags_string_for_copy.c_str());
                 }
                 ImGui::EndPopup();
             }
         };
         ImGui::Text("PropertyFlags:");
-        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
+        create_menu_for_copy_flags(99);
+        // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
         ImGui::Indent();
         for (size_t i = 0; i < property_flags_stringifier.flag_parts.size(); ++i)
         {
@@ -3376,72 +3418,89 @@ namespace RC::GUI
     }
 
     auto LiveView::render_info_panel() -> void
+{
+    // Get the size of the info panel child window
+    ImVec2 info_panel_size = ImVec2(-16.0f, m_bottom_size);
+    
+    ImGui::BeginChild("LiveView_InfoPanel", info_panel_size, true, ImGuiWindowFlags_HorizontalScrollbar);
+
+    // Initialize splitter sizes based on available content region
+    ImVec2 available = ImGui::GetContentRegionAvail();
+    
+    // Account for the header buttons and separator (approximately 60 pixels)
+    float content_height = available.y - 60.0f;
+    
+    // Initialize sizes if they don't match the available space
+    if (m_info_panel_top_size + m_info_panel_bottom_size < content_height - 10.0f || 
+        m_info_panel_top_size + m_info_panel_bottom_size > content_height + 10.0f)
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {-16.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        m_info_panel_top_size = content_height * 0.4f;
+        m_info_panel_bottom_size = content_height - m_info_panel_top_size - 4.0f;
+    }
 
-        size_t next_object_index_to_select{};
+    size_t next_object_index_to_select{};
 
-        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_LEFT))
+    if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_LEFT))
+    {
+        next_object_index_to_select = s_currently_selected_object_index;
+        if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
         {
-            next_object_index_to_select = s_currently_selected_object_index;
-            if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
-            {
-                next_object_index_to_select = s_currently_selected_object_index - 1;
-            }
-        }
-        auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
-        if (selected_next_object.second)
-        {
-            next_object_index_to_select = selected_next_object.first;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_RIGHT))
-        {
-            next_object_index_to_select = s_currently_selected_object_index;
-            if (s_currently_selected_object_index + 1 < s_object_view_history.size())
-            {
-                next_object_index_to_select = s_currently_selected_object_index + 1;
-            }
-        }
-        auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
-        if (selected_prev_object.second)
-        {
-            next_object_index_to_select = selected_prev_object.first;
-        }
-
-        auto currently_selected_object = get_selected_object_or_property();
-
-        ImGui::SameLine();
-        if (!currently_selected_object.is_object)
-        {
-            ImGui::BeginDisabled();
-        }
-        if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
-        {
-            m_function_caller_widget->open_widget_deferred();
-        }
-        if (!currently_selected_object.is_object)
-        {
-            ImGui::EndDisabled();
-        }
-        ImGui::Separator();
-
-        if (currently_selected_object.is_object)
-        {
-            render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
-        }
-        else
-        {
-            render_info_panel_as_property(currently_selected_object.property);
-        }
-
-        ImGui::EndChild();
-
-        if (next_object_index_to_select > 0)
-        {
-            select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
+            next_object_index_to_select = s_currently_selected_object_index - 1;
         }
     }
+    auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
+    if (selected_next_object.second)
+    {
+        next_object_index_to_select = selected_next_object.first;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_RIGHT))
+    {
+        next_object_index_to_select = s_currently_selected_object_index;
+        if (s_currently_selected_object_index + 1 < s_object_view_history.size())
+        {
+            next_object_index_to_select = s_currently_selected_object_index + 1;
+        }
+    }
+    auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
+    if (selected_prev_object.second)
+    {
+        next_object_index_to_select = selected_prev_object.first;
+    }
+
+    auto currently_selected_object = get_selected_object_or_property();
+
+    ImGui::SameLine();
+    if (!currently_selected_object.is_object)
+    {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+    {
+        m_function_caller_widget->open_widget_deferred();
+    }
+    if (!currently_selected_object.is_object)
+    {
+        ImGui::EndDisabled();
+    }
+    ImGui::Separator();
+
+    if (currently_selected_object.is_object)
+    {
+        render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
+    }
+    else
+    {
+        render_info_panel_as_property(currently_selected_object.property);
+    }
+
+    ImGui::EndChild();
+
+    if (next_object_index_to_select > 0)
+    {
+        select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
+    }
+}
 
     static auto object_search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
     {
