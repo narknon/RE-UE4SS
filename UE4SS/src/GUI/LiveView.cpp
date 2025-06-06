@@ -2601,25 +2601,28 @@ namespace RC::GUI
         }
         else
         {
-            // For float properties, use ImGuiFloat for now
+            // For float properties, use ImGuiSlider with monitored value
             auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_float = m_property_container->get_value<ImGuiFloat>(float_id);
+            auto existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
             
             if (!existing_float)
             {
-                auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(
+                // Create a slider with reasonable default range
+                auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
                     [container_ptr]() -> float {
                         return *static_cast<float*>(container_ptr);
                     },
                     [container_ptr](float new_value) {
                         *static_cast<float*>(container_ptr) = new_value;
                     },
-                    0.0f,  // default value
-                    ""     // name
+                    -100.0f,  // min
+                    100.0f,   // max
+                    0.0f,     // default value
+                    ""        // name
                 );
                 
                 m_property_container->add_value(float_id, std::move(float_value));
-                existing_float = m_property_container->get_value<ImGuiFloat>(float_id);
+                existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
                 
                 existing_float->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu

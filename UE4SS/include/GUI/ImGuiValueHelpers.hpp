@@ -64,7 +64,7 @@ namespace RC::GUI
         
         // Draw just the value as text (read-only)
         virtual void draw_value(const char* label = nullptr) = 0;
-        virtual void draw_value(const CharType* label = nullptr) = 0;
+        virtual void draw_value(const CharType* label) = 0;
         
         // Draw control with optional text representation
         virtual bool draw_with_text(const char* label = nullptr, bool show_text = true) = 0;
