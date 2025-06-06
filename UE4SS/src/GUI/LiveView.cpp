@@ -2213,9 +2213,13 @@ namespace RC::GUI
             *last_property_in = property;
         }
 
-        if (ImGui::IsItemHovered())
+        // Only show tooltip if it's not a custom-rendered property that handles its own tooltip
+        if (!property->IsA<FBoolProperty>() && !property->IsA<FFloatProperty>() && !property->IsA<FDoubleProperty>())
         {
-            render_property_details_tooltip(property);
+            if (ImGui::IsItemHovered())
+            {
+                render_property_details_tooltip(property);
+            }
         }
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
@@ -2572,10 +2576,6 @@ namespace RC::GUI
                 m_property_container->add_value(double_id, std::move(double_value));
                 existing_double = m_property_container->get_value<ImGuiDouble>(double_id);
                 
-                existing_double->set_custom_tooltip_callback([property]() {
-                    render_property_details_tooltip(property);
-                });
-                
                 existing_double->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
@@ -2584,14 +2584,20 @@ namespace RC::GUI
             // Update from game engine
             existing_double->update_from_external(true);
             
-            // Render the double input
+            // Render input field for doubles (no slider due to precision)
             ImGui::SameLine();
-            ImGui::PushItemWidth(200 * font_scale);
+            ImGui::PushItemWidth(120 * font_scale);
             if (existing_double->draw("##double"))
             {
                 // Value changed by user
             }
             ImGui::PopItemWidth();
+            
+            // Handle tooltip on hover
+            if (ImGui::IsItemHovered())
+            {
+                render_property_details_tooltip(property);
+            }
         }
         else
         {
@@ -2615,10 +2621,6 @@ namespace RC::GUI
                 m_property_container->add_value(float_id, std::move(float_value));
                 existing_float = m_property_container->get_value<ImGuiFloat>(float_id);
                 
-                existing_float->set_custom_tooltip_callback([property]() {
-                    render_property_details_tooltip(property);
-                });
-                
                 existing_float->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
@@ -2627,14 +2629,36 @@ namespace RC::GUI
             // Update from game engine
             existing_float->update_from_external(true);
             
-            // Render the float input
+            // Render a slider and input field combo
             ImGui::SameLine();
-            ImGui::PushItemWidth(200 * font_scale);
-            if (existing_float->draw("##float"))
+            
+            // Get current value
+            float current_value = existing_float->value();
+            
+            // Render slider
+            ImGui::PushItemWidth(150 * font_scale);
+            if (ImGui::SliderFloat("##slider", &current_value, -100.0f, 100.0f, "%.3f"))
             {
-                // Value changed by user
+                existing_float->set_value(current_value);
+                existing_float->apply_changes();
             }
             ImGui::PopItemWidth();
+            
+            // Render input field for precise input
+            ImGui::SameLine();
+            ImGui::PushItemWidth(80 * font_scale);
+            if (ImGui::InputFloat("##input", &current_value, 0.0f, 0.0f, "%.3f"))
+            {
+                existing_float->set_value(current_value);
+                existing_float->apply_changes();
+            }
+            ImGui::PopItemWidth();
+            
+            // Handle tooltip on hover
+            if (ImGui::IsItemHovered())
+            {
+                render_property_details_tooltip(property);
+            }
         }
         
         // Check if item was right-clicked
