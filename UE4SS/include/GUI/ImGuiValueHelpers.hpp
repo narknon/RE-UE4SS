@@ -2993,6 +2993,17 @@ namespace RC::GUI
             this->set_external_value(getter());
         }
         
+        // Variadic template constructor that forwards all arguments to ValueType
+        template<typename... Args>
+        ImGuiMonitoredValue(ValueGetter getter, ValueSetter setter, Args&&... args)
+            : ValueType(std::forward<Args>(args)...)
+            , m_getter(getter)
+            , m_setter(setter)
+        {
+            this->set_externally_controlled(true);
+            this->set_external_value(getter());
+        }
+        
         // Update from external source
         void refresh()
         {
@@ -3065,17 +3076,43 @@ namespace RC::GUI
     inline auto make_monitored_slider(std::function<float()> getter, std::function<void(float)> setter,
                                      float min, float max, float default_value = 0.0f, const std::string& name = "")
     {
-        // Note: ImGuiSlider needs min/max passed to constructor, not set later
-        // For now, we'll just use regular float input until we update ImGuiMonitoredValue to support custom constructors
-        return std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(getter, setter, default_value, name);
+        // Now we can properly create a slider with min/max using the variadic constructor
+        return std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(getter, setter, min, max, default_value, name);
     }
     
     inline auto make_monitored_slider_int(std::function<int32_t()> getter, std::function<void(int32_t)> setter,
                                          int32_t min, int32_t max, int32_t default_value = 0, const std::string& name = "")
     {
-        // Note: ImGuiSliderInt32 needs min/max passed to constructor, not set later
-        // For now, we'll just use regular int input until we update ImGuiMonitoredValue to support custom constructors
-        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiInt32>>(getter, setter, default_value, name);
+        // Now we can properly create an int slider with min/max using the variadic constructor
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(getter, setter, min, max, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_double(std::function<double()> getter, std::function<void(double)> setter,
+                                            double min, double max, double default_value = 0.0, const std::string& name = "",
+                                            bool show_precision_input = false)
+    {
+        return std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(getter, setter, min, max, default_value, name, "", show_precision_input);
+    }
+    
+    inline auto make_monitored_text_multiline(std::function<std::string()> getter, std::function<void(const std::string&)> setter,
+                                             const std::string& default_value = "", const std::string& name = "",
+                                             const ImVec2& size = ImVec2(0, 0))
+    {
+        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiTextMultiline>>(getter, setter, default_value, name, size);
+    }
+    
+    template<typename EnumType>
+    inline auto make_monitored_enum(std::function<EnumType()> getter, std::function<void(EnumType)> setter,
+                                   const std::vector<std::pair<EnumType, std::string>>& options,
+                                   EnumType default_value, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<EnumType, ImGuiEnum<EnumType>>>(getter, setter, options, default_value, name);
+    }
+    
+    inline auto make_monitored_combo(std::function<int32_t()> getter, std::function<void(int32_t)> setter,
+                                    const std::vector<std::string>& options, int32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiCombo>>(getter, setter, options, default_value, name);
     }
 
     // Container for managing multiple ImGui values with advanced features
