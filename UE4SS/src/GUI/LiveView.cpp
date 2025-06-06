@@ -2570,8 +2570,8 @@ namespace RC::GUI
                     [container_ptr](double new_value) {
                         *static_cast<double*>(container_ptr) = new_value;
                     },
-                    -100.0,   // min
-                    100.0,    // max
+                    -1e10,    // min - large but not max to avoid overflow
+                    1e10,     // max - large but not max to avoid overflow
                     0.0,      // default value
                     "",       // name
                     "",       // tooltip
@@ -2613,7 +2613,7 @@ namespace RC::GUI
             
             if (!existing_float)
             {
-                // Create a slider with reasonable default range
+                // Create a slider with wide range
                 auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
                     [container_ptr]() -> float {
                         return *static_cast<float*>(container_ptr);
@@ -2621,8 +2621,8 @@ namespace RC::GUI
                     [container_ptr](float new_value) {
                         *static_cast<float*>(container_ptr) = new_value;
                     },
-                    -100.0f,  // min
-                    100.0f,   // max
+                    -1e10f,   // min - large but not FLT_MAX to avoid overflow
+                    1e10f,    // max - large but not FLT_MAX to avoid overflow
                     0.0f,     // default value
                     ""        // name
                 );
