@@ -2586,8 +2586,8 @@ namespace RC::GUI
             
             // Render input field for doubles (no slider due to precision)
             ImGui::SameLine();
-            ImGui::PushItemWidth(120 * font_scale);
-            if (existing_double->draw("##double"))
+            ImGui::PushItemWidth(100 * font_scale);
+            if (existing_double->draw())
             {
                 // Value changed by user
             }
@@ -2638,7 +2638,8 @@ namespace RC::GUI
             // Render slider (Ctrl+Click to input manually)
             ImGui::SameLine();
             
-            ImGui::PushItemWidth(200 * font_scale);
+            // Make the slider more compact, similar to input fields
+            ImGui::PushItemWidth(120 * font_scale);
             if (existing_float->draw())
             {
                 // Value changed by user
