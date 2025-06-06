@@ -2632,26 +2632,10 @@ namespace RC::GUI
             // Render a slider and input field combo
             ImGui::SameLine();
             
-            // Get current value
-            float current_value = existing_float->value();
-            
-            // Render slider
-            ImGui::PushItemWidth(150 * font_scale);
-            if (ImGui::SliderFloat("##slider", &current_value, -100.0f, 100.0f, "%.3f"))
-            {
-                existing_float->set_value(current_value);
-                existing_float->apply_changes();
-            }
+            // For now, just use the draw method directly
+            ImGui::PushItemWidth(200 * font_scale);
+            existing_float->draw();
             ImGui::PopItemWidth();
-            
-            // Render input field for precise input
-            ImGui::SameLine();
-            ImGui::PushItemWidth(80 * font_scale);
-            if (ImGui::InputFloat("##input", &current_value, 0.0f, 0.0f, "%.3f"))
-            {
-                existing_float->set_value(current_value);
-                existing_float->apply_changes();
-            }
             ImGui::PopItemWidth();
             
             // Handle tooltip on hover

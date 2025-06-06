@@ -3096,9 +3096,9 @@ namespace RC::GUI
     
     inline auto make_monitored_text_multiline(std::function<std::string()> getter, std::function<void(const std::string&)> setter,
                                              const std::string& default_value = "", const std::string& name = "",
-                                             const ImVec2& size = ImVec2(0, 0))
+                                             const ImVec2& size = ImVec2(0, 0), const std::string& tooltip = "", size_t buffer_size = 4096)
     {
-        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiTextMultiline>>(getter, setter, default_value, name, size);
+        return std::make_unique<ImGuiMonitoredValue<std::string, ImGuiTextMultiline>>(getter, setter, default_value, name, tooltip, size, buffer_size);
     }
     
     template<typename EnumType>
