@@ -2556,89 +2556,51 @@ namespace RC::GUI
         
         if (is_double)
         {
-            // For double properties, use both a slider (for visual feedback) and input (for full precision)
-            auto slider_id = fmt::format("double_slider_{}_{}", static_cast<void*>(container), property_name);
-            auto input_id = fmt::format("double_input_{}_{}", static_cast<void*>(container), property_name);
+            // For double properties, use ImGuiSliderDouble with unclamped precision input
+            auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+            auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
             
-            auto existing_slider = m_property_container->get_value<ImGuiSliderDouble>(slider_id);
-            auto existing_input = m_property_container->get_value<ImGuiDouble>(input_id);
-            
-            if (!existing_slider)
+            if (!existing_double)
             {
-                // Create a slider for visual feedback (no precision input since we have separate input)
-                auto slider_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
+                // Create a slider with precision input field (now unclamped!)
+                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
                     [container_ptr]() -> double {
                         return *static_cast<double*>(container_ptr);
                     },
                     [container_ptr](double new_value) {
                         *static_cast<double*>(container_ptr) = new_value;
                     },
-                    -1e10,    // min
-                    1e10,     // max
+                    -1e10,    // min for slider
+                    1e10,     // max for slider
                     0.0,      // default value
                     "",       // name
                     "",       // tooltip
-                    false     // no precision input (we'll use separate input)
+                    true      // show_precision_input (now unclamped!)
                 );
                 
-                m_property_container->add_value(slider_id, std::move(slider_value));
-                existing_slider = m_property_container->get_value<ImGuiSliderDouble>(slider_id);
+                m_property_container->add_value(double_id, std::move(double_value));
+                existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
                 
-                existing_slider->set_custom_context_menu_callback([]() {
+                existing_double->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
-                existing_slider->set_custom_tooltip_callback([property]() {
+                existing_double->set_custom_tooltip_callback([property]() {
                     render_property_details_tooltip(property);
                 });
             }
             
-            if (!existing_input)
-            {
-                // Create an input field for full precision (no range limits)
-                auto input_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(
-                    [container_ptr]() -> double {
-                        return *static_cast<double*>(container_ptr);
-                    },
-                    [container_ptr](double new_value) {
-                        *static_cast<double*>(container_ptr) = new_value;
-                    },
-                    0.0,  // default value
-                    ""    // name
-                );
-                
-                m_property_container->add_value(input_id, std::move(input_value));
-                existing_input = m_property_container->get_value<ImGuiDouble>(input_id);
-                
-                existing_input->set_custom_context_menu_callback([]() {
-                    // Empty - prevents default context menu
-                });
-                existing_input->set_custom_tooltip_callback([property]() {
-                    render_property_details_tooltip(property);
-                });
-            }
+            // Update from game engine
+            existing_double->update_from_external(true);
             
-            // Update both from game engine
-            existing_slider->update_from_external();
-            existing_input->update_from_external();
-            
-            // Render slider and unclamped input field
+            // Render slider with unclamped precision input
             ImGui::SameLine();
             
+            // Push compact frame padding to reduce height
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-            ImGui::PushItemWidth(120 * font_scale);
-            if (existing_slider->draw())
+            ImGui::PushItemWidth(200 * font_scale); // Wide enough for both slider and input
+            if (existing_double->draw())
             {
-                // Slider changed - update input to match
-                existing_input->update_from_external();
-            }
-            ImGui::PopItemWidth();
-            
-            ImGui::SameLine();
-            ImGui::PushItemWidth(80 * font_scale);
-            if (existing_input->draw())
-            {
-                // Input changed - update slider to match
-                existing_slider->update_from_external();
+                // Value changed by user
             }
             ImGui::PopItemWidth();
             ImGui::PopStyleVar();

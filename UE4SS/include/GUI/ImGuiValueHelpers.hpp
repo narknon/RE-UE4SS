@@ -831,7 +831,7 @@ namespace RC::GUI
                 ImGui::SameLine();
                 if (ImGui::InputDouble("##precise", &working_val))
                 {
-                    working_val = std::clamp(working_val, m_min, m_max);
+                    // Don't clamp the precision input - allow full double range
                     changed = true;
                 }
             }
