@@ -2279,10 +2279,10 @@ namespace RC::GUI
                     }
                     else if (property->IsA<FDoubleProperty>())
                     {
-                        auto double_slider_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id))
+                        auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_double = m_property_container->get_value<ImGuiDouble>(double_id))
                         {
-                            existing_double_slider->update_from_external(true);
+                            existing_double->update_from_external(true);
                         }
                     }
                 }
@@ -2552,13 +2552,13 @@ namespace RC::GUI
         
         if (is_double)
         {
-            // For double properties, use ImGuiSliderDouble with precision input
-            auto double_slider_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id);
+            // For double properties, use ImGuiDouble with monitored value
+            auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+            auto existing_double = m_property_container->get_value<ImGuiDouble>(double_id);
             
-            if (!existing_double_slider)
+            if (!existing_double)
             {
-                auto double_slider = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
+                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(
                     [container_ptr]() -> double {
                         return *static_cast<double*>(container_ptr);
                     },
@@ -2569,30 +2569,25 @@ namespace RC::GUI
                     ""    // name
                 );
                 
-                // Configure the internal ImGuiSliderDouble
-                double_slider->get_imgui_value()->set_min(-1000000.0);
-                double_slider->get_imgui_value()->set_max(1000000.0);
-                double_slider->get_imgui_value()->set_show_precision_input(true);
+                m_property_container->add_value(double_id, std::move(double_value));
+                existing_double = m_property_container->get_value<ImGuiDouble>(double_id);
                 
-                m_property_container->add_value(double_slider_id, std::move(double_slider));
-                existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id);
-                
-                existing_double_slider->set_custom_tooltip_callback([property]() {
+                existing_double->set_custom_tooltip_callback([property]() {
                     render_property_details_tooltip(property);
                 });
                 
-                existing_double_slider->set_custom_context_menu_callback([]() {
+                existing_double->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
             }
             
             // Update from game engine
-            existing_double_slider->update_from_external(true);
+            existing_double->update_from_external(true);
             
-            // Render the slider with input field
+            // Render the double input
             ImGui::SameLine();
-            ImGui::PushItemWidth(280 * font_scale);
-            if (existing_double_slider->draw("##slider"))
+            ImGui::PushItemWidth(200 * font_scale);
+            if (existing_double->draw("##double"))
             {
                 // Value changed by user
             }
@@ -2617,9 +2612,9 @@ namespace RC::GUI
                     ""     // name
                 );
                 
-                // Configure the internal ImGuiSlider
-                float_slider->get_imgui_value()->set_min(-1000000.0f);
-                float_slider->get_imgui_value()->set_max(1000000.0f);
+                // Configure the slider min/max
+                float_slider->min() = -1000000.0f;
+                float_slider->max() = 1000000.0f;
                 
                 m_property_container->add_value(slider_id, std::move(float_slider));
                 existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
@@ -2651,8 +2646,8 @@ namespace RC::GUI
             float current_value = existing_slider->value();
             if (ImGui::InputFloat(fmt::format("##{}_input", slider_id).c_str(), &current_value, 0.0f, 0.0f, "%.3f"))
             {
-                // Update the value directly through the ImGui value
-                existing_slider->get_imgui_value()->set_value(current_value);
+                // Update the value directly
+                existing_slider->set_value(current_value);
                 existing_slider->apply_changes();
             }
             ImGui::PopItemWidth();
