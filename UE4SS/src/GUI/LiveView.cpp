@@ -3035,14 +3035,8 @@ namespace RC::GUI
             
             // Calculate height for the control panel
             float control_panel_height = 0.0f;
-            control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Checkboxes line
-            control_panel_height += ImGui::GetStyle().ItemSpacing.y; // Spacing
-            if (m_property_container->has_pending_changes())
-            {
-                control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Apply/Reset buttons
-                control_panel_height += ImGui::GetStyle().ItemSpacing.y; // Spacing
-            }
-            control_panel_height += ImGui::GetStyle().ItemSpacing.y * 2; // Extra padding
+            control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Single line for checkboxes and buttons
+            control_panel_height += ImGui::GetStyle().ItemSpacing.y * 3; // Extra padding
             
             // Render control panel in a non-scrollable area
             ImGui::BeginChild("PropertyControlPanel", ImVec2(0, control_panel_height), false, ImGuiWindowFlags_NoScrollbar);
@@ -3079,15 +3073,15 @@ namespace RC::GUI
                 }
                 
                 // Pop the style var
-                ImGui::PopStyleVar();
-                
-                // Add some spacing
-                ImGui::Spacing();
-                
-                // Render apply/reset buttons if there are pending changes
+                // Render apply/reset buttons on the same line if there are pending changes
                 if (m_property_container->has_pending_changes())
                 {
-                    if (ImGui::Button("Apply Changes"))
+                    ImGui::SameLine();
+                    
+                    // Make buttons smaller to fit on same line
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                    
+                    if (ImGui::Button("Apply"))
                     {
                         m_property_container->apply_all();
                     }
@@ -3096,8 +3090,14 @@ namespace RC::GUI
                     {
                         m_property_container->revert_all();
                     }
-                    ImGui::Spacing();
+                    
+                    ImGui::PopStyleVar(); // Pop frame padding for buttons
                 }
+                
+                ImGui::PopStyleVar(); // Pop frame padding for checkboxes
+                
+                // Add some spacing
+                ImGui::Spacing();
             }
             ImGui::EndChild();
             
