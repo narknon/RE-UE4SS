@@ -2901,6 +2901,10 @@ namespace RC::GUI
             // Render control panel in a non-scrollable area
             ImGui::BeginChild("PropertyControlPanel", ImVec2(0, control_panel_height), false, ImGuiWindowFlags_NoScrollbar);
             {
+                // Push smaller frame padding for more compact checkboxes, scaled with font
+                float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 2 * font_scale));
+                
                 // Render the "Allow Editing Properties" checkbox
                 bool is_editable = m_property_container->get_global_edit_mode() == EditMode::Editable;
                 if (ImGui::Checkbox("Allow Editing Properties", &is_editable))
@@ -2927,6 +2931,9 @@ namespace RC::GUI
                 {
                     ImGui::SetTooltip("When enabled, property changes are applied immediately without needing to press Apply");
                 }
+                
+                // Pop the style var
+                ImGui::PopStyleVar();
                 
                 // Add some spacing
                 ImGui::Spacing();
