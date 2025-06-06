@@ -2586,12 +2586,16 @@ namespace RC::GUI
             
             // Render input field for doubles (no slider due to precision)
             ImGui::SameLine();
+            
+            // Push compact frame padding to reduce height
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
             ImGui::PushItemWidth(100 * font_scale);
             if (existing_double->draw())
             {
                 // Value changed by user
             }
             ImGui::PopItemWidth();
+            ImGui::PopStyleVar();
             
             // Handle tooltip on hover
             if (ImGui::IsItemHovered())
@@ -2638,13 +2642,15 @@ namespace RC::GUI
             // Render slider (Ctrl+Click to input manually)
             ImGui::SameLine();
             
-            // Make the slider more compact, similar to input fields
+            // Push compact frame padding to reduce height
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
             ImGui::PushItemWidth(120 * font_scale);
             if (existing_float->draw())
             {
                 // Value changed by user
             }
             ImGui::PopItemWidth();
+            ImGui::PopStyleVar();
         }
         
         // Check if item was right-clicked
