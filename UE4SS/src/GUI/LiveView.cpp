@@ -2595,13 +2595,13 @@ namespace RC::GUI
         }
         else
         {
-            // For float properties, use ImGuiSlider
-            auto slider_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
+            // For float properties, use ImGuiFloat for now
+            auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+            auto existing_float = m_property_container->get_value<ImGuiFloat>(float_id);
             
-            if (!existing_slider)
+            if (!existing_float)
             {
-                auto float_slider = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
+                auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(
                     [container_ptr]() -> float {
                         return *static_cast<float*>(container_ptr);
                     },
@@ -2612,43 +2612,27 @@ namespace RC::GUI
                     ""     // name
                 );
                 
-                // Configure the slider min/max
-                float_slider->min() = -1000000.0f;
-                float_slider->max() = 1000000.0f;
+                m_property_container->add_value(float_id, std::move(float_value));
+                existing_float = m_property_container->get_value<ImGuiFloat>(float_id);
                 
-                m_property_container->add_value(slider_id, std::move(float_slider));
-                existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
-                
-                existing_slider->set_custom_tooltip_callback([property]() {
+                existing_float->set_custom_tooltip_callback([property]() {
                     render_property_details_tooltip(property);
                 });
                 
-                existing_slider->set_custom_context_menu_callback([]() {
+                existing_float->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
             }
             
             // Update from game engine
-            existing_slider->update_from_external(true);
+            existing_float->update_from_external(true);
             
-            // Render the slider
+            // Render the float input
             ImGui::SameLine();
             ImGui::PushItemWidth(200 * font_scale);
-            if (existing_slider->draw("##slider"))
+            if (existing_float->draw("##float"))
             {
                 // Value changed by user
-            }
-            ImGui::PopItemWidth();
-            
-            // Add editable text input next to slider
-            ImGui::SameLine();
-            ImGui::PushItemWidth(80 * font_scale);
-            float current_value = existing_slider->value();
-            if (ImGui::InputFloat(fmt::format("##{}_input", slider_id).c_str(), &current_value, 0.0f, 0.0f, "%.3f"))
-            {
-                // Update the value directly
-                existing_slider->set_value(current_value);
-                existing_slider->apply_changes();
             }
             ImGui::PopItemWidth();
         }
