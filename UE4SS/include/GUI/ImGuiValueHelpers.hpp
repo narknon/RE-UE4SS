@@ -643,7 +643,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -653,7 +653,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.3f", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -729,7 +729,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -739,7 +739,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.6f", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -849,7 +849,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -859,7 +859,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.6f [%.6f, %.6f]", get_display_label(label), m_value, m_min, m_max);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -942,7 +942,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -952,7 +952,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.3f [%.3f, %.3f]", get_display_label(label), m_value, m_min, m_max);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1029,7 +1029,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1039,7 +1039,7 @@ namespace RC::GUI
             ImGui::Text("%s: %d", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1113,7 +1113,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1123,7 +1123,7 @@ namespace RC::GUI
             ImGui::Text("%s: %d [%d, %d]", get_display_label(label), m_value, m_min, m_max);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1208,7 +1208,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1219,7 +1219,7 @@ namespace RC::GUI
             ImGui::Text("%s: %s", get_display_label(label), m_options_pointers[m_value]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1333,7 +1333,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1343,7 +1343,7 @@ namespace RC::GUI
             ImGui::Text("%s: %s", get_display_label(label), m_value.c_str());
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1431,7 +1431,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1441,7 +1441,7 @@ namespace RC::GUI
             ImGui::Text("%s: %s", get_display_label(label), m_value.c_str());
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1518,7 +1518,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1528,7 +1528,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1611,7 +1611,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1621,7 +1621,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.3f, %.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2], m_value[3]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1706,7 +1706,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1716,7 +1716,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.3f, %.3f)", get_display_label(label), m_value[0], m_value[1]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1804,7 +1804,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1814,7 +1814,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.3f, %.3f, %.3f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -1910,7 +1910,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -1920,7 +1920,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.3f", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2038,7 +2038,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2048,7 +2048,7 @@ namespace RC::GUI
             ImGui::Text("%s: %.6f", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2135,7 +2135,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2145,7 +2145,7 @@ namespace RC::GUI
             ImGui::Text("%s: %d", get_display_label(label), m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2253,7 +2253,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2263,7 +2263,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.6f, %.6f)", get_display_label(label), m_value[0], m_value[1]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2403,7 +2403,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2413,7 +2413,7 @@ namespace RC::GUI
             ImGui::Text("%s: (%.6f, %.6f, %.6f)", get_display_label(label), m_value[0], m_value[1], m_value[2]);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2523,7 +2523,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2540,7 +2540,7 @@ namespace RC::GUI
             }
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2668,7 +2668,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2685,7 +2685,7 @@ namespace RC::GUI
             }
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2801,7 +2801,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2811,7 +2811,7 @@ namespace RC::GUI
             ImGui::Text("%s: 0x%X", this->get_display_label(label), this->m_value);
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
@@ -2913,7 +2913,7 @@ namespace RC::GUI
             return changed;
         }
 
-        bool draw(const CharType* label = nullptr) override
+        bool draw(const CharType* label) override
         {
             return draw(label ? to_string(label).c_str() : nullptr);
         }
@@ -2931,7 +2931,7 @@ namespace RC::GUI
             }
         }
 
-        void draw_value(const CharType* label = nullptr) override
+        void draw_value(const CharType* label) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
