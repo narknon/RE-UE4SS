@@ -2627,25 +2627,23 @@ namespace RC::GUI
                 existing_float->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
                 });
+                existing_float->set_custom_tooltip_callback([property]() {
+                    render_property_details_tooltip(property);
+                });
             }
             
             // Update from game engine
             existing_float->update_from_external(true);
             
-            // Render a slider and input field combo
+            // Render slider (Ctrl+Click to input manually)
             ImGui::SameLine();
             
-            // For now, just use the draw method directly
             ImGui::PushItemWidth(200 * font_scale);
-            existing_float->draw();
-            ImGui::PopItemWidth();
-            ImGui::PopItemWidth();
-            
-            // Handle tooltip on hover
-            if (ImGui::IsItemHovered())
+            if (existing_float->draw())
             {
-                render_property_details_tooltip(property);
+                // Value changed by user
             }
+            ImGui::PopItemWidth();
         }
         
         // Check if item was right-clicked
