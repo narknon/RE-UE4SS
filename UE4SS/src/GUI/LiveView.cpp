@@ -2559,14 +2559,20 @@ namespace RC::GUI
             if (!existing_double_slider)
             {
                 auto double_slider = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
-                    std::make_unique<ImGuiSliderDouble>(-1000000.0, 1000000.0, 0.0, "", "", true),
                     [container_ptr]() -> double {
                         return *static_cast<double*>(container_ptr);
                     },
                     [container_ptr](double new_value) {
                         *static_cast<double*>(container_ptr) = new_value;
-                    }
+                    },
+                    0.0,  // default value
+                    ""    // name
                 );
+                
+                // Configure the internal ImGuiSliderDouble
+                double_slider->get_imgui_value()->set_min(-1000000.0);
+                double_slider->get_imgui_value()->set_max(1000000.0);
+                double_slider->get_imgui_value()->set_show_precision_input(true);
                 
                 m_property_container->add_value(double_slider_id, std::move(double_slider));
                 existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id);
@@ -2601,14 +2607,19 @@ namespace RC::GUI
             if (!existing_slider)
             {
                 auto float_slider = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
-                    std::make_unique<ImGuiSlider>(-1000000.0f, 1000000.0f, 0.0f, ""),
                     [container_ptr]() -> float {
                         return *static_cast<float*>(container_ptr);
                     },
                     [container_ptr](float new_value) {
                         *static_cast<float*>(container_ptr) = new_value;
-                    }
+                    },
+                    0.0f,  // default value
+                    ""     // name
                 );
+                
+                // Configure the internal ImGuiSlider
+                float_slider->get_imgui_value()->set_min(-1000000.0f);
+                float_slider->get_imgui_value()->set_max(1000000.0f);
                 
                 m_property_container->add_value(slider_id, std::move(float_slider));
                 existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
@@ -2640,9 +2651,9 @@ namespace RC::GUI
             float current_value = existing_slider->value();
             if (ImGui::InputFloat(fmt::format("##{}_input", slider_id).c_str(), &current_value, 0.0f, 0.0f, "%.3f"))
             {
-                // Update the value through the monitored wrapper
-                existing_slider->set_external_value(current_value);
-                existing_slider->apply_changes_with_external();
+                // Update the value directly through the ImGui value
+                existing_slider->get_imgui_value()->set_value(current_value);
+                existing_slider->apply_changes();
             }
             ImGui::PopItemWidth();
         }
