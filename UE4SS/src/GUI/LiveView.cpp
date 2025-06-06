@@ -2197,6 +2197,11 @@ namespace RC::GUI
             render_bool_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
+        else if (property->IsA<FFloatProperty>() || property->IsA<FDoubleProperty>())
+        {
+            render_float_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
         else
         {
             render_default_property(property, to_string(property_text.GetCharArray()));
@@ -2262,6 +2267,22 @@ namespace RC::GUI
                         if (auto existing_toggle = m_property_container->get_value<ImGuiToggle>(toggle_id))
                         {
                             existing_toggle->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FFloatProperty>())
+                    {
+                        auto slider_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id))
+                        {
+                            existing_slider->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FDoubleProperty>())
+                    {
+                        auto double_slider_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id))
+                        {
+                            existing_double_slider->update_from_external(true);
                         }
                     }
                 }
@@ -2512,6 +2533,138 @@ namespace RC::GUI
         // Open context menu if checkbox was right-clicked
         // This ensures the same context menu appears for both checkbox and text
         if (checkbox_right_clicked)
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+
+    auto LiveView::render_float_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text) -> void
+    {
+        // Create a unique ID for this property
+        auto slider_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+        
+        // Check if this slider already exists in the container
+        auto existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
+        
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        if (!existing_slider)
+        {
+            // Determine if this is a float or double property
+            bool is_double = property->IsA<FDoubleProperty>();
+            
+            if (is_double)
+            {
+                // For double properties, use ImGuiSliderDouble with precision input
+                auto double_slider_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                auto existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id);
+                
+                if (!existing_double_slider)
+                {
+                    auto double_slider = make_monitored_double_slider(
+                        [container_ptr]() -> double {
+                            return *static_cast<double*>(container_ptr);
+                        },
+                        [container_ptr](double new_value) {
+                            *static_cast<double*>(container_ptr) = new_value;
+                        },
+                        -1000000.0, // min
+                        1000000.0,  // max
+                        0.0,        // default
+                        "",         // no display name
+                        "",         // no description
+                        true        // show precision input
+                    );
+                    
+                    m_property_container->add_value(double_slider_id, std::move(double_slider));
+                    existing_double_slider = m_property_container->get_value<ImGuiSliderDouble>(double_slider_id);
+                    
+                    existing_double_slider->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                    
+                    existing_double_slider->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                }
+                
+                // Update from game engine
+                existing_double_slider->update_from_external(true);
+                
+                // Render the slider with input field
+                ImGui::SameLine();
+                ImGui::PushItemWidth(200 * font_scale);
+                if (existing_double_slider->draw())
+                {
+                    // Value changed by user
+                }
+                ImGui::PopItemWidth();
+            }
+            else
+            {
+                // For float properties, use ImGuiSlider
+                auto float_slider = make_monitored_float_slider(
+                    [container_ptr]() -> float {
+                        return *static_cast<float*>(container_ptr);
+                    },
+                    [container_ptr](float new_value) {
+                        *static_cast<float*>(container_ptr) = new_value;
+                    },
+                    -1000000.0f, // min
+                    1000000.0f,  // max
+                    0.0f,        // default
+                    ""           // no display name
+                );
+                
+                m_property_container->add_value(slider_id, std::move(float_slider));
+                existing_slider = m_property_container->get_value<ImGuiSlider>(slider_id);
+                
+                existing_slider->set_custom_tooltip_callback([property]() {
+                    render_property_details_tooltip(property);
+                });
+                
+                existing_slider->set_custom_context_menu_callback([]() {
+                    // Empty - prevents default context menu
+                });
+            }
+        }
+        
+        if (property->IsA<FFloatProperty>() && existing_slider)
+        {
+            // Update from game engine
+            existing_slider->update_from_external(true);
+            
+            // Render the slider
+            ImGui::SameLine();
+            ImGui::PushItemWidth(200 * font_scale);
+            if (existing_slider->draw())
+            {
+                // Value changed by user
+            }
+            ImGui::PopItemWidth();
+            
+            // Add editable text input next to slider
+            ImGui::SameLine();
+            ImGui::PushItemWidth(80 * font_scale);
+            float current_value = existing_slider->value();
+            if (ImGui::InputFloat(fmt::format("##{}_input", slider_id).c_str(), &current_value, 0.0f, 0.0f, "%.3f"))
+            {
+                existing_slider->set_value(current_value);
+                existing_slider->apply_changes();
+            }
+            ImGui::PopItemWidth();
+        }
+        
+        // Check if item was right-clicked
+        bool item_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        
+        // Open context menu if right-clicked
+        if (item_right_clicked)
         {
             ImGui::OpenPopup(property_name.c_str());
         }
