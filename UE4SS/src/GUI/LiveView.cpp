@@ -2556,52 +2556,54 @@ namespace RC::GUI
         
         if (is_double)
         {
-            // For double properties, use ImGuiDouble with monitored value
+            // For double properties, use ImGuiSliderDouble with precision input
             auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_double = m_property_container->get_value<ImGuiDouble>(double_id);
+            auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
             
             if (!existing_double)
             {
-                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(
+                // Create a slider with precision input field
+                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
                     [container_ptr]() -> double {
                         return *static_cast<double*>(container_ptr);
                     },
                     [container_ptr](double new_value) {
                         *static_cast<double*>(container_ptr) = new_value;
                     },
-                    0.0,  // default value
-                    ""    // name
+                    -100.0,   // min
+                    100.0,    // max
+                    0.0,      // default value
+                    "",       // name
+                    "",       // tooltip
+                    true      // show_precision_input
                 );
                 
                 m_property_container->add_value(double_id, std::move(double_value));
-                existing_double = m_property_container->get_value<ImGuiDouble>(double_id);
+                existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
                 
                 existing_double->set_custom_context_menu_callback([]() {
                     // Empty - prevents default context menu
+                });
+                existing_double->set_custom_tooltip_callback([property]() {
+                    render_property_details_tooltip(property);
                 });
             }
             
             // Update from game engine
             existing_double->update_from_external(true);
             
-            // Render input field for doubles (no slider due to precision)
+            // Render slider with precision input (Ctrl+Click slider or use the input field)
             ImGui::SameLine();
             
             // Push compact frame padding to reduce height
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-            ImGui::PushItemWidth(100 * font_scale);
+            ImGui::PushItemWidth(200 * font_scale); // Wider to accommodate both slider and input
             if (existing_double->draw())
             {
                 // Value changed by user
             }
             ImGui::PopItemWidth();
             ImGui::PopStyleVar();
-            
-            // Handle tooltip on hover
-            if (ImGui::IsItemHovered())
-            {
-                render_property_details_tooltip(property);
-            }
         }
         else
         {
