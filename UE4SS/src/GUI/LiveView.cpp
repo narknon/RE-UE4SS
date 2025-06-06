@@ -3036,7 +3036,7 @@ namespace RC::GUI
             // Calculate height for the control panel
             float control_panel_height = 0.0f;
             control_panel_height += ImGui::GetFrameHeightWithSpacing(); // Single line for checkboxes and buttons
-            control_panel_height += ImGui::GetStyle().ItemSpacing.y; // Minimal padding
+            control_panel_height += ImGui::GetStyle().ItemSpacing.y * .5; // Minimal padding
             
             // Render control panel in a non-scrollable area
             ImGui::BeginChild("PropertyControlPanel", ImVec2(0, control_panel_height), false, ImGuiWindowFlags_NoScrollbar);
