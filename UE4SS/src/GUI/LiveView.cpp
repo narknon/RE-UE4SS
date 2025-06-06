@@ -2618,8 +2618,8 @@ namespace RC::GUI
             }
             
             // Update both from game engine
-            existing_slider->update_from_external(true);
-            existing_input->update_from_external(true);
+            existing_slider->update_from_external();
+            existing_input->update_from_external();
             
             // Render slider and unclamped input field
             ImGui::SameLine();
@@ -2629,7 +2629,7 @@ namespace RC::GUI
             if (existing_slider->draw())
             {
                 // Slider changed - update input to match
-                existing_input->update_from_external(true);
+                existing_input->update_from_external();
             }
             ImGui::PopItemWidth();
             
@@ -2638,7 +2638,7 @@ namespace RC::GUI
             if (existing_input->draw())
             {
                 // Input changed - update slider to match
-                existing_slider->update_from_external(true);
+                existing_slider->update_from_external();
             }
             ImGui::PopItemWidth();
             ImGui::PopStyleVar();
