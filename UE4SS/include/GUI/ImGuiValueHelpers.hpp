@@ -1136,6 +1136,541 @@ namespace RC::GUI
         int32_t m_max;
     };
 
+    // Unsigned integer types
+    // ImGuiUInt8 - for uint8_t values
+    class ImGuiUInt8 : public ImGuiValue<uint8_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt8>;
+
+        static auto create(uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt8>(default_value, name, tooltip);
+        }
+
+        static auto create(uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt8>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt8(uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint8_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt8(uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint8_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int input and clamp
+            ImGui::PushID(this);
+            uint8_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::InputInt(get_display_label(label), &temp_val);
+            render_tooltip();
+            if (changed)
+            {
+                // Clamp to uint8_t range
+                temp_val = std::clamp(temp_val, 0, 255);
+                working_val = static_cast<uint8_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt16 - for uint16_t values
+    class ImGuiUInt16 : public ImGuiValue<uint16_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt16>;
+
+        static auto create(uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt16>(default_value, name, tooltip);
+        }
+
+        static auto create(uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt16>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt16(uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint16_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt16(uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint16_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputInt(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int input and clamp
+            ImGui::PushID(this);
+            uint16_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::InputInt(get_display_label(label), &temp_val);
+            render_tooltip();
+            if (changed)
+            {
+                // Clamp to uint16_t range
+                temp_val = std::clamp(temp_val, 0, 65535);
+                working_val = static_cast<uint16_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt32 - for uint32_t values (use string input since it may exceed int32_t range)
+    class ImGuiUInt32 : public ImGuiValue<uint32_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt32>;
+
+        static auto create(uint32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt32>(default_value, name, tooltip);
+        }
+
+        static auto create(uint32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt32>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt32(uint32_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint32_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt32(uint32_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint32_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For uint32, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%u", get_working_value());
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    unsigned long val = std::stoul(buffer);
+                    if (val <= UINT32_MAX)
+                    {
+                        get_working_value() = static_cast<uint32_t>(val);
+                        m_is_dirty = true;
+                        m_last_value_source = ValueSource::User;
+                        fire_change_callback();
+                    }
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // ImGuiUInt64 - for uint64_t values (use string input)
+    class ImGuiUInt64 : public ImGuiValue<uint64_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiUInt64>;
+
+        static auto create(uint64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiUInt64>(default_value, name, tooltip);
+        }
+
+        static auto create(uint64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiUInt64>(default_value, name, tooltip);
+        }
+
+        ImGuiUInt64(uint64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint64_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiUInt64(uint64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint64_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For uint64, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%llu", static_cast<unsigned long long>(get_working_value()));
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    unsigned long long val = std::stoull(buffer);
+                    get_working_value() = static_cast<uint64_t>(val);
+                    m_is_dirty = true;
+                    m_last_value_source = ValueSource::User;
+                    fire_change_callback();
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %llu", get_display_label(label), static_cast<unsigned long long>(m_value));
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // Unsigned integer slider types
+    // ImGuiSliderUInt8 - for uint8_t values with slider
+    class ImGuiSliderUInt8 : public ImGuiValue<uint8_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderUInt8>;
+
+        static auto create(uint8_t min = 0, uint8_t max = 255, uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSliderUInt8>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(uint8_t min, uint8_t max, uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSliderUInt8>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSliderUInt8(uint8_t min = 0, uint8_t max = 255, uint8_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint8_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderUInt8(uint8_t min, uint8_t max, uint8_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint8_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int slider
+            ImGui::PushID(this);
+            uint8_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::SliderInt(get_display_label(label), &temp_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                working_val = static_cast<uint8_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        uint8_t& min() { return m_min; }
+        uint8_t& max() { return m_max; }
+
+    private:
+        uint8_t m_min;
+        uint8_t m_max;
+    };
+
+    // ImGuiSliderUInt16 - for uint16_t values with slider
+    class ImGuiSliderUInt16 : public ImGuiValue<uint16_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderUInt16>;
+
+        static auto create(uint16_t min = 0, uint16_t max = 65535, uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiSliderUInt16>(min, max, default_value, name, tooltip);
+        }
+
+        static auto create(uint16_t min, uint16_t max, uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiSliderUInt16>(min, max, default_value, name, tooltip);
+        }
+
+        ImGuiSliderUInt16(uint16_t min = 0, uint16_t max = 65535, uint16_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<uint16_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderUInt16(uint16_t min, uint16_t max, uint16_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<uint16_t>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                int display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::SliderInt(get_display_label(label), &display_val, m_min, m_max);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use int slider
+            ImGui::PushID(this);
+            uint16_t& working_val = get_working_value();
+            int temp_val = working_val;
+            bool changed = ImGui::SliderInt(get_display_label(label), &temp_val, m_min, m_max);
+            render_tooltip();
+            if (changed)
+            {
+                working_val = static_cast<uint16_t>(temp_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %u", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        uint16_t& min() { return m_min; }
+        uint16_t& max() { return m_max; }
+
+    private:
+        uint16_t m_min;
+        uint16_t m_max;
+    };
+
     // Combo box
     class ImGuiCombo : public ImGuiValue<int32_t>
     {
