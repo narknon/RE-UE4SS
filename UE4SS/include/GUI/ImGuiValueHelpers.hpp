@@ -3650,7 +3650,7 @@ namespace RC::GUI
         return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiCombo>>(getter, setter, options, default_value, name);
     }
     
-    // Unsigned integer monitored value helpers
+    // Small unsigned integer monitored value helpers (these use input fields)
     inline auto make_monitored_uint8(std::function<uint8_t()> getter, std::function<void(uint8_t)> setter, 
                                     uint8_t default_value = 0, const std::string& name = "")
     {
@@ -3661,18 +3661,6 @@ namespace RC::GUI
                                      uint16_t default_value = 0, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiUInt16>>(getter, setter, default_value, name);
-    }
-    
-    inline auto make_monitored_uint32(std::function<uint32_t()> getter, std::function<void(uint32_t)> setter, 
-                                     uint32_t default_value = 0, const std::string& name = "")
-    {
-        return std::make_unique<ImGuiMonitoredValue<uint32_t, ImGuiUInt32>>(getter, setter, default_value, name);
-    }
-    
-    inline auto make_monitored_uint64(std::function<uint64_t()> getter, std::function<void(uint64_t)> setter, 
-                                     uint64_t default_value = 0, const std::string& name = "")
-    {
-        return std::make_unique<ImGuiMonitoredValue<uint64_t, ImGuiUInt64>>(getter, setter, default_value, name);
     }
     
     // Unsigned slider helpers
@@ -3686,6 +3674,38 @@ namespace RC::GUI
                                             uint16_t min, uint16_t max, uint16_t default_value = 0, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(getter, setter, min, max, default_value, name);
+    }
+    
+    // Large integer helpers that use string input for full precision
+    // For int64, we still need to wrap string since we don't have ImGuiInt64
+    inline auto make_monitored_int64(std::function<int64_t()> getter, std::function<void(int64_t)> setter, 
+                                    int64_t default_value = 0, const std::string& name = "")
+    {
+        return make_monitored_string(
+            [getter]() -> std::string { return std::to_string(getter()); },
+            [setter](const std::string& value) {
+                try {
+                    setter(std::stoll(value));
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            },
+            std::to_string(default_value),
+            name
+        );
+    }
+    
+    // For uint32 and uint64, we use the native ImGuiUInt32/64 classes
+    inline auto make_monitored_uint32(std::function<uint32_t()> getter, std::function<void(uint32_t)> setter, 
+                                     uint32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint32_t, ImGuiUInt32>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint64(std::function<uint64_t()> getter, std::function<void(uint64_t)> setter, 
+                                     uint64_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint64_t, ImGuiUInt64>>(getter, setter, default_value, name);
     }
 
     // Container for managing multiple ImGui values with advanced features
