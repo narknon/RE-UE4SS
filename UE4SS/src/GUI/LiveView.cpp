@@ -3901,15 +3901,11 @@ namespace RC::GUI
             last_measured_object = object;
         }
         
-        // Clamp the splitter size to the measured content height
+        // Calculate the maximum size based on content
         float max_top_size = measured_content_height + ImGui::GetStyle().WindowPadding.y * 2;
-        if (m_info_panel_top_size > max_top_size)
-        {
-            m_info_panel_top_size = max_top_size;
-        }
         
-        // Use the existing ImGui_Splitter at the correct level
-        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
+        // Use the existing ImGui_Splitter with custom max constraint
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, max_top_size);
 
         // === Top Section ===
         ImGui::BeginChild("InfoPanelTop",
