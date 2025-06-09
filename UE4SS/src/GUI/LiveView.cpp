@@ -3905,9 +3905,12 @@ namespace RC::GUI
         float max_top_size = measured_content_height + ImGui::GetStyle().WindowPadding.y * 2;
         
         // Use the existing ImGui_Splitter with custom max constraint
-        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, max_top_size);
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 20.0f, max_top_size);
 
         // === Top Section ===
+        // Only measure content if the panel is large enough to show all content
+        bool should_measure = m_info_panel_top_size >= measured_content_height;
+        
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
                           false,
@@ -3948,9 +3951,12 @@ namespace RC::GUI
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
 
-        // Measure the content height for next frame
-        float content_end_y = ImGui::GetCursorPosY();
-        measured_content_height = content_end_y - content_start_y;
+        // Only update measured content height if we're showing all content
+        if (should_measure)
+        {
+            float content_end_y = ImGui::GetCursorPosY();
+            measured_content_height = content_end_y - content_start_y;
+        }
 
         ImGui::EndChild();
 
