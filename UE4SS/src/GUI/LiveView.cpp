@@ -3890,19 +3890,35 @@ namespace RC::GUI
         // This function should be called within the info panel, which already has proper bounds
         // The splitter divides the available space between top (basic info) and bottom (collapsible content)
 
+        // Store the content height after rendering (will be used next frame)
+        static float measured_content_height = 300.0f;  // Default until first measurement
+        static void* last_measured_object = nullptr;
+        
+        // If this is a different object, reset to default size
+        if (last_measured_object != object)
+        {
+            m_info_panel_top_size = 300.0f;
+            last_measured_object = object;
+        }
+        
+        // Clamp the splitter size to the measured content height
+        float max_top_size = measured_content_height + ImGui::GetStyle().WindowPadding.y * 2;
+        if (m_info_panel_top_size > max_top_size)
+        {
+            m_info_panel_top_size = max_top_size;
+        }
+        
         // Use the existing ImGui_Splitter at the correct level
         ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
 
         // === Top Section ===
-        // Begin with scrollable region that respects the splitter size
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
                           false,
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         
-        // Use a dummy group to measure content height
-        ImVec2 content_start = ImGui::GetCursorPos();
-        ImGui::BeginGroup();
+        // Track where content starts
+        float content_start_y = ImGui::GetCursorPosY();
 
         auto object_full_name = get_object_full_name(object);
 
@@ -3936,16 +3952,9 @@ namespace RC::GUI
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
 
-        // End the group and calculate actual content height
-        ImGui::EndGroup();
-        ImVec2 content_end = ImGui::GetCursorPos();
-        float actual_content_height = content_end.y - content_start.y;
-        
-        // If content is smaller than the splitter size, add invisible content to prevent collapse
-        if (actual_content_height < m_info_panel_top_size)
-        {
-            ImGui::Dummy(ImVec2(0, m_info_panel_top_size - actual_content_height));
-        }
+        // Measure the content height for next frame
+        float content_end_y = ImGui::GetCursorPosY();
+        measured_content_height = content_end_y - content_start_y;
 
         ImGui::EndChild();
 
