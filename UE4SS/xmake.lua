@@ -72,7 +72,7 @@ target(projectName)
         "IniParser", "JSON", "Input",
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad", { public = true }
+        "glad", "ImDataControls", { public = true }
     )
 
     add_packages("fmt", { public = true })

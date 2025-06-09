@@ -20,6 +20,7 @@ includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
 includes("String")
+includes("ImDataControls")
 
 task("manuallyBuildLocalPatternsleuth")
     on_run(function()
