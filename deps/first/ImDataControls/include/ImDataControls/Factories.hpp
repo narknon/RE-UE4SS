@@ -240,6 +240,46 @@ namespace RC::ImDataControls {
     return MonitoredSliderDoubleWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
 }
 
+[[nodiscard]] inline auto make_monitored_slider_uint8(
+    std::function<uint8_t()> getter,
+    std::function<void(uint8_t)> setter,
+    uint8_t min_val,
+    uint8_t max_val,
+    uint8_t default_value = 0)
+{
+    return MonitoredSliderUInt8::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_uint16(
+    std::function<uint16_t()> getter,
+    std::function<void(uint16_t)> setter,
+    uint16_t min_val,
+    uint16_t max_val,
+    uint16_t default_value = 0)
+{
+    return MonitoredSliderUInt16::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_uint8_with_text(
+    std::function<uint8_t()> getter,
+    std::function<void(uint8_t)> setter,
+    uint8_t min_val,
+    uint8_t max_val,
+    uint8_t default_value = 0)
+{
+    return MonitoredSliderUInt8WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_uint16_with_text(
+    std::function<uint16_t()> getter,
+    std::function<void(uint16_t)> setter,
+    uint16_t min_val,
+    uint16_t max_val,
+    uint16_t default_value = 0)
+{
+    return MonitoredSliderUInt16WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
 // Convenience template for creating monitored values from member pointers
 template<typename ObjectType, typename ValueType>
 [[nodiscard]] auto make_monitored_member(

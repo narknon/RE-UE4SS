@@ -688,9 +688,331 @@ private:
     bool m_show_precision_input;
 };
 
+// ============================================================================
+// UInt8 Slider
+// ============================================================================
+
+// Simple UInt8 Slider
+class SimpleSliderUInt8 : public SliderWidget<uint8_t, SimpleImGuiValue> {
+public:
+    using Base = SliderWidget<uint8_t, SimpleImGuiValue>;
+    
+    SimpleSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
+        return std::make_unique<SimpleSliderUInt8>(min_val, max_val, initial_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        // Use int for ImGui
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        if (changed) {
+            this->m_value = static_cast<uint8_t>(temp_value);
+            this->m_changed = true;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        return changed;
+    }
+};
+
+// Monitored UInt8 Slider
+class MonitoredSliderUInt8 : public SliderWidget<uint8_t, MonitoredImGuiValue> {
+public:
+    using Base = SliderWidget<uint8_t, MonitoredImGuiValue>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderUInt8(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
+        return std::make_unique<MonitoredSliderUInt8>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value = 0) {
+        return std::make_unique<MonitoredSliderUInt8>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        
+        if (changed && this->is_editable()) {
+            this->set(static_cast<uint8_t>(temp_value));
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        return changed && this->is_editable();
+    }
+};
+
+// Monitored UInt8 Slider With Text
+class MonitoredSliderUInt8WithText : public SliderWidget<uint8_t, MonitoredImGuiValueWithText> {
+public:
+    using Base = SliderWidget<uint8_t, MonitoredImGuiValueWithText>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderUInt8WithText(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderUInt8WithText(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
+        return std::make_unique<MonitoredSliderUInt8WithText>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value = 0) {
+        return std::make_unique<MonitoredSliderUInt8WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        
+        if (changed && this->is_editable()) {
+            this->set(static_cast<uint8_t>(temp_value));
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation
+        this->draw_text_representation();
+        
+        return changed && this->is_editable();
+    }
+};
+
+// ============================================================================
+// UInt16 Slider
+// ============================================================================
+
+// Simple UInt16 Slider
+class SimpleSliderUInt16 : public SliderWidget<uint16_t, SimpleImGuiValue> {
+public:
+    using Base = SliderWidget<uint16_t, SimpleImGuiValue>;
+    
+    SimpleSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
+        return std::make_unique<SimpleSliderUInt16>(min_val, max_val, initial_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        // Use int for ImGui
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        if (changed) {
+            this->m_value = static_cast<uint16_t>(temp_value);
+            this->m_changed = true;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        return changed;
+    }
+};
+
+// Monitored UInt16 Slider
+class MonitoredSliderUInt16 : public SliderWidget<uint16_t, MonitoredImGuiValue> {
+public:
+    using Base = SliderWidget<uint16_t, MonitoredImGuiValue>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderUInt16(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
+        return std::make_unique<MonitoredSliderUInt16>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value = 0) {
+        return std::make_unique<MonitoredSliderUInt16>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        
+        if (changed && this->is_editable()) {
+            this->set(static_cast<uint16_t>(temp_value));
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        return changed && this->is_editable();
+    }
+};
+
+// Monitored UInt16 Slider With Text
+class MonitoredSliderUInt16WithText : public SliderWidget<uint16_t, MonitoredImGuiValueWithText> {
+public:
+    using Base = SliderWidget<uint16_t, MonitoredImGuiValueWithText>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderUInt16WithText(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderUInt16WithText(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
+        return std::make_unique<MonitoredSliderUInt16WithText>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value = 0) {
+        return std::make_unique<MonitoredSliderUInt16WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %u", label ? label : "", static_cast<unsigned>(this->m_value));
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int temp_value = static_cast<int>(this->m_value);
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, 
+                                        static_cast<int>(m_min), static_cast<int>(m_max));
+        
+        if (changed && this->is_editable()) {
+            this->set(static_cast<uint16_t>(temp_value));
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation
+        this->draw_text_representation();
+        
+        return changed && this->is_editable();
+    }
+};
+
 // Type aliases for compatibility
 using ImGuiSlider = SimpleSliderFloat;
 using ImGuiSliderDouble = SimpleSliderDouble;
 using ImGuiSliderInt32 = SimpleSliderInt32;
+using ImGuiSliderUInt8 = SimpleSliderUInt8;
+using ImGuiSliderUInt16 = SimpleSliderUInt16;
 
 } // namespace RC::ImDataControls
