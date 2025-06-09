@@ -2729,15 +2729,116 @@ namespace RC::GUI
         // Determine if this is a floating point or integer type
         if (numeric_property->IsFloatingPoint())
         {
-            // Handle float/double properties
-            if (property->IsA<FFloatProperty>())
+            // Handle float/double properties inline
+            bool is_double = property->IsA<FDoubleProperty>();
+            
+            if (is_double)
             {
-                render_float_property(property, container_type, container, container_ptr, property_name, property_text);
+                // For double properties, use ImGuiSliderDouble with unclamped precision input
+                auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
+                auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+                
+                if (!existing_double)
+                {
+                    // Create a slider with precision input field (now unclamped!)
+                    auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
+                        [container_ptr]() -> double {
+                            return *static_cast<double*>(container_ptr);
+                        },
+                        [container_ptr](double new_value) {
+                            *static_cast<double*>(container_ptr) = new_value;
+                        },
+                        -1e10,    // min for slider
+                        1e10,     // max for slider
+                        0.0,      // default value
+                        "",       // name
+                        "",       // tooltip
+                        true      // show_precision_input (now unclamped!)
+                    );
+                    
+                    m_property_container->add_value(double_id, std::move(double_value));
+                    existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
+                    
+                    existing_double->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_double->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                }
+                
+                // Update from game engine
+                existing_double->update_from_external(true);
+                
+                // Render slider with unclamped precision input
+                ImGui::SameLine();
+                
+                // Push compact frame padding to reduce height
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                ImGui::PushItemWidth(200 * font_scale); // Wide enough for both slider and input
+                if (existing_double->draw())
+                {
+                    // Value changed by user
+                }
+                ImGui::PopItemWidth();
+                ImGui::PopStyleVar();
             }
-            else if (property->IsA<FDoubleProperty>())
+            else
             {
-                render_float_property(property, container_type, container, container_ptr, property_name, property_text);
+                // For float properties, use ImGuiSlider
+                auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
+                auto existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+                
+                if (!existing_float)
+                {
+                    // Create a slider with reasonable range
+                    auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
+                        [container_ptr]() -> float {
+                            return *static_cast<float*>(container_ptr);
+                        },
+                        [container_ptr](float new_value) {
+                            *static_cast<float*>(container_ptr) = new_value;
+                        },
+                        -100.0f,  // min
+                        100.0f,   // max
+                        0.0f,     // default value
+                        ""        // name
+                    );
+                    
+                    m_property_container->add_value(float_id, std::move(float_value));
+                    existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
+                    
+                    existing_float->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_float->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                }
+                
+                // Update from game engine
+                existing_float->update_from_external(true);
+                
+                // Render slider (Ctrl+Click to input manually)
+                ImGui::SameLine();
+                
+                // Push compact frame padding to reduce height
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                ImGui::PushItemWidth(120 * font_scale);
+                if (existing_float->draw())
+                {
+                    // Value changed by user
+                }
+                ImGui::PopItemWidth();
+                ImGui::PopStyleVar();
             }
+            
+            // Check if item was right-clicked
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                ImGui::OpenPopup(property_name.c_str());
+            }
+            return;
         }
         else if (numeric_property->IsInteger())
         {

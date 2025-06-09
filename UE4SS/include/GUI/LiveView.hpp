@@ -220,13 +220,6 @@ namespace RC::GUI
                                  const std::string& property_name,
                                  const std::string& property_text) -> void;
         
-        auto render_float_property(FProperty* property,
-                                  ContainerType container_type,
-                                  void* container,
-                                  void* container_ptr,
-                                  const std::string& property_name,
-                                  const std::string& property_text) -> void;
-        
         auto render_default_property(FProperty* property,
                                     const std::string& property_text) -> void;
         
