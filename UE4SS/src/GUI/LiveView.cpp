@@ -3894,10 +3894,15 @@ namespace RC::GUI
         ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
 
         // === Top Section ===
+        // Begin with scrollable region that respects the splitter size
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
                           false,
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        
+        // Use a dummy group to measure content height
+        ImVec2 content_start = ImGui::GetCursorPos();
+        ImGui::BeginGroup();
 
         auto object_full_name = get_object_full_name(object);
 
@@ -3930,6 +3935,17 @@ namespace RC::GUI
             render_flags<FunctionFlagsStringifier>(as_function, "FunctionFlags");
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
+
+        // End the group and calculate actual content height
+        ImGui::EndGroup();
+        ImVec2 content_end = ImGui::GetCursorPos();
+        float actual_content_height = content_end.y - content_start.y;
+        
+        // If content is smaller than the splitter size, add invisible content to prevent collapse
+        if (actual_content_height < m_info_panel_top_size)
+        {
+            ImGui::Dummy(ImVec2(0, m_info_panel_top_size - actual_content_height));
+        }
 
         ImGui::EndChild();
 
