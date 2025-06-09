@@ -2920,10 +2920,9 @@ namespace RC::GUI
             else if (property->IsA<FInt64Property>())
             {
                 type_prefix = "int64";
-                use_string_input = true;
                 unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
                 
-                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                auto existing_value = m_property_container->get_value<ImGuiInt64>(unique_id);
                 if (!existing_value)
                 {
                     auto monitored_value = make_monitored_int64(
@@ -2936,7 +2935,7 @@ namespace RC::GUI
                         0, ""
                     );
                     m_property_container->add_value(unique_id, std::move(monitored_value));
-                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                    existing_value = m_property_container->get_value<ImGuiInt64>(unique_id);
                 }
             }
             else if (property->IsA<FByteProperty>())
@@ -3045,7 +3044,7 @@ namespace RC::GUI
                     
                     // Use different widths for different types
                     float item_width = 120 * font_scale;
-                    if (use_string_input || property->IsA<FUInt32Property>() || property->IsA<FUInt64Property>())
+                    if (use_string_input || property->IsA<FInt64Property>() || property->IsA<FUInt32Property>() || property->IsA<FUInt64Property>())
                     {
                         item_width = 100 * font_scale;  // String inputs are narrower
                     }
