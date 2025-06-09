@@ -1700,7 +1700,7 @@ namespace RC::GUI
     };
 
     LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{}),
-                           m_property_container(std::make_unique<ImGuiValueContainer>("Properties"))
+                           m_property_container(std::make_unique<ImDataControls::ImGuiValueContainer>("Properties"))
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
         strncpy_s(m_search_by_name_buffer,
