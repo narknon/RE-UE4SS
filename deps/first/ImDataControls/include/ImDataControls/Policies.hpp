@@ -7,6 +7,7 @@
 #include <vector>
 #include <variant>
 #include <concepts>
+#include <imgui.h>
 
 namespace RC::ImDataControls {
 
@@ -238,7 +239,71 @@ private:
     Validator m_validator;
 };
 
-// Policy 8: Value History (Undo/Redo)
+// Policy 8: Text Representation Display
+template<typename T>
+class TextRepresentationPolicy {
+public:
+    using value_type = T;
+    
+    void set_show_text_representation(bool show) { m_show_text = show; }
+    [[nodiscard]] bool should_show_text_representation() const { return m_show_text; }
+    
+    void set_text_format(const std::string& format) { m_text_format = format; }
+    [[nodiscard]] const std::string& get_text_format() const { return m_text_format; }
+    
+    // Get text representation of current value
+    [[nodiscard]] std::string get_text_representation() const {
+        const T& value = get_value();
+        
+        if constexpr (std::is_same_v<T, bool>) {
+            return value ? "true" : "false";
+        }
+        else if constexpr (std::is_integral_v<T>) {
+            return std::to_string(value);
+        }
+        else if constexpr (std::is_floating_point_v<T>) {
+            if (m_text_format.empty()) {
+                // Default format for floating point
+                char buffer[64];
+                if constexpr (std::is_same_v<T, float>) {
+                    snprintf(buffer, sizeof(buffer), "%.3f", value);
+                } else {
+                    snprintf(buffer, sizeof(buffer), "%.6f", value);
+                }
+                return std::string(buffer);
+            } else {
+                // Use custom format string
+                char buffer[128];
+                snprintf(buffer, sizeof(buffer), m_text_format.c_str(), value);
+                return std::string(buffer);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            return value;
+        }
+        else {
+            return "<unsupported type>";
+        }
+    }
+    
+    // Draw text representation after the widget
+    void draw_text_representation() {
+        if (m_show_text && ImGui::GetCurrentContext()) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%s)", get_text_representation().c_str());
+        }
+    }
+    
+protected:
+    // Bridge to get current value from composed class
+    [[nodiscard]] virtual const T& get_value() const = 0;
+    
+private:
+    bool m_show_text = false;
+    std::string m_text_format;  // Optional printf-style format string
+};
+
+// Policy 9: Value History (Undo/Redo)
 template<typename T>
 class ValueHistoryPolicy {
 public:

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "Policies.hpp"
 #include <imgui.h>
 #include <string>
 #include <algorithm>
@@ -68,8 +69,8 @@ protected:
     }
 };
 
-// Monitored Toggle - With external sync
-class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue> {
+// Monitored Toggle - With external sync and text representation
+class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue>, public TextRepresentationPolicy<bool> {
 public:
     using Base = BasicWidget<bool, MonitoredImGuiValue>;
     using Base::Base;
@@ -83,6 +84,9 @@ public:
     }
     
 protected:
+    // Bridge method for TextRepresentationPolicy
+    [[nodiscard]] const bool& get_value() const override { return this->m_value; }
+    
     bool draw_impl(const char* label) override {
         if (m_edit_mode == EditMode::ViewOnly) {
             ImGui::Text("%s: %s", label ? label : "", m_value ? "true" : "false");
@@ -103,6 +107,9 @@ protected:
         if (m_edit_mode == EditMode::ReadOnly) {
             ImGui::EndDisabled();
         }
+        
+        // Draw text representation if enabled
+        draw_text_representation();
         
         return changed && is_editable();
     }
