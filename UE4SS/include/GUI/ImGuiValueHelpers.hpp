@@ -3649,6 +3649,44 @@ namespace RC::GUI
     {
         return std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiCombo>>(getter, setter, options, default_value, name);
     }
+    
+    // Unsigned integer monitored value helpers
+    inline auto make_monitored_uint8(std::function<uint8_t()> getter, std::function<void(uint8_t)> setter, 
+                                    uint8_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiUInt8>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint16(std::function<uint16_t()> getter, std::function<void(uint16_t)> setter, 
+                                     uint16_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiUInt16>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint32(std::function<uint32_t()> getter, std::function<void(uint32_t)> setter, 
+                                     uint32_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint32_t, ImGuiUInt32>>(getter, setter, default_value, name);
+    }
+    
+    inline auto make_monitored_uint64(std::function<uint64_t()> getter, std::function<void(uint64_t)> setter, 
+                                     uint64_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint64_t, ImGuiUInt64>>(getter, setter, default_value, name);
+    }
+    
+    // Unsigned slider helpers
+    inline auto make_monitored_slider_uint8(std::function<uint8_t()> getter, std::function<void(uint8_t)> setter,
+                                           uint8_t min, uint8_t max, uint8_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiSliderUInt8>>(getter, setter, min, max, default_value, name);
+    }
+    
+    inline auto make_monitored_slider_uint16(std::function<uint16_t()> getter, std::function<void(uint16_t)> setter,
+                                            uint16_t min, uint16_t max, uint16_t default_value = 0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(getter, setter, min, max, default_value, name);
+    }
 
     // Container for managing multiple ImGui values with advanced features
     class ImGuiValueContainer

@@ -2741,7 +2741,7 @@ namespace RC::GUI
                 if (!existing_double)
                 {
                     // Create a slider with precision input field (now unclamped!)
-                    auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
+                    auto double_value = make_monitored_slider_double(
                         [container_ptr]() -> double {
                             return *static_cast<double*>(container_ptr);
                         },
@@ -2752,7 +2752,6 @@ namespace RC::GUI
                         1e10,     // max for slider
                         0.0,      // default value
                         "",       // name
-                        "",       // tooltip
                         true      // show_precision_input (now unclamped!)
                     );
                     
@@ -2792,7 +2791,7 @@ namespace RC::GUI
                 if (!existing_float)
                 {
                     // Create a slider with reasonable range
-                    auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
+                    auto float_value = make_monitored_slider(
                         [container_ptr]() -> float {
                             return *static_cast<float*>(container_ptr);
                         },
@@ -2863,7 +2862,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                    auto monitored_value = make_monitored_slider_int(
                         [container_ptr]() -> int32_t {
                             return static_cast<int32_t>(*static_cast<int8_t*>(container_ptr));
                         },
@@ -2884,7 +2883,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                    auto monitored_value = make_monitored_slider_int(
                         [container_ptr]() -> int32_t {
                             return static_cast<int32_t>(*static_cast<int16_t*>(container_ptr));
                         },
@@ -2905,7 +2904,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                    auto monitored_value = make_monitored_slider_int(
                         [container_ptr]() -> int32_t {
                             return *static_cast<int32_t*>(container_ptr);
                         },
@@ -2927,7 +2926,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                    auto monitored_value = make_monitored_string(
                         [container_ptr]() -> std::string {
                             return std::to_string(*static_cast<int64_t*>(container_ptr));
                         },
@@ -2952,7 +2951,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiSliderUInt8>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiSliderUInt8>>(
+                    auto monitored_value = make_monitored_slider_uint8(
                         [container_ptr]() -> uint8_t {
                             return *static_cast<uint8_t*>(container_ptr);
                         },
@@ -2973,7 +2972,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiSliderUInt16>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(
+                    auto monitored_value = make_monitored_slider_uint16(
                         [container_ptr]() -> uint16_t {
                             return *static_cast<uint16_t*>(container_ptr);
                         },
@@ -2995,7 +2994,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                    auto monitored_value = make_monitored_string(
                         [container_ptr]() -> std::string {
                             return std::to_string(*static_cast<uint32_t*>(container_ptr));
                         },
@@ -3021,7 +3020,7 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                    auto monitored_value = make_monitored_string(
                         [container_ptr]() -> std::string {
                             return std::to_string(*static_cast<uint64_t*>(container_ptr));
                         },
