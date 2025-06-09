@@ -2197,49 +2197,9 @@ namespace RC::GUI
             render_bool_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
-        else if (property->IsA<FFloatProperty>() || property->IsA<FDoubleProperty>())
+        else if (property->IsA<FNumericProperty>())
         {
-            render_float_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FInt8Property>())
-        {
-            render_int8_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FInt16Property>())
-        {
-            render_int16_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FIntProperty>())
-        {
-            render_int32_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FInt64Property>())
-        {
-            render_int64_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FByteProperty>())
-        {
-            render_byte_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FUInt16Property>())
-        {
-            render_uint16_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FUInt32Property>())
-        {
-            render_uint32_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
-            render_property_value_context_menu();
-        }
-        else if (property->IsA<FUInt64Property>())
-        {
-            render_uint64_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_numeric_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
         else
@@ -2255,16 +2215,7 @@ namespace RC::GUI
 
         // Only show tooltip if it's not a custom-rendered property that handles its own tooltip
         if (!property->IsA<FBoolProperty>() && 
-            !property->IsA<FFloatProperty>() && 
-            !property->IsA<FDoubleProperty>() &&
-            !property->IsA<FInt8Property>() &&
-            !property->IsA<FInt16Property>() &&
-            !property->IsA<FIntProperty>() &&
-            !property->IsA<FInt64Property>() &&
-            !property->IsA<FByteProperty>() &&
-            !property->IsA<FUInt16Property>() &&
-            !property->IsA<FUInt32Property>() &&
-            !property->IsA<FUInt64Property>())
+            !property->IsA<FNumericProperty>())
         {
             if (ImGui::IsItemHovered())
             {
@@ -2339,68 +2290,52 @@ namespace RC::GUI
                             existing_double->update_from_external(true);
                         }
                     }
-                    else if (property->IsA<FInt8Property>())
+                    else if (property->IsA<FNumericProperty>())
                     {
-                        auto int8_id = fmt::format("int8_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_int8 = m_property_container->get_value<ImGuiSliderInt32>(int8_id))
+                        // Update numeric property monitored values
+                        std::string type_prefix;
+                        std::string unique_id;
+                        
+                        if (property->IsA<FInt8Property>())
                         {
-                            existing_int8->update_from_external(true);
+                            type_prefix = "int8";
                         }
-                    }
-                    else if (property->IsA<FInt16Property>())
-                    {
-                        auto int16_id = fmt::format("int16_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_int16 = m_property_container->get_value<ImGuiSliderInt32>(int16_id))
+                        else if (property->IsA<FInt16Property>())
                         {
-                            existing_int16->update_from_external(true);
+                            type_prefix = "int16";
                         }
-                    }
-                    else if (property->IsA<FIntProperty>())
-                    {
-                        auto int32_id = fmt::format("int32_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_int32 = m_property_container->get_value<ImGuiSliderInt32>(int32_id))
+                        else if (property->IsA<FIntProperty>())
                         {
-                            existing_int32->update_from_external(true);
+                            type_prefix = "int32";
                         }
-                    }
-                    else if (property->IsA<FInt64Property>())
-                    {
-                        auto int64_id = fmt::format("int64_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_int64 = m_property_container->get_value<ImGuiString>(int64_id))
+                        else if (property->IsA<FInt64Property>())
                         {
-                            existing_int64->update_from_external(true);
+                            type_prefix = "int64";
                         }
-                    }
-                    else if (property->IsA<FByteProperty>())
-                    {
-                        auto byte_id = fmt::format("byte_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_byte = m_property_container->get_value<ImGuiSliderInt32>(byte_id))
+                        else if (property->IsA<FByteProperty>())
                         {
-                            existing_byte->update_from_external(true);
+                            type_prefix = "byte";
                         }
-                    }
-                    else if (property->IsA<FUInt16Property>())
-                    {
-                        auto uint16_id = fmt::format("uint16_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_uint16 = m_property_container->get_value<ImGuiSliderInt32>(uint16_id))
+                        else if (property->IsA<FUInt16Property>())
                         {
-                            existing_uint16->update_from_external(true);
+                            type_prefix = "uint16";
                         }
-                    }
-                    else if (property->IsA<FUInt32Property>())
-                    {
-                        auto uint32_id = fmt::format("uint32_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_uint32 = m_property_container->get_value<ImGuiString>(uint32_id))
+                        else if (property->IsA<FUInt32Property>())
                         {
-                            existing_uint32->update_from_external(true);
+                            type_prefix = "uint32";
                         }
-                    }
-                    else if (property->IsA<FUInt64Property>())
-                    {
-                        auto uint64_id = fmt::format("uint64_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_uint64 = m_property_container->get_value<ImGuiString>(uint64_id))
+                        else if (property->IsA<FUInt64Property>())
                         {
-                            existing_uint64->update_from_external(true);
+                            type_prefix = "uint64";
+                        }
+                        
+                        if (!type_prefix.empty())
+                        {
+                            unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                            if (auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id))
+                            {
+                                existing_value->update_from_external(true);
+                            }
                         }
                     }
                 }
@@ -3287,6 +3222,293 @@ namespace RC::GUI
         if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
         {
             ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_numeric_property(FProperty* property,
+                                          ContainerType container_type,
+                                          void* container,
+                                          void* container_ptr,
+                                          const std::string& property_name,
+                                          const std::string& property_text) -> void
+    {
+        // Cast to FNumericProperty to use polymorphic interface
+        auto* numeric_property = static_cast<FNumericProperty*>(property);
+        
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        // Determine if this is a floating point or integer type
+        if (numeric_property->IsFloatingPoint())
+        {
+            // Handle float/double properties
+            if (property->IsA<FFloatProperty>())
+            {
+                render_float_property(property, container_type, container, container_ptr, property_name, property_text);
+            }
+            else if (property->IsA<FDoubleProperty>())
+            {
+                render_float_property(property, container_type, container, container_ptr, property_name, property_text);
+            }
+        }
+        else if (numeric_property->IsInteger())
+        {
+            // Special case for byte enum
+            if (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->GetIntPropertyEnum())
+            {
+                render_enum_property(property, container_ptr, property_text);
+                return;
+            }
+            
+            // For integer types, we need to determine the specific type and whether to use slider or string input
+            bool use_string_input = false;
+            std::string type_prefix;
+            std::string unique_id;
+            
+            // Create appropriate UI based on property type
+            if (property->IsA<FInt8Property>())
+            {
+                type_prefix = "int8";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                        [container_ptr]() -> int32_t {
+                            return static_cast<int32_t>(*static_cast<int8_t*>(container_ptr));
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int8_t*>(container_ptr) = static_cast<int8_t>(new_value);
+                        },
+                        -128, 127, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FInt16Property>())
+            {
+                type_prefix = "int16";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                        [container_ptr]() -> int32_t {
+                            return static_cast<int32_t>(*static_cast<int16_t*>(container_ptr));
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int16_t*>(container_ptr) = static_cast<int16_t>(new_value);
+                        },
+                        -32768, 32767, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FIntProperty>())
+            {
+                type_prefix = "int32";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                        [container_ptr]() -> int32_t {
+                            return *static_cast<int32_t*>(container_ptr);
+                        },
+                        [container_ptr](int32_t new_value) {
+                            *static_cast<int32_t*>(container_ptr) = new_value;
+                        },
+                        -1000000000, 1000000000, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderInt32>(unique_id);
+                }
+            }
+            else if (property->IsA<FInt64Property>())
+            {
+                type_prefix = "int64";
+                use_string_input = true;
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                        [container_ptr]() -> std::string {
+                            return std::to_string(*static_cast<int64_t*>(container_ptr));
+                        },
+                        [container_ptr](const std::string& new_value) {
+                            try {
+                                *static_cast<int64_t*>(container_ptr) = std::stoll(new_value);
+                            } catch (...) {
+                                // Invalid input, ignore
+                            }
+                        },
+                        "0", ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                }
+            }
+            else if (property->IsA<FByteProperty>())
+            {
+                type_prefix = "byte";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderUInt8>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<uint8_t, ImGuiSliderUInt8>>(
+                        [container_ptr]() -> uint8_t {
+                            return *static_cast<uint8_t*>(container_ptr);
+                        },
+                        [container_ptr](uint8_t new_value) {
+                            *static_cast<uint8_t*>(container_ptr) = new_value;
+                        },
+                        0, 255, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderUInt8>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt16Property>())
+            {
+                type_prefix = "uint16";
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiSliderUInt16>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(
+                        [container_ptr]() -> uint16_t {
+                            return *static_cast<uint16_t*>(container_ptr);
+                        },
+                        [container_ptr](uint16_t new_value) {
+                            *static_cast<uint16_t*>(container_ptr) = new_value;
+                        },
+                        0, 65535, 0, ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiSliderUInt16>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt32Property>())
+            {
+                type_prefix = "uint32";
+                use_string_input = true;
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                        [container_ptr]() -> std::string {
+                            return std::to_string(*static_cast<uint32_t*>(container_ptr));
+                        },
+                        [container_ptr](const std::string& new_value) {
+                            try {
+                                *static_cast<uint32_t*>(container_ptr) = std::stoul(new_value);
+                            } catch (...) {
+                                // Invalid input, ignore
+                            }
+                        },
+                        "0", ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                }
+            }
+            else if (property->IsA<FUInt64Property>())
+            {
+                type_prefix = "uint64";
+                use_string_input = true;
+                unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
+                
+                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                if (!existing_value)
+                {
+                    auto monitored_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                        [container_ptr]() -> std::string {
+                            return std::to_string(*static_cast<uint64_t*>(container_ptr));
+                        },
+                        [container_ptr](const std::string& new_value) {
+                            try {
+                                *static_cast<uint64_t*>(container_ptr) = std::stoull(new_value);
+                            } catch (...) {
+                                // Invalid input, ignore
+                            }
+                        },
+                        "0", ""
+                    );
+                    m_property_container->add_value(unique_id, std::move(monitored_value));
+                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                }
+            }
+            
+            // Now render the appropriate UI
+            if (!unique_id.empty())
+            {
+                // Set up common callbacks
+                if (use_string_input)
+                {
+                    auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                    if (existing_value)
+                    {
+                        existing_value->set_custom_context_menu_callback([]() {
+                            // Empty - prevents default context menu
+                        });
+                        existing_value->set_custom_tooltip_callback([property]() {
+                            render_property_details_tooltip(property);
+                        });
+                        existing_value->update_from_external(true);
+                        
+                        // Render input
+                        ImGui::SameLine();
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                        ImGui::PushItemWidth(100 * font_scale);
+                        existing_value->draw();
+                        ImGui::PopItemWidth();
+                        ImGui::PopStyleVar();
+                        
+                        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                        {
+                            ImGui::OpenPopup(property_name.c_str());
+                        }
+                    }
+                }
+                else
+                {
+                    // Handle all slider types through base interface
+                    auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id);
+                    if (existing_value)
+                    {
+                        existing_value->set_custom_context_menu_callback([]() {
+                            // Empty - prevents default context menu
+                        });
+                        existing_value->set_custom_tooltip_callback([property]() {
+                            render_property_details_tooltip(property);
+                        });
+                        existing_value->update_from_external(true);
+                        
+                        // Render slider
+                        ImGui::SameLine();
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                        ImGui::PushItemWidth(120 * font_scale);
+                        existing_value->draw();
+                        ImGui::PopItemWidth();
+                        ImGui::PopStyleVar();
+                        
+                        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                        {
+                            ImGui::OpenPopup(property_name.c_str());
+                        }
+                    }
+                }
+            }
         }
     }
     
