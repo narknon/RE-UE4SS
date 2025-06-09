@@ -1,0 +1,120 @@
+#pragma once
+
+#include "BasicWidgets.hpp"
+#include "AdvancedWidgets.hpp"
+#include <memory>
+#include <functional>
+
+namespace RC::ImDataControls {
+
+// Factory functions for monitored values
+
+[[nodiscard]] inline auto make_monitored_toggle(
+    std::function<bool()> getter,
+    std::function<void(bool)> setter,
+    bool default_value = false)
+{
+    return MonitoredToggle::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_float(
+    std::function<float()> getter,
+    std::function<void(float)> setter,
+    float default_value = 0.0f)
+{
+    return MonitoredFloat::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_double(
+    std::function<double()> getter,
+    std::function<void(double)> setter,
+    double default_value = 0.0)
+{
+    return MonitoredDouble::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_int32(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    int32_t default_value = 0)
+{
+    return MonitoredInt32::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_string(
+    std::function<std::string()> getter,
+    std::function<void(const std::string&)> setter,
+    const std::string& default_value = "")
+{
+    return MonitoredString::create(std::move(getter), std::move(setter), default_value);
+}
+
+// Factory functions for monitored sliders
+
+[[nodiscard]] inline auto make_monitored_slider(
+    std::function<float()> getter,
+    std::function<void(float)> setter,
+    float min_val,
+    float max_val,
+    float default_value = 0.0f)
+{
+    return MonitoredSliderFloat::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_int(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    int32_t min_val,
+    int32_t max_val,
+    int32_t default_value = 0)
+{
+    return MonitoredSliderInt32::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_double(
+    std::function<double()> getter,
+    std::function<void(double)> setter,
+    double min_val,
+    double max_val,
+    double default_value = 0.0,
+    bool show_precision_input = false)
+{
+    return MonitoredSliderDouble::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+}
+
+// Convenience template for creating monitored values from member pointers
+template<typename ObjectType, typename ValueType>
+[[nodiscard]] auto make_monitored_member(
+    ObjectType* object,
+    ValueType ObjectType::*member,
+    ValueType default_value = ValueType{})
+{
+    auto getter = [object, member]() -> ValueType {
+        return object->*member;
+    };
+    
+    auto setter = [object, member](const ValueType& value) {
+        object->*member = value;
+    };
+    
+    if constexpr (std::is_same_v<ValueType, bool>) {
+        return make_monitored_toggle(getter, setter, default_value);
+    }
+    else if constexpr (std::is_same_v<ValueType, float>) {
+        return make_monitored_float(getter, setter, default_value);
+    }
+    else if constexpr (std::is_same_v<ValueType, double>) {
+        return make_monitored_double(getter, setter, default_value);
+    }
+    else if constexpr (std::is_same_v<ValueType, int32_t>) {
+        return make_monitored_int32(getter, setter, default_value);
+    }
+    else if constexpr (std::is_same_v<ValueType, std::string>) {
+        return make_monitored_string(getter, setter, default_value);
+    }
+    else {
+        static_assert(sizeof(ValueType) == 0, "Unsupported type for make_monitored_member");
+    }
+}
+
+} // namespace RC::ImDataControls
