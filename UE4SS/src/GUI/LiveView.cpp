@@ -3890,49 +3890,30 @@ namespace RC::GUI
         // This function should be called within the info panel, which already has proper bounds
         // The splitter divides the available space between top (basic info) and bottom (collapsible content)
 
-        // Cache content heights per object
-        static std::unordered_map<void*, float> object_content_heights;
-        static void* last_measured_object = nullptr;
+        // Calculate maximum possible content height based on font size
+        float line_height = ImGui::GetTextLineHeightWithSpacing();
+        float padding = ImGui::GetStyle().WindowPadding.y * 2;
         
-        // Check if we have a cached height for this object
-        auto height_it = object_content_heights.find(object);
-        float max_content_height = 300.0f;  // Default
+        // Calculate worst-case scenario:
+        // - 5 basic lines (Selected, Address, ClassPrivate, Path, Player Controlled)
+        // - ObjectFlags: 1 header + up to 10 lines of flags (30 flags, 3 per line)
+        // - ClassFlags: 1 header + up to 10 lines (worst case)
+        // - ClassCastFlags: 1 header + up to 5 lines (worst case)
+        // - FunctionFlags: 1 header + up to 10 lines (worst case)
+        // Total worst case: 5 + 1 + 10 + 1 + 10 + 1 + 5 = 33 lines
+        // Typical case: 5 + 1 + 3 + 1 + 3 + 1 + 2 = 16 lines
         
-        if (height_it != object_content_heights.end())
-        {
-            // Use cached height
-            max_content_height = height_it->second;
-        }
-        else
-        {
-            // Mark that we need to measure this object
-            last_measured_object = nullptr;
-        }
+        // Use a reasonable maximum that covers most cases without being excessive
+        float max_top_size = (20 * line_height) + padding;
         
-        // If this is a different object, reset panel size to default
-        if (last_measured_object != object)
-        {
-            m_info_panel_top_size = std::min(300.0f, max_content_height);
-            last_measured_object = object;
-        }
-        
-        // Calculate the maximum size based on content
-        float max_top_size = max_content_height + ImGui::GetStyle().WindowPadding.y * 2;
-        
-        // Use the existing ImGui_Splitter with custom max constraint
+        // Use the existing ImGui_Splitter with fixed max constraint
         ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 20.0f, max_top_size);
 
         // === Top Section ===
-        // Only measure if we haven't cached this object's height yet
-        bool should_measure = (height_it == object_content_heights.end());
-        
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
                           false,
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        
-        // Track where content starts
-        float content_start_y = ImGui::GetCursorPosY();
 
         auto object_full_name = get_object_full_name(object);
 
@@ -3965,17 +3946,6 @@ namespace RC::GUI
             render_flags<FunctionFlagsStringifier>(as_function, "FunctionFlags");
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
-
-        // Cache the content height for this object if we haven't already
-        if (should_measure)
-        {
-            float content_end_y = ImGui::GetCursorPosY();
-            float measured_height = content_end_y - content_start_y;
-            object_content_heights[object] = measured_height;
-            
-            // Also update max_content_height for immediate use
-            max_content_height = measured_height;
-        }
 
         ImGui::EndChild();
 
