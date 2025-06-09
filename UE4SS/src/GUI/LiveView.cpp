@@ -3000,7 +3000,6 @@ namespace RC::GUI
         FProperty* last_property{};
 
         auto render_property_text = [&](UClass* uclass, FProperty* property) {
-            // New
             auto next_item_variant =
                     render_property_value(property, ContainerType::Object, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
             if (auto object_item = std::get_if<UObject*>(&next_item_variant); object_item && *object_item)
