@@ -1045,6 +1045,94 @@ namespace RC::GUI
         }
     };
 
+    // ImGuiInt64 - for int64_t values (use string input since it may be too large for int32_t)
+    class ImGuiInt64 : public ImGuiValue<int64_t>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiInt64>;
+
+        static auto create(int64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiInt64>(default_value, name, tooltip);
+        }
+
+        static auto create(int64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiInt64>(default_value, name, tooltip);
+        }
+
+        ImGuiInt64(int64_t default_value = 0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<int64_t>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiInt64(int64_t default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<int64_t>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            
+            // For int64, use string input to handle full range
+            ImGui::PushID(this);
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%lld", static_cast<long long>(get_working_value()));
+            
+            if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::BeginDisabled();
+                ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            bool changed = ImGui::InputText(get_display_label(label), buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal);
+            render_tooltip();
+            if (changed)
+            {
+                try {
+                    long long val = std::stoll(buffer);
+                    get_working_value() = static_cast<int64_t>(val);
+                    m_is_dirty = true;
+                    m_last_value_source = ValueSource::User;
+                    fire_change_callback();
+                } catch (...) {
+                    // Invalid input, ignore
+                }
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %lld", get_display_label(label), static_cast<long long>(m_value));
+        }
+
+        void draw_value(const CharType* label) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
     // Integer slider
     class ImGuiSliderInt32 : public ImGuiValue<int32_t>
     {
@@ -3676,23 +3764,11 @@ namespace RC::GUI
         return std::make_unique<ImGuiMonitoredValue<uint16_t, ImGuiSliderUInt16>>(getter, setter, min, max, default_value, name);
     }
     
-    // Large integer helpers that use string input for full precision
-    // For int64, we still need to wrap string since we don't have ImGuiInt64
+    // Large integer helpers
     inline auto make_monitored_int64(std::function<int64_t()> getter, std::function<void(int64_t)> setter, 
                                     int64_t default_value = 0, const std::string& name = "")
     {
-        return make_monitored_string(
-            [getter]() -> std::string { return std::to_string(getter()); },
-            [setter](const std::string& value) {
-                try {
-                    setter(std::stoll(value));
-                } catch (...) {
-                    // Invalid input, ignore
-                }
-            },
-            std::to_string(default_value),
-            name
-        );
+        return std::make_unique<ImGuiMonitoredValue<int64_t, ImGuiInt64>>(getter, setter, default_value, name);
     }
     
     // For uint32 and uint64, we use the native ImGuiUInt32/64 classes
