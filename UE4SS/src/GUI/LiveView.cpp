@@ -3890,26 +3890,41 @@ namespace RC::GUI
         // This function should be called within the info panel, which already has proper bounds
         // The splitter divides the available space between top (basic info) and bottom (collapsible content)
 
-        // Store the content height after rendering (will be used next frame)
-        static float measured_content_height = 300.0f;  // Default until first measurement
+        // Cache content heights per object
+        static std::unordered_map<void*, float> object_content_heights;
         static void* last_measured_object = nullptr;
         
-        // If this is a different object, reset to default size
+        // Check if we have a cached height for this object
+        auto height_it = object_content_heights.find(object);
+        float max_content_height = 300.0f;  // Default
+        
+        if (height_it != object_content_heights.end())
+        {
+            // Use cached height
+            max_content_height = height_it->second;
+        }
+        else
+        {
+            // Mark that we need to measure this object
+            last_measured_object = nullptr;
+        }
+        
+        // If this is a different object, reset panel size to default
         if (last_measured_object != object)
         {
-            m_info_panel_top_size = 300.0f;
+            m_info_panel_top_size = std::min(300.0f, max_content_height);
             last_measured_object = object;
         }
         
         // Calculate the maximum size based on content
-        float max_top_size = measured_content_height + ImGui::GetStyle().WindowPadding.y * 2;
+        float max_top_size = max_content_height + ImGui::GetStyle().WindowPadding.y * 2;
         
         // Use the existing ImGui_Splitter with custom max constraint
         ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 20.0f, max_top_size);
 
         // === Top Section ===
-        // Only measure content if the panel is large enough to show all content
-        bool should_measure = m_info_panel_top_size >= measured_content_height;
+        // Only measure if we haven't cached this object's height yet
+        bool should_measure = (height_it == object_content_heights.end());
         
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
@@ -3951,11 +3966,15 @@ namespace RC::GUI
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
 
-        // Only update measured content height if we're showing all content
+        // Cache the content height for this object if we haven't already
         if (should_measure)
         {
             float content_end_y = ImGui::GetCursorPosY();
-            measured_content_height = content_end_y - content_start_y;
+            float measured_height = content_end_y - content_start_y;
+            object_content_heights[object] = measured_height;
+            
+            // Also update max_content_height for immediate use
+            max_content_height = measured_height;
         }
 
         ImGui::EndChild();
