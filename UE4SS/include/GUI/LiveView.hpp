@@ -287,6 +287,14 @@ namespace RC::GUI
         auto render_default_property(FProperty* property,
                                     const std::string& property_text) -> void;
         
+        // Unified numeric property renderer
+        auto render_numeric_property(FProperty* property,
+                                    ContainerType container_type,
+                                    void* container,
+                                    void* container_ptr,
+                                    const std::string& property_name,
+                                    const std::string& property_text) -> void;
+        
         // Type specific renderers
         auto render_type_specific(UObject* object) -> bool;
         
