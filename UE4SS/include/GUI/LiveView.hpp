@@ -227,63 +227,6 @@ namespace RC::GUI
                                   const std::string& property_name,
                                   const std::string& property_text) -> void;
         
-        // Integer property renderers
-        auto render_int8_property(FProperty* property,
-                                 ContainerType container_type,
-                                 void* container,
-                                 void* container_ptr,
-                                 const std::string& property_name,
-                                 const std::string& property_text) -> void;
-        
-        auto render_int16_property(FProperty* property,
-                                  ContainerType container_type,
-                                  void* container,
-                                  void* container_ptr,
-                                  const std::string& property_name,
-                                  const std::string& property_text) -> void;
-        
-        auto render_int32_property(FProperty* property,
-                                  ContainerType container_type,
-                                  void* container,
-                                  void* container_ptr,
-                                  const std::string& property_name,
-                                  const std::string& property_text) -> void;
-        
-        auto render_int64_property(FProperty* property,
-                                  ContainerType container_type,
-                                  void* container,
-                                  void* container_ptr,
-                                  const std::string& property_name,
-                                  const std::string& property_text) -> void;
-        
-        auto render_byte_property(FProperty* property,
-                                 ContainerType container_type,
-                                 void* container,
-                                 void* container_ptr,
-                                 const std::string& property_name,
-                                 const std::string& property_text) -> void;
-        
-        auto render_uint16_property(FProperty* property,
-                                   ContainerType container_type,
-                                   void* container,
-                                   void* container_ptr,
-                                   const std::string& property_name,
-                                   const std::string& property_text) -> void;
-        
-        auto render_uint32_property(FProperty* property,
-                                   ContainerType container_type,
-                                   void* container,
-                                   void* container_ptr,
-                                   const std::string& property_name,
-                                   const std::string& property_text) -> void;
-        
-        auto render_uint64_property(FProperty* property,
-                                   ContainerType container_type,
-                                   void* container,
-                                   void* container_ptr,
-                                   const std::string& property_name,
-                                   const std::string& property_text) -> void;
-        
         auto render_default_property(FProperty* property,
                                     const std::string& property_text) -> void;
         
