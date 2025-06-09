@@ -3890,30 +3890,14 @@ namespace RC::GUI
         // This function should be called within the info panel, which already has proper bounds
         // The splitter divides the available space between top (basic info) and bottom (collapsible content)
 
-        // Calculate maximum possible content height based on font size
-        float line_height = ImGui::GetTextLineHeightWithSpacing();
-        float padding = ImGui::GetStyle().WindowPadding.y * 2;
-        
-        // Calculate worst-case scenario:
-        // - 5 basic lines (Selected, Address, ClassPrivate, Path, Player Controlled)
-        // - ObjectFlags: 1 header + up to 10 lines of flags (30 flags, 3 per line)
-        // - ClassFlags: 1 header + up to 10 lines (worst case)
-        // - ClassCastFlags: 1 header + up to 5 lines (worst case)
-        // - FunctionFlags: 1 header + up to 10 lines (worst case)
-        // Total worst case: 5 + 1 + 10 + 1 + 10 + 1 + 5 = 33 lines
-        // Typical case: 5 + 1 + 3 + 1 + 3 + 1 + 2 = 16 lines
-        
-        // Use a reasonable maximum that covers most cases without being excessive
-        float max_top_size = (20 * line_height) + padding;
-        
-        // Use the existing ImGui_Splitter with fixed max constraint
-        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 20.0f, max_top_size);
+        // Use the existing ImGui_Splitter at the correct level
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
 
         // === Top Section ===
+        // Enable vertical scrolling when content is larger than the visible area
         ImGui::BeginChild("InfoPanelTop",
                           ImVec2(0, m_info_panel_top_size),
-                          false,
-                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                          false);
 
         auto object_full_name = get_object_full_name(object);
 
