@@ -2926,18 +2926,14 @@ namespace RC::GUI
                 auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = make_monitored_string(
-                        [container_ptr]() -> std::string {
-                            return std::to_string(*static_cast<int64_t*>(container_ptr));
+                    auto monitored_value = make_monitored_int64(
+                        [container_ptr]() -> int64_t {
+                            return *static_cast<int64_t*>(container_ptr);
                         },
-                        [container_ptr](const std::string& new_value) {
-                            try {
-                                *static_cast<int64_t*>(container_ptr) = std::stoll(new_value);
-                            } catch (...) {
-                                // Invalid input, ignore
-                            }
+                        [container_ptr](int64_t new_value) {
+                            *static_cast<int64_t*>(container_ptr) = new_value;
                         },
-                        "0", ""
+                        0, ""
                     );
                     m_property_container->add_value(unique_id, std::move(monitored_value));
                     existing_value = m_property_container->get_value<ImGuiString>(unique_id);
@@ -2988,113 +2984,80 @@ namespace RC::GUI
             else if (property->IsA<FUInt32Property>())
             {
                 type_prefix = "uint32";
-                use_string_input = true;
                 unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
                 
-                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                auto existing_value = m_property_container->get_value<ImGuiUInt32>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = make_monitored_string(
-                        [container_ptr]() -> std::string {
-                            return std::to_string(*static_cast<uint32_t*>(container_ptr));
+                    auto monitored_value = make_monitored_uint32(
+                        [container_ptr]() -> uint32_t {
+                            return *static_cast<uint32_t*>(container_ptr);
                         },
-                        [container_ptr](const std::string& new_value) {
-                            try {
-                                *static_cast<uint32_t*>(container_ptr) = std::stoul(new_value);
-                            } catch (...) {
-                                // Invalid input, ignore
-                            }
+                        [container_ptr](uint32_t new_value) {
+                            *static_cast<uint32_t*>(container_ptr) = new_value;
                         },
-                        "0", ""
+                        0, ""
                     );
                     m_property_container->add_value(unique_id, std::move(monitored_value));
-                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                    existing_value = m_property_container->get_value<ImGuiUInt32>(unique_id);
                 }
             }
             else if (property->IsA<FUInt64Property>())
             {
                 type_prefix = "uint64";
-                use_string_input = true;
                 unique_id = fmt::format("{}_{}_{}",  type_prefix, static_cast<void*>(container), property_name);
                 
-                auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                auto existing_value = m_property_container->get_value<ImGuiUInt64>(unique_id);
                 if (!existing_value)
                 {
-                    auto monitored_value = make_monitored_string(
-                        [container_ptr]() -> std::string {
-                            return std::to_string(*static_cast<uint64_t*>(container_ptr));
+                    auto monitored_value = make_monitored_uint64(
+                        [container_ptr]() -> uint64_t {
+                            return *static_cast<uint64_t*>(container_ptr);
                         },
-                        [container_ptr](const std::string& new_value) {
-                            try {
-                                *static_cast<uint64_t*>(container_ptr) = std::stoull(new_value);
-                            } catch (...) {
-                                // Invalid input, ignore
-                            }
+                        [container_ptr](uint64_t new_value) {
+                            *static_cast<uint64_t*>(container_ptr) = new_value;
                         },
-                        "0", ""
+                        0, ""
                     );
                     m_property_container->add_value(unique_id, std::move(monitored_value));
-                    existing_value = m_property_container->get_value<ImGuiString>(unique_id);
+                    existing_value = m_property_container->get_value<ImGuiUInt64>(unique_id);
                 }
             }
             
             // Now render the appropriate UI
             if (!unique_id.empty())
             {
-                // Set up common callbacks
-                if (use_string_input)
+                // All types can be handled through the base interface
+                auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id);
+                if (existing_value)
                 {
-                    auto existing_value = m_property_container->get_value<ImGuiString>(unique_id);
-                    if (existing_value)
+                    existing_value->set_custom_context_menu_callback([]() {
+                        // Empty - prevents default context menu
+                    });
+                    existing_value->set_custom_tooltip_callback([property]() {
+                        render_property_details_tooltip(property);
+                    });
+                    existing_value->update_from_external(true);
+                    
+                    // Render control
+                    ImGui::SameLine();
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+                    
+                    // Use different widths for different types
+                    float item_width = 120 * font_scale;
+                    if (use_string_input || property->IsA<FUInt32Property>() || property->IsA<FUInt64Property>())
                     {
-                        existing_value->set_custom_context_menu_callback([]() {
-                            // Empty - prevents default context menu
-                        });
-                        existing_value->set_custom_tooltip_callback([property]() {
-                            render_property_details_tooltip(property);
-                        });
-                        existing_value->update_from_external(true);
-                        
-                        // Render input
-                        ImGui::SameLine();
-                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-                        ImGui::PushItemWidth(100 * font_scale);
-                        existing_value->draw();
-                        ImGui::PopItemWidth();
-                        ImGui::PopStyleVar();
-                        
-                        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-                        {
-                            ImGui::OpenPopup(property_name.c_str());
-                        }
+                        item_width = 100 * font_scale;  // String inputs are narrower
                     }
-                }
-                else
-                {
-                    // Handle all slider types through base interface
-                    auto existing_value = m_property_container->get_value<IImGuiValue>(unique_id);
-                    if (existing_value)
+                    
+                    ImGui::PushItemWidth(item_width);
+                    existing_value->draw();
+                    ImGui::PopItemWidth();
+                    ImGui::PopStyleVar();
+                    
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
                     {
-                        existing_value->set_custom_context_menu_callback([]() {
-                            // Empty - prevents default context menu
-                        });
-                        existing_value->set_custom_tooltip_callback([property]() {
-                            render_property_details_tooltip(property);
-                        });
-                        existing_value->update_from_external(true);
-                        
-                        // Render slider
-                        ImGui::SameLine();
-                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-                        ImGui::PushItemWidth(120 * font_scale);
-                        existing_value->draw();
-                        ImGui::PopItemWidth();
-                        ImGui::PopStyleVar();
-                        
-                        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-                        {
-                            ImGui::OpenPopup(property_name.c_str());
-                        }
+                        ImGui::OpenPopup(property_name.c_str());
                     }
                 }
             }
