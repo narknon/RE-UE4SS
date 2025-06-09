@@ -2202,6 +2202,46 @@ namespace RC::GUI
             render_float_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
+        else if (property->IsA<FInt8Property>())
+        {
+            render_int8_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FInt16Property>())
+        {
+            render_int16_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FIntProperty>())
+        {
+            render_int32_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FInt64Property>())
+        {
+            render_int64_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FByteProperty>())
+        {
+            render_byte_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FUInt16Property>())
+        {
+            render_uint16_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FUInt32Property>())
+        {
+            render_uint32_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
+        else if (property->IsA<FUInt64Property>())
+        {
+            render_uint64_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
         else
         {
             render_default_property(property, to_string(property_text.GetCharArray()));
@@ -2214,7 +2254,17 @@ namespace RC::GUI
         }
 
         // Only show tooltip if it's not a custom-rendered property that handles its own tooltip
-        if (!property->IsA<FBoolProperty>() && !property->IsA<FFloatProperty>() && !property->IsA<FDoubleProperty>())
+        if (!property->IsA<FBoolProperty>() && 
+            !property->IsA<FFloatProperty>() && 
+            !property->IsA<FDoubleProperty>() &&
+            !property->IsA<FInt8Property>() &&
+            !property->IsA<FInt16Property>() &&
+            !property->IsA<FIntProperty>() &&
+            !property->IsA<FInt64Property>() &&
+            !property->IsA<FByteProperty>() &&
+            !property->IsA<FUInt16Property>() &&
+            !property->IsA<FUInt32Property>() &&
+            !property->IsA<FUInt64Property>())
         {
             if (ImGui::IsItemHovered())
             {
@@ -2284,9 +2334,73 @@ namespace RC::GUI
                     else if (property->IsA<FDoubleProperty>())
                     {
                         auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
-                        if (auto existing_double = m_property_container->get_value<ImGuiDouble>(double_id))
+                        if (auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id))
                         {
                             existing_double->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FInt8Property>())
+                    {
+                        auto int8_id = fmt::format("int8_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_int8 = m_property_container->get_value<ImGuiSliderInt32>(int8_id))
+                        {
+                            existing_int8->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FInt16Property>())
+                    {
+                        auto int16_id = fmt::format("int16_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_int16 = m_property_container->get_value<ImGuiSliderInt32>(int16_id))
+                        {
+                            existing_int16->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FIntProperty>())
+                    {
+                        auto int32_id = fmt::format("int32_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_int32 = m_property_container->get_value<ImGuiSliderInt32>(int32_id))
+                        {
+                            existing_int32->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FInt64Property>())
+                    {
+                        auto int64_id = fmt::format("int64_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_int64 = m_property_container->get_value<ImGuiString>(int64_id))
+                        {
+                            existing_int64->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FByteProperty>())
+                    {
+                        auto byte_id = fmt::format("byte_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_byte = m_property_container->get_value<ImGuiSliderInt32>(byte_id))
+                        {
+                            existing_byte->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FUInt16Property>())
+                    {
+                        auto uint16_id = fmt::format("uint16_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_uint16 = m_property_container->get_value<ImGuiSliderInt32>(uint16_id))
+                        {
+                            existing_uint16->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FUInt32Property>())
+                    {
+                        auto uint32_id = fmt::format("uint32_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_uint32 = m_property_container->get_value<ImGuiString>(uint32_id))
+                        {
+                            existing_uint32->update_from_external(true);
+                        }
+                    }
+                    else if (property->IsA<FUInt64Property>())
+                    {
+                        auto uint64_id = fmt::format("uint64_{}_{}", static_cast<void*>(container), property_name);
+                        if (auto existing_uint64 = m_property_container->get_value<ImGuiString>(uint64_id))
+                        {
+                            existing_uint64->update_from_external(true);
                         }
                     }
                 }
@@ -2665,6 +2779,517 @@ namespace RC::GUI
         }
     }
 
+    auto LiveView::render_int8_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       void* container_ptr,
+                                       const std::string& property_name,
+                                       const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto int8_id = fmt::format("int8_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_int8 = m_property_container->get_value<ImGuiSliderInt32>(int8_id);
+        
+        if (!existing_int8)
+        {
+            // Create a slider with int8 range
+            auto int8_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                [container_ptr]() -> int32_t {
+                    return static_cast<int32_t>(*static_cast<int8_t*>(container_ptr));
+                },
+                [container_ptr](int32_t new_value) {
+                    *static_cast<int8_t*>(container_ptr) = static_cast<int8_t>(std::clamp(new_value, -128, 127));
+                },
+                -128,   // min
+                127,    // max
+                0,      // default value
+                ""      // name
+            );
+            
+            m_property_container->add_value(int8_id, std::move(int8_value));
+            existing_int8 = m_property_container->get_value<ImGuiSliderInt32>(int8_id);
+            
+            existing_int8->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_int8->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_int8->update_from_external(true);
+        
+        // Render slider
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(120 * font_scale);
+        if (existing_int8->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_int16_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto int16_id = fmt::format("int16_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_int16 = m_property_container->get_value<ImGuiSliderInt32>(int16_id);
+        
+        if (!existing_int16)
+        {
+            // Create a slider with int16 range
+            auto int16_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                [container_ptr]() -> int32_t {
+                    return static_cast<int32_t>(*static_cast<int16_t*>(container_ptr));
+                },
+                [container_ptr](int32_t new_value) {
+                    *static_cast<int16_t*>(container_ptr) = static_cast<int16_t>(std::clamp(new_value, -32768, 32767));
+                },
+                -32768, // min
+                32767,  // max
+                0,      // default value
+                ""      // name
+            );
+            
+            m_property_container->add_value(int16_id, std::move(int16_value));
+            existing_int16 = m_property_container->get_value<ImGuiSliderInt32>(int16_id);
+            
+            existing_int16->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_int16->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_int16->update_from_external(true);
+        
+        // Render slider
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(120 * font_scale);
+        if (existing_int16->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_int32_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto int32_id = fmt::format("int32_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_int32 = m_property_container->get_value<ImGuiSliderInt32>(int32_id);
+        
+        if (!existing_int32)
+        {
+            // Create a slider with wide range
+            auto int32_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                [container_ptr]() -> int32_t {
+                    return *static_cast<int32_t*>(container_ptr);
+                },
+                [container_ptr](int32_t new_value) {
+                    *static_cast<int32_t*>(container_ptr) = new_value;
+                },
+                -1000000000, // min - large but not INT_MIN to avoid overflow
+                1000000000,  // max - large but not INT_MAX to avoid overflow
+                0,           // default value
+                ""           // name
+            );
+            
+            m_property_container->add_value(int32_id, std::move(int32_value));
+            existing_int32 = m_property_container->get_value<ImGuiSliderInt32>(int32_id);
+            
+            existing_int32->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_int32->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_int32->update_from_external(true);
+        
+        // Render slider
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(120 * font_scale);
+        if (existing_int32->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_int64_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        void* container_ptr,
+                                        const std::string& property_name,
+                                        const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto int64_id = fmt::format("int64_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_int64 = m_property_container->get_value<ImGuiString>(int64_id);
+        
+        if (!existing_int64)
+        {
+            // Create a string input for int64 (too large for slider)
+            auto int64_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                [container_ptr]() -> std::string {
+                    return std::to_string(*static_cast<int64_t*>(container_ptr));
+                },
+                [container_ptr](const std::string& new_value) {
+                    try {
+                        *static_cast<int64_t*>(container_ptr) = std::stoll(new_value);
+                    } catch (...) {
+                        // Invalid input, ignore
+                    }
+                },
+                "0",  // default value
+                ""    // name
+            );
+            
+            m_property_container->add_value(int64_id, std::move(int64_value));
+            existing_int64 = m_property_container->get_value<ImGuiString>(int64_id);
+            
+            existing_int64->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_int64->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_int64->update_from_external(true);
+        
+        // Render input
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(100 * font_scale);
+        if (existing_int64->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_byte_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       void* container_ptr,
+                                       const std::string& property_name,
+                                       const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        // Check if this byte property is an enum
+        auto byte_property = static_cast<FByteProperty*>(property);
+        if (byte_property->IsEnum())
+        {
+            // Render as enum dropdown
+            render_enum_property(property, container_ptr, property_text);
+            return;
+        }
+        
+        auto byte_id = fmt::format("byte_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_byte = m_property_container->get_value<ImGuiSliderInt32>(byte_id);
+        
+        if (!existing_byte)
+        {
+            // Create a slider with byte range
+            auto byte_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                [container_ptr]() -> int32_t {
+                    return static_cast<int32_t>(*static_cast<uint8_t*>(container_ptr));
+                },
+                [container_ptr](int32_t new_value) {
+                    *static_cast<uint8_t*>(container_ptr) = static_cast<uint8_t>(std::clamp(new_value, 0, 255));
+                },
+                0,      // min
+                255,    // max
+                0,      // default value
+                ""      // name
+            );
+            
+            m_property_container->add_value(byte_id, std::move(byte_value));
+            existing_byte = m_property_container->get_value<ImGuiSliderInt32>(byte_id);
+            
+            existing_byte->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_byte->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_byte->update_from_external(true);
+        
+        // Render slider
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(120 * font_scale);
+        if (existing_byte->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_uint16_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         void* container_ptr,
+                                         const std::string& property_name,
+                                         const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto uint16_id = fmt::format("uint16_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_uint16 = m_property_container->get_value<ImGuiSliderInt32>(uint16_id);
+        
+        if (!existing_uint16)
+        {
+            // Create a slider with uint16 range
+            auto uint16_value = std::make_unique<ImGuiMonitoredValue<int32_t, ImGuiSliderInt32>>(
+                [container_ptr]() -> int32_t {
+                    return static_cast<int32_t>(*static_cast<uint16_t*>(container_ptr));
+                },
+                [container_ptr](int32_t new_value) {
+                    *static_cast<uint16_t*>(container_ptr) = static_cast<uint16_t>(std::clamp(new_value, 0, 65535));
+                },
+                0,      // min
+                65535,  // max
+                0,      // default value
+                ""      // name
+            );
+            
+            m_property_container->add_value(uint16_id, std::move(uint16_value));
+            existing_uint16 = m_property_container->get_value<ImGuiSliderInt32>(uint16_id);
+            
+            existing_uint16->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_uint16->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_uint16->update_from_external(true);
+        
+        // Render slider
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(120 * font_scale);
+        if (existing_uint16->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_uint32_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         void* container_ptr,
+                                         const std::string& property_name,
+                                         const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto uint32_id = fmt::format("uint32_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_uint32 = m_property_container->get_value<ImGuiString>(uint32_id);
+        
+        if (!existing_uint32)
+        {
+            // Create a string input for uint32 (may exceed int32 range)
+            auto uint32_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                [container_ptr]() -> std::string {
+                    return std::to_string(*static_cast<uint32_t*>(container_ptr));
+                },
+                [container_ptr](const std::string& new_value) {
+                    try {
+                        *static_cast<uint32_t*>(container_ptr) = std::stoul(new_value);
+                    } catch (...) {
+                        // Invalid input, ignore
+                    }
+                },
+                "0",  // default value
+                ""    // name
+            );
+            
+            m_property_container->add_value(uint32_id, std::move(uint32_value));
+            existing_uint32 = m_property_container->get_value<ImGuiString>(uint32_id);
+            
+            existing_uint32->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_uint32->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_uint32->update_from_external(true);
+        
+        // Render input
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(100 * font_scale);
+        if (existing_uint32->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
+    auto LiveView::render_uint64_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         void* container_ptr,
+                                         const std::string& property_name,
+                                         const std::string& property_text) -> void
+    {
+        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        
+        auto uint64_id = fmt::format("uint64_{}_{}", static_cast<void*>(container), property_name);
+        auto existing_uint64 = m_property_container->get_value<ImGuiString>(uint64_id);
+        
+        if (!existing_uint64)
+        {
+            // Create a string input for uint64 (too large for slider)
+            auto uint64_value = std::make_unique<ImGuiMonitoredValue<std::string, ImGuiString>>(
+                [container_ptr]() -> std::string {
+                    return std::to_string(*static_cast<uint64_t*>(container_ptr));
+                },
+                [container_ptr](const std::string& new_value) {
+                    try {
+                        *static_cast<uint64_t*>(container_ptr) = std::stoull(new_value);
+                    } catch (...) {
+                        // Invalid input, ignore
+                    }
+                },
+                "0",  // default value
+                ""    // name
+            );
+            
+            m_property_container->add_value(uint64_id, std::move(uint64_value));
+            existing_uint64 = m_property_container->get_value<ImGuiString>(uint64_id);
+            
+            existing_uint64->set_custom_context_menu_callback([]() {
+                // Empty - prevents default context menu
+            });
+            existing_uint64->set_custom_tooltip_callback([property]() {
+                render_property_details_tooltip(property);
+            });
+        }
+        
+        // Update from game engine
+        existing_uint64->update_from_external(true);
+        
+        // Render input
+        ImGui::SameLine();
+        
+        // Push compact frame padding to reduce height
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
+        ImGui::PushItemWidth(100 * font_scale);
+        if (existing_uint64->draw())
+        {
+            // Value changed by user
+        }
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        
+        // Check if item was right-clicked
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(property_name.c_str());
+        }
+    }
+    
     auto LiveView::render_default_property(FProperty* property,
                                           const std::string& property_text) -> void
     {
