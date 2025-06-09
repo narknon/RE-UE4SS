@@ -10,4 +10,7 @@ target(projectName)
     add_headerfiles("include/**.hpp")
     
     -- Dependencies
-    add_deps("String", "Helpers", "imgui")
+    add_deps("String", "Helpers")
+    
+    -- ImGui is provided as a package, not a target
+    add_packages("imgui", { public = true })
