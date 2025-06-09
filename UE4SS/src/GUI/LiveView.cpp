@@ -3891,7 +3891,7 @@ namespace RC::GUI
         // The splitter divides the available space between top (basic info) and bottom (collapsible content)
 
         // Use the existing ImGui_Splitter at the correct level
-        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 50.0f, 50.0f);
+        ImGui_Splitter(false, 4.0f, &m_info_panel_top_size, &m_info_panel_bottom_size, 10.0f, 50.0f);
 
         // === Top Section ===
         // Enable vertical scrolling when content is larger than the visible area
