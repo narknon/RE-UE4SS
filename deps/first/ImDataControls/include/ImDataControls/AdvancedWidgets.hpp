@@ -132,6 +132,64 @@ protected:
     }
 };
 
+// Monitored Float Slider With Text
+class MonitoredSliderFloatWithText : public SliderWidget<float, MonitoredImGuiValueWithText> {
+public:
+    using Base = SliderWidget<float, MonitoredImGuiValueWithText>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderFloatWithText(float min_val, float max_val, float initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderFloatWithText(Getter getter, Setter setter, float min_val, float max_val, float default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(float min_val, float max_val, float initial_value = 0.0f) {
+        return std::make_unique<MonitoredSliderFloatWithText>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, float min_val, float max_val, float default_value = 0.0f) {
+        return std::make_unique<MonitoredSliderFloatWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %.3f", label ? label : "", this->m_value);
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        float temp_value = this->m_value;
+        bool changed = ImGui::SliderFloat(label ? label : "##slider", &temp_value, m_min, m_max);
+        
+        if (changed && this->is_editable()) {
+            this->set(temp_value);
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
+        
+        return changed && this->is_editable();
+    }
+};
+
 // Config Float Slider
 class ConfigSliderFloat : public SliderWidget<float, ConfigImGuiValue> {
 public:
@@ -272,6 +330,64 @@ protected:
         if (this->m_edit_mode == EditMode::ReadOnly) {
             ImGui::EndDisabled();
         }
+        
+        return changed && this->is_editable();
+    }
+};
+
+// Monitored Int32 Slider With Text
+class MonitoredSliderInt32WithText : public SliderWidget<int32_t, MonitoredImGuiValueWithText> {
+public:
+    using Base = SliderWidget<int32_t, MonitoredImGuiValueWithText>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderInt32WithText(int32_t min_val, int32_t max_val, int32_t initial_value)
+        : Base(min_val, max_val, initial_value)
+    {}
+    
+    MonitoredSliderInt32WithText(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value)
+        : Base(min_val, max_val, default_value)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(int32_t min_val, int32_t max_val, int32_t initial_value = 0) {
+        return std::make_unique<MonitoredSliderInt32WithText>(min_val, max_val, initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value = 0) {
+        return std::make_unique<MonitoredSliderInt32WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %d", label ? label : "", this->m_value);
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int32_t temp_value = this->m_value;
+        bool changed = ImGui::SliderInt(label ? label : "##slider", &temp_value, m_min, m_max);
+        
+        if (changed && this->is_editable()) {
+            this->set(temp_value);
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
         
         return changed && this->is_editable();
     }
@@ -475,6 +591,95 @@ protected:
         if (this->m_edit_mode == EditMode::ReadOnly) {
             ImGui::EndDisabled();
         }
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    bool m_show_precision_input;
+};
+
+// Monitored Double Slider With Text
+class MonitoredSliderDoubleWithText : public SliderWidget<double, MonitoredImGuiValueWithText> {
+public:
+    using Base = SliderWidget<double, MonitoredImGuiValueWithText>;
+    using typename Base::Getter;
+    using typename Base::Setter;
+    
+    MonitoredSliderDoubleWithText(double min_val, double max_val, double initial_value, bool show_precision_input = false)
+        : Base(min_val, max_val, initial_value)
+        , m_show_precision_input(show_precision_input)
+    {}
+    
+    MonitoredSliderDoubleWithText(Getter getter, Setter setter, double min_val, double max_val, double default_value, bool show_precision_input = false)
+        : Base(min_val, max_val, default_value)
+        , m_show_precision_input(show_precision_input)
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(double min_val, double max_val, double initial_value = 0.0, bool show_precision_input = false) {
+        return std::make_unique<MonitoredSliderDoubleWithText>(min_val, max_val, initial_value, show_precision_input);
+    }
+    
+    static auto create(Getter getter, Setter setter, double min_val, double max_val, double default_value = 0.0, bool show_precision_input = false) {
+        return std::make_unique<MonitoredSliderDoubleWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %.6f", label ? label : "", this->m_value);
+            return false;
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        bool changed = false;
+        double temp_value = this->m_value;
+        
+        if (m_show_precision_input) {
+            // Draw slider with limited precision
+            float temp_float = static_cast<float>(temp_value);
+            if (ImGui::SliderFloat(label ? label : "##slider", &temp_float, 
+                                   static_cast<float>(m_min), static_cast<float>(m_max))) {
+                temp_value = static_cast<double>(temp_float);
+                changed = true;
+            }
+            
+            // Draw precision input next to slider
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100.0f);
+            if (ImGui::InputDouble("##precision", &temp_value)) {
+                temp_value = std::clamp(temp_value, m_min, m_max);
+                changed = true;
+            }
+        } else {
+            // Just use float slider
+            float temp_float = static_cast<float>(temp_value);
+            if (ImGui::SliderFloat(label ? label : "##slider", &temp_float, 
+                                   static_cast<float>(m_min), static_cast<float>(m_max))) {
+                temp_value = static_cast<double>(temp_float);
+                changed = true;
+            }
+        }
+        
+        if (changed && this->is_editable()) {
+            this->set(temp_value);
+        }
+        
+        if (this->m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
         
         return changed && this->is_editable();
     }

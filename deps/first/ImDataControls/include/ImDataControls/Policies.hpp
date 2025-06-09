@@ -299,7 +299,7 @@ protected:
     [[nodiscard]] virtual const T& get_value() const = 0;
     
 private:
-    bool m_show_text = false;
+    bool m_show_text = true;  // Default to showing text representation
     std::string m_text_format;  // Optional printf-style format string
 };
 

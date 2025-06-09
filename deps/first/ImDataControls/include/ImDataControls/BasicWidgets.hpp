@@ -69,8 +69,8 @@ protected:
     }
 };
 
-// Monitored Toggle - With external sync and text representation
-class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue>, public TextRepresentationPolicy<bool> {
+// Monitored Toggle - With external sync
+class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue> {
 public:
     using Base = BasicWidget<bool, MonitoredImGuiValue>;
     using Base::Base;
@@ -84,9 +84,6 @@ public:
     }
     
 protected:
-    // Bridge method for TextRepresentationPolicy
-    [[nodiscard]] const bool& get_value() const override { return this->m_value; }
-    
     bool draw_impl(const char* label) override {
         if (m_edit_mode == EditMode::ViewOnly) {
             ImGui::Text("%s: %s", label ? label : "", m_value ? "true" : "false");
@@ -108,8 +105,48 @@ protected:
             ImGui::EndDisabled();
         }
         
-        // Draw text representation if enabled
-        draw_text_representation();
+        return changed && is_editable();
+    }
+};
+
+// Monitored Toggle With Text - With external sync and text representation
+class MonitoredToggleWithText : public BasicWidget<bool, MonitoredImGuiValueWithText> {
+public:
+    using Base = BasicWidget<bool, MonitoredImGuiValueWithText>;
+    using Base::Base;
+    
+    static auto create(bool initial_value = false) {
+        return std::make_unique<MonitoredToggleWithText>(initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, bool default_value = false) {
+        return std::make_unique<MonitoredToggleWithText>(std::move(getter), std::move(setter), default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %s", label ? label : "", m_value ? "true" : "false");
+            return false;
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        bool temp_value = m_value;
+        bool changed = ImGui::Checkbox(label ? label : "##toggle", &temp_value);
+        
+        if (changed && is_editable()) {
+            set(temp_value);
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
         
         return changed && is_editable();
     }
@@ -234,6 +271,49 @@ protected:
         if (m_edit_mode == EditMode::ReadOnly) {
             ImGui::EndDisabled();
         }
+        
+        return changed && is_editable();
+    }
+};
+
+// Monitored Float With Text - With external sync and text representation
+class MonitoredFloatWithText : public BasicWidget<float, MonitoredImGuiValueWithText> {
+public:
+    using Base = BasicWidget<float, MonitoredImGuiValueWithText>;
+    using Base::Base;
+    
+    static auto create(float initial_value = 0.0f) {
+        return std::make_unique<MonitoredFloatWithText>(initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, float default_value = 0.0f) {
+        return std::make_unique<MonitoredFloatWithText>(std::move(getter), std::move(setter), default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %.3f", label ? label : "", m_value);
+            return false;
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        float temp_value = m_value;
+        bool changed = ImGui::InputFloat(label ? label : "##float", &temp_value);
+        
+        if (changed && is_editable()) {
+            set(temp_value);
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
         
         return changed && is_editable();
     }
@@ -374,6 +454,49 @@ protected:
     }
 };
 
+// Monitored Double With Text - With external sync and text representation
+class MonitoredDoubleWithText : public BasicWidget<double, MonitoredImGuiValueWithText> {
+public:
+    using Base = BasicWidget<double, MonitoredImGuiValueWithText>;
+    using Base::Base;
+    
+    static auto create(double initial_value = 0.0) {
+        return std::make_unique<MonitoredDoubleWithText>(initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, double default_value = 0.0) {
+        return std::make_unique<MonitoredDoubleWithText>(std::move(getter), std::move(setter), default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %.6f", label ? label : "", m_value);
+            return false;
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        double temp_value = m_value;
+        bool changed = ImGui::InputDouble(label ? label : "##double", &temp_value);
+        
+        if (changed && is_editable()) {
+            set(temp_value);
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
+        
+        return changed && is_editable();
+    }
+};
+
 // Config Double - With validation and deferred updates
 class ConfigDouble : public BasicWidget<double, ConfigImGuiValue> {
 public:
@@ -493,6 +616,49 @@ protected:
         if (m_edit_mode == EditMode::ReadOnly) {
             ImGui::EndDisabled();
         }
+        
+        return changed && is_editable();
+    }
+};
+
+// Monitored Int32 With Text - With external sync and text representation
+class MonitoredInt32WithText : public BasicWidget<int32_t, MonitoredImGuiValueWithText> {
+public:
+    using Base = BasicWidget<int32_t, MonitoredImGuiValueWithText>;
+    using Base::Base;
+    
+    static auto create(int32_t initial_value = 0) {
+        return std::make_unique<MonitoredInt32WithText>(initial_value);
+    }
+    
+    static auto create(Getter getter, Setter setter, int32_t default_value = 0) {
+        return std::make_unique<MonitoredInt32WithText>(std::move(getter), std::move(setter), default_value);
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (m_edit_mode == EditMode::ViewOnly) {
+            ImGui::Text("%s: %d", label ? label : "", m_value);
+            return false;
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::BeginDisabled();
+        }
+        
+        int32_t temp_value = m_value;
+        bool changed = ImGui::InputInt(label ? label : "##int32", &temp_value);
+        
+        if (changed && is_editable()) {
+            set(temp_value);
+        }
+        
+        if (m_edit_mode == EditMode::ReadOnly) {
+            ImGui::EndDisabled();
+        }
+        
+        // Draw text representation (automatically enabled by default)
+        this->draw_text_representation();
         
         return changed && is_editable();
     }

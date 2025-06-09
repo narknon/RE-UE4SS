@@ -195,6 +195,85 @@ public:
     }
 };
 
+// MonitoredImGuiValueWithText - For external synchronization with text representation
+template<typename T>
+class MonitoredImGuiValueWithText : public ComposedValue<
+    BasicImGuiValue<T>,
+    ExternalSyncPolicy<T>,
+    ThreadSafetyPolicy<T>,
+    ValueSourcePolicy<T>,
+    ChangeNotificationPolicy<T>,
+    TextRepresentationPolicy<T>
+> {
+public:
+    using Base = ComposedValue<
+        BasicImGuiValue<T>,
+        ExternalSyncPolicy<T>,
+        ThreadSafetyPolicy<T>,
+        ValueSourcePolicy<T>,
+        ChangeNotificationPolicy<T>,
+        TextRepresentationPolicy<T>
+    >;
+    
+    using typename ExternalSyncPolicy<T>::Getter;
+    using typename ExternalSyncPolicy<T>::Setter;
+    
+    explicit MonitoredImGuiValueWithText(T initial_value = T{})
+        : Base(std::move(initial_value))
+    {}
+    
+    MonitoredImGuiValueWithText(Getter getter, Setter setter, T default_value = T{})
+        : Base(std::move(default_value))
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(T initial_value = T{}) {
+        return std::make_unique<MonitoredImGuiValueWithText<T>>(std::move(initial_value));
+    }
+    
+    static auto create(Getter getter, Setter setter, T default_value = T{}) {
+        return std::make_unique<MonitoredImGuiValueWithText<T>>(
+            std::move(getter), std::move(setter), std::move(default_value)
+        );
+    }
+    
+    // Thread-safe value access
+    [[nodiscard]] T get() const {
+        auto lock = this->read_lock();
+        return this->value();
+    }
+    
+    void set(const T& new_value) {
+        T old_value;
+        {
+            auto lock = this->write_lock();
+            old_value = this->value();
+            if (old_value != new_value) {
+                this->operator=(new_value);
+                this->track_source(ValueSource::User);
+            }
+        }
+        if (old_value != new_value) {
+            this->notify_change(old_value, new_value);
+            this->sync_to_external();
+        }
+    }
+    
+    // Refresh from external source
+    void refresh() {
+        this->sync_from_external();
+    }
+    
+protected:
+    // Bridge method for TextRepresentationPolicy
+    [[nodiscard]] const T& get_value() const override { return this->value(); }
+};
+
 // ConfigImGuiValue - For configuration with validation and deferred updates
 template<typename T>
 class ConfigImGuiValue : public ComposedValue<

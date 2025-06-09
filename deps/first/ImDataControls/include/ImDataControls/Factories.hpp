@@ -7,7 +7,7 @@
 
 namespace RC::ImDataControls {
 
-// Factory functions for monitored values
+// Factory functions for monitored values (without text representation)
 
 [[nodiscard]] inline auto make_monitored_toggle(
     std::function<bool()> getter,
@@ -41,6 +41,40 @@ namespace RC::ImDataControls {
     return MonitoredInt32::create(std::move(getter), std::move(setter), default_value);
 }
 
+// Factory functions for monitored values with text representation
+
+[[nodiscard]] inline auto make_monitored_toggle_with_text(
+    std::function<bool()> getter,
+    std::function<void(bool)> setter,
+    bool default_value = false)
+{
+    return MonitoredToggleWithText::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_float_with_text(
+    std::function<float()> getter,
+    std::function<void(float)> setter,
+    float default_value = 0.0f)
+{
+    return MonitoredFloatWithText::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_double_with_text(
+    std::function<double()> getter,
+    std::function<void(double)> setter,
+    double default_value = 0.0)
+{
+    return MonitoredDoubleWithText::create(std::move(getter), std::move(setter), default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_int32_with_text(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    int32_t default_value = 0)
+{
+    return MonitoredInt32WithText::create(std::move(getter), std::move(setter), default_value);
+}
+
 [[nodiscard]] inline auto make_monitored_string(
     std::function<std::string()> getter,
     std::function<void(const std::string&)> setter,
@@ -49,7 +83,7 @@ namespace RC::ImDataControls {
     return MonitoredString::create(std::move(getter), std::move(setter), default_value);
 }
 
-// Factory functions for monitored sliders
+// Factory functions for monitored sliders (without text representation)
 
 [[nodiscard]] inline auto make_monitored_slider(
     std::function<float()> getter,
@@ -80,6 +114,39 @@ namespace RC::ImDataControls {
     bool show_precision_input = false)
 {
     return MonitoredSliderDouble::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+}
+
+// Factory functions for monitored sliders with text representation
+
+[[nodiscard]] inline auto make_monitored_slider_with_text(
+    std::function<float()> getter,
+    std::function<void(float)> setter,
+    float min_val,
+    float max_val,
+    float default_value = 0.0f)
+{
+    return MonitoredSliderFloatWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_int_with_text(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    int32_t min_val,
+    int32_t max_val,
+    int32_t default_value = 0)
+{
+    return MonitoredSliderInt32WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+}
+
+[[nodiscard]] inline auto make_monitored_slider_double_with_text(
+    std::function<double()> getter,
+    std::function<void(double)> setter,
+    double min_val,
+    double max_val,
+    double default_value = 0.0,
+    bool show_precision_input = false)
+{
+    return MonitoredSliderDoubleWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
 }
 
 // Convenience template for creating monitored values from member pointers
