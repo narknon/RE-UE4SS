@@ -27,6 +27,8 @@ public:
     using Getter = std::function<T()>;
     using Setter = std::function<void(const T&)>;
     
+    virtual ~ExternalSyncPolicy() = default;
+    
     void set_external_getter(Getter getter) { m_getter = std::move(getter); }
     void set_external_setter(Setter setter) { m_setter = std::move(setter); }
     
@@ -64,6 +66,8 @@ class ThreadSafetyPolicy {
 public:
     using value_type = T;
     
+    virtual ~ThreadSafetyPolicy() = default;
+    
     class ReadLock {
     public:
         explicit ReadLock(const ThreadSafetyPolicy& policy) 
@@ -95,6 +99,8 @@ class ValueSourcePolicy {
 public:
     using value_type = T;
     
+    virtual ~ValueSourcePolicy() = default;
+    
     [[nodiscard]] ValueSource get_last_source() const { return m_last_source; }
     
 protected:
@@ -111,6 +117,8 @@ public:
     using value_type = T;
     using ChangeCallback = std::function<void(const T& old_value, const T& new_value)>;
     using SimpleChangeCallback = std::function<void()>;
+    
+    virtual ~ChangeNotificationPolicy() = default;
     
     void add_change_listener(ChangeCallback callback) {
         m_change_callbacks.push_back(std::move(callback));
@@ -145,6 +153,8 @@ template<typename T>
 class DeferredUpdatePolicy {
 public:
     using value_type = T;
+    
+    virtual ~DeferredUpdatePolicy() = default;
     
     [[nodiscard]] bool has_pending_changes() const {
         return m_pending_value.has_value() && 
@@ -191,6 +201,8 @@ class DefaultValuePolicy {
 public:
     using value_type = T;
     
+    virtual ~DefaultValuePolicy() = default;
+    
     explicit DefaultValuePolicy(T default_value = T{})
         : m_default_value(std::move(default_value)) {}
     
@@ -214,6 +226,8 @@ class ValidationPolicy {
 public:
     using value_type = T;
     using Validator = std::function<std::expected<T, std::string>(const T&)>;
+    
+    virtual ~ValidationPolicy() = default;
     
     void set_validator(Validator validator) {
         m_validator = std::move(validator);
@@ -244,6 +258,8 @@ template<typename T>
 class TextRepresentationPolicy {
 public:
     using value_type = T;
+    
+    virtual ~TextRepresentationPolicy() = default;
     
     void set_show_text_representation(bool show) { m_show_text = show; }
     [[nodiscard]] bool should_show_text_representation() const { return m_show_text; }
@@ -308,6 +324,8 @@ template<typename T>
 class ValueHistoryPolicy {
 public:
     using value_type = T;
+    
+    virtual ~ValueHistoryPolicy() = default;
     
     void push_history(const T& value) {
         // Remove any redo history when pushing new value
