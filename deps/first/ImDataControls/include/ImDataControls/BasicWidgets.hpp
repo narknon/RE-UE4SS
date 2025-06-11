@@ -896,7 +896,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -957,7 +961,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1023,7 +1031,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1347,7 +1359,11 @@ protected:
         }
         
         char buffer[16];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1408,7 +1424,11 @@ protected:
         }
         
         char buffer[16];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1474,7 +1494,11 @@ protected:
         }
         
         char buffer[16];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1542,7 +1566,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1603,7 +1631,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
@@ -1669,7 +1701,11 @@ protected:
         }
         
         char buffer[32];
-        strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#ifdef _WIN32
+    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
+#else
+    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
+#endif
         buffer[sizeof(buffer) - 1] = '\0';
         
         bool changed = false;
