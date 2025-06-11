@@ -207,6 +207,10 @@ public:
         : m_default_value(std::move(default_value)) {}
     
     [[nodiscard]] const T& get_default_value() const { return m_default_value; }
+
+    void set_default_value(T new_default) {
+        m_default_value = std::move(new_default);
+    }
     
     void reset_to_default() {
         reset_value(m_default_value);

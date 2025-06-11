@@ -30,9 +30,27 @@ public:
         static_assert(std::is_base_of_v<IImGuiDrawable, T>, "T must derive from IImGuiDrawable");
         
         auto shared = std::shared_ptr<T>(std::move(value));
-        m_values[id] = shared;
-        m_ordered_values.push_back({id, shared});
-        m_value_types[id] = std::type_index(typeid(T));
+
+        // Use insert_or_assign to correctly handle insertion or update.
+        // This is necessary for std::type_index, which is not default-constructible,
+        // and fixes the compilation error caused by operator[].
+        m_values.insert_or_assign(id, shared);
+        m_value_types.insert_or_assign(id, std::type_index(typeid(T)));
+        
+        // Also fix the logic for the ordered list to avoid creating duplicates on update.
+        auto it = std::find_if(m_ordered_values.begin(), m_ordered_values.end(),
+            [&id](const auto& pair) { return pair.first == id; });
+
+        if (it != m_ordered_values.end())
+        {
+            // If the ID already exists, update the pointer in-place.
+            it->second = shared;
+        }
+        else
+        {
+            // Otherwise, add the new value to the list.
+            m_ordered_values.push_back({ id, shared });
+        }
         
         return shared;
     }

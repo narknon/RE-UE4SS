@@ -3,7 +3,6 @@
 // Convenience header that includes all ImDataControls components
 
 #include "Core.hpp"
-#include "Policies.hpp"
 #include "BasicWidgets.hpp"
 #include "AdvancedWidgets.hpp"
 #include "Container.hpp"

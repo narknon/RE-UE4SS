@@ -1700,7 +1700,7 @@ namespace RC::GUI
     };
 
     LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{}),
-                           m_property_container(std::make_unique<ImDataControls::ImGuiValueContainer>("Properties"))
+                                                      m_property_container(std::make_unique<ImGuiValueContainer>("Properties"))
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
         strncpy_s(m_search_by_name_buffer,
@@ -2586,129 +2586,6 @@ namespace RC::GUI
         // Open context menu if checkbox was right-clicked
         // This ensures the same context menu appears for both checkbox and text
         if (checkbox_right_clicked)
-        {
-            ImGui::OpenPopup(property_name.c_str());
-        }
-    }
-
-    auto LiveView::render_float_property(FProperty* property,
-                                        ContainerType container_type,
-                                        void* container,
-                                        void* container_ptr,
-                                        const std::string& property_name,
-                                        const std::string& property_text) -> void
-    {
-        float font_scale = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
-        
-        // Determine if this is a float or double property
-        bool is_double = property->IsA<FDoubleProperty>();
-        
-        if (is_double)
-        {
-            // For double properties, use ImGuiSliderDouble with unclamped precision input
-            auto double_id = fmt::format("double_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
-            
-            if (!existing_double)
-            {
-                // Create a slider with precision input field (now unclamped!)
-                auto double_value = std::make_unique<ImGuiMonitoredValue<double, ImGuiSliderDouble>>(
-                    [container_ptr]() -> double {
-                        return *static_cast<double*>(container_ptr);
-                    },
-                    [container_ptr](double new_value) {
-                        *static_cast<double*>(container_ptr) = new_value;
-                    },
-                    -1e10,    // min for slider
-                    1e10,     // max for slider
-                    0.0,      // default value
-                    "",       // name
-                    "",       // tooltip
-                    true      // show_precision_input (now unclamped!)
-                );
-                
-                m_property_container->add_value(double_id, std::move(double_value));
-                existing_double = m_property_container->get_value<ImGuiSliderDouble>(double_id);
-                
-                existing_double->set_custom_context_menu_callback([]() {
-                    // Empty - prevents default context menu
-                });
-                existing_double->set_custom_tooltip_callback([property]() {
-                    render_property_details_tooltip(property);
-                });
-            }
-            
-            // Update from game engine
-            existing_double->update_from_external(true);
-            
-            // Render slider with unclamped precision input
-            ImGui::SameLine();
-            
-            // Push compact frame padding to reduce height
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-            ImGui::PushItemWidth(200 * font_scale); // Wide enough for both slider and input
-            if (existing_double->draw())
-            {
-                // Value changed by user
-            }
-            ImGui::PopItemWidth();
-            ImGui::PopStyleVar();
-        }
-        else
-        {
-            // For float properties, use ImGuiSlider with monitored value
-            auto float_id = fmt::format("float_{}_{}", static_cast<void*>(container), property_name);
-            auto existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
-            
-            if (!existing_float)
-            {
-                // Create a slider with wide range
-                auto float_value = std::make_unique<ImGuiMonitoredValue<float, ImGuiSlider>>(
-                    [container_ptr]() -> float {
-                        return *static_cast<float*>(container_ptr);
-                    },
-                    [container_ptr](float new_value) {
-                        *static_cast<float*>(container_ptr) = new_value;
-                    },
-                    -1e10f,   // min - large but not FLT_MAX to avoid overflow
-                    1e10f,    // max - large but not FLT_MAX to avoid overflow
-                    0.0f,     // default value
-                    ""        // name
-                );
-                
-                m_property_container->add_value(float_id, std::move(float_value));
-                existing_float = m_property_container->get_value<ImGuiSlider>(float_id);
-                
-                existing_float->set_custom_context_menu_callback([]() {
-                    // Empty - prevents default context menu
-                });
-                existing_float->set_custom_tooltip_callback([property]() {
-                    render_property_details_tooltip(property);
-                });
-            }
-            
-            // Update from game engine
-            existing_float->update_from_external(true);
-            
-            // Render slider (Ctrl+Click to input manually)
-            ImGui::SameLine();
-            
-            // Push compact frame padding to reduce height
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4 * font_scale, 1 * font_scale));
-            ImGui::PushItemWidth(120 * font_scale);
-            if (existing_float->draw())
-            {
-                // Value changed by user
-            }
-            ImGui::PopItemWidth();
-            ImGui::PopStyleVar();
-        }
-        
-        // Check if item was right-clicked
-        bool item_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-        
-        // Open context menu if right-clicked
-        if (item_right_clicked)
         {
             ImGui::OpenPopup(property_name.c_str());
         }

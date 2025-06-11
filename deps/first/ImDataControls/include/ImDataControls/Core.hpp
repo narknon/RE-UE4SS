@@ -13,6 +13,7 @@ namespace RC::ImDataControls {
 // Forward declarations
 template<typename T> class SimpleImGuiValue;
 template<typename T> class MonitoredImGuiValue;
+template<typename T> class MonitoredImGuiValueWithText;
 template<typename T> class ConfigImGuiValue;
 template<typename T> class FullImGuiValue;
 
@@ -89,6 +90,7 @@ template<typename Base, typename... Policies>
 class ComposedValue : public Base, public Policies... {
 public:
     using value_type = typename Base::value_type;
+    using Base::operator=;
     
     template<typename... Args>
     explicit ComposedValue(Args&&... args)
@@ -139,7 +141,8 @@ public:
         ValueSourcePolicy<T>,
         ChangeNotificationPolicy<T>
     >;
-    
+
+    using Base::operator=;
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
     
@@ -214,7 +217,8 @@ public:
         ChangeNotificationPolicy<T>,
         TextRepresentationPolicy<T>
     >;
-    
+
+    using Base::operator=;
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
     
@@ -294,8 +298,9 @@ public:
     
     explicit ConfigImGuiValue(T default_value = T{})
         : Base(std::move(default_value))
-        , DefaultValuePolicy<T>(default_value)
-    {}
+    {
+        this->set_default_value(default_value); 
+    }
     
     static auto create(T default_value = T{}) {
         return std::make_unique<ConfigImGuiValue<T>>(std::move(default_value));

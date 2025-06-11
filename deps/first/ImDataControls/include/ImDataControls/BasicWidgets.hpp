@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core.hpp"
-#include "Policies.hpp"
 #include <imgui.h>
 #include <string>
 #include <algorithm>
@@ -38,7 +37,7 @@ protected:
 // Simple Toggle - No policies, just a checkbox
 class SimpleToggle : public BasicWidget<bool, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<bool, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
@@ -72,7 +71,7 @@ protected:
 // Monitored Toggle - With external sync
 class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<bool, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
@@ -112,7 +111,7 @@ protected:
 // Monitored Toggle With Text - With external sync and text representation
 class MonitoredToggleWithText : public BasicWidget<bool, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<bool, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
@@ -155,7 +154,7 @@ protected:
 // Config Toggle - With validation and deferred updates
 class ConfigToggle : public BasicWidget<bool, ConfigImGuiValue> {
 public:
-    using Base = BasicWidget<bool, ConfigImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool default_value = false) {
@@ -205,7 +204,7 @@ protected:
 // Simple Float - No policies
 class SimpleFloat : public BasicWidget<float, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<float, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
@@ -239,7 +238,7 @@ protected:
 // Monitored Float - With external sync
 class MonitoredFloat : public BasicWidget<float, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<float, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
@@ -279,7 +278,7 @@ protected:
 // Monitored Float With Text - With external sync and text representation
 class MonitoredFloatWithText : public BasicWidget<float, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<float, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
@@ -322,7 +321,7 @@ protected:
 // Config Float - With validation and deferred updates
 class ConfigFloat : public BasicWidget<float, ConfigImGuiValue> {
 public:
-    using Base = BasicWidget<float, ConfigImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float default_value = 0.0f) {
@@ -382,7 +381,7 @@ protected:
 // Simple Double - No policies
 class SimpleDouble : public BasicWidget<double, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<double, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
@@ -417,7 +416,7 @@ protected:
 // Monitored Double - With external sync
 class MonitoredDouble : public BasicWidget<double, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<double, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
@@ -457,7 +456,7 @@ protected:
 // Monitored Double With Text - With external sync and text representation
 class MonitoredDoubleWithText : public BasicWidget<double, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<double, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
@@ -500,7 +499,7 @@ protected:
 // Config Double - With validation and deferred updates
 class ConfigDouble : public BasicWidget<double, ConfigImGuiValue> {
 public:
-    using Base = BasicWidget<double, ConfigImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double default_value = 0.0) {
@@ -550,7 +549,7 @@ protected:
 // Simple Int32 - No policies
 class SimpleInt32 : public BasicWidget<int32_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<int32_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
@@ -584,7 +583,7 @@ protected:
 // Monitored Int32 - With external sync
 class MonitoredInt32 : public BasicWidget<int32_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<int32_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
@@ -624,7 +623,7 @@ protected:
 // Monitored Int32 With Text - With external sync and text representation
 class MonitoredInt32WithText : public BasicWidget<int32_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<int32_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
@@ -667,7 +666,7 @@ protected:
 // Config Int32 - With validation and deferred updates
 class ConfigInt32 : public BasicWidget<int32_t, ConfigImGuiValue> {
 public:
-    using Base = BasicWidget<int32_t, ConfigImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t default_value = 0) {
@@ -717,7 +716,7 @@ protected:
 // Simple String - No policies
 class SimpleString : public BasicWidget<std::string, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<std::string, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "") {
@@ -762,7 +761,7 @@ private:
 // Monitored String - With external sync
 class MonitoredString : public BasicWidget<std::string, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<std::string, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "") {
@@ -811,7 +810,7 @@ private:
 // Config String - With validation and deferred updates
 class ConfigString : public BasicWidget<std::string, ConfigImGuiValue> {
 public:
-    using Base = BasicWidget<std::string, ConfigImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& default_value = "") {
@@ -872,7 +871,7 @@ private:
 // Simple Int64 - No policies
 class SimpleInt64 : public BasicWidget<int64_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<int64_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
@@ -932,7 +931,7 @@ private:
 // Monitored Int64 - With external sync
 class MonitoredInt64 : public BasicWidget<int64_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<int64_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
@@ -1002,7 +1001,7 @@ private:
 // Monitored Int64 With Text
 class MonitoredInt64WithText : public BasicWidget<int64_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<int64_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
@@ -1079,7 +1078,7 @@ private:
 // Simple UInt8 - No policies
 class SimpleUInt8 : public BasicWidget<uint8_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<uint8_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
@@ -1118,7 +1117,7 @@ protected:
 // Monitored UInt8 - With external sync
 class MonitoredUInt8 : public BasicWidget<uint8_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<uint8_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
@@ -1159,7 +1158,7 @@ protected:
 // Monitored UInt8 With Text
 class MonitoredUInt8WithText : public BasicWidget<uint8_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<uint8_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
@@ -1207,7 +1206,7 @@ protected:
 // Simple UInt16 - No policies
 class SimpleUInt16 : public BasicWidget<uint16_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<uint16_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
@@ -1246,7 +1245,7 @@ protected:
 // Monitored UInt16 - With external sync
 class MonitoredUInt16 : public BasicWidget<uint16_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<uint16_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
@@ -1287,7 +1286,7 @@ protected:
 // Monitored UInt16 With Text
 class MonitoredUInt16WithText : public BasicWidget<uint16_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<uint16_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
@@ -1335,7 +1334,7 @@ protected:
 // Simple UInt32 - No policies
 class SimpleUInt32 : public BasicWidget<uint32_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<uint32_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
@@ -1395,7 +1394,7 @@ private:
 // Monitored UInt32 - With external sync
 class MonitoredUInt32 : public BasicWidget<uint32_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<uint32_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
@@ -1465,7 +1464,7 @@ private:
 // Monitored UInt32 With Text
 class MonitoredUInt32WithText : public BasicWidget<uint32_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<uint32_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
@@ -1542,7 +1541,7 @@ private:
 // Simple UInt64 - No policies
 class SimpleUInt64 : public BasicWidget<uint64_t, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<uint64_t, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
@@ -1602,7 +1601,7 @@ private:
 // Monitored UInt64 - With external sync
 class MonitoredUInt64 : public BasicWidget<uint64_t, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<uint64_t, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
@@ -1672,7 +1671,7 @@ private:
 // Monitored UInt64 With Text
 class MonitoredUInt64WithText : public BasicWidget<uint64_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = BasicWidget<uint64_t, MonitoredImGuiValueWithText>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
@@ -1749,7 +1748,7 @@ private:
 // Simple TextMultiline - No policies
 class SimpleTextMultiline : public BasicWidget<std::string, SimpleImGuiValue> {
 public:
-    using Base = BasicWidget<std::string, SimpleImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "", const ImVec2& size = ImVec2(-1, 0)) {
@@ -1801,7 +1800,7 @@ private:
 // Monitored TextMultiline - With external sync
 class MonitoredTextMultiline : public BasicWidget<std::string, MonitoredImGuiValue> {
 public:
-    using Base = BasicWidget<std::string, MonitoredImGuiValue>;
+    using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "", const ImVec2& size = ImVec2(-1, 0)) {

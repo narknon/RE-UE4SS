@@ -43,7 +43,7 @@ protected:
 // Simple Float Slider
 class SimpleSliderFloat : public SliderWidget<float, SimpleImGuiValue> {
 public:
-    using Base = SliderWidget<float, SimpleImGuiValue>;
+    using Base = SliderWidget;
     
     SimpleSliderFloat(float min_val, float max_val, float initial_value)
         : Base(min_val, max_val, initial_value)
@@ -80,7 +80,7 @@ protected:
 // Monitored Float Slider
 class MonitoredSliderFloat : public SliderWidget<float, MonitoredImGuiValue> {
 public:
-    using Base = SliderWidget<float, MonitoredImGuiValue>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -135,7 +135,7 @@ protected:
 // Monitored Float Slider With Text
 class MonitoredSliderFloatWithText : public SliderWidget<float, MonitoredImGuiValueWithText> {
 public:
-    using Base = SliderWidget<float, MonitoredImGuiValueWithText>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -193,7 +193,7 @@ protected:
 // Config Float Slider
 class ConfigSliderFloat : public SliderWidget<float, ConfigImGuiValue> {
 public:
-    using Base = SliderWidget<float, ConfigImGuiValue>;
+    using Base = SliderWidget;
     
     ConfigSliderFloat(float min_val, float max_val, float default_value)
         : Base(min_val, max_val, default_value)
@@ -246,7 +246,7 @@ protected:
 // Simple Int32 Slider
 class SimpleSliderInt32 : public SliderWidget<int32_t, SimpleImGuiValue> {
 public:
-    using Base = SliderWidget<int32_t, SimpleImGuiValue>;
+    using Base = SliderWidget;
     
     SimpleSliderInt32(int32_t min_val, int32_t max_val, int32_t initial_value)
         : Base(min_val, max_val, initial_value)
@@ -283,7 +283,7 @@ protected:
 // Monitored Int32 Slider
 class MonitoredSliderInt32 : public SliderWidget<int32_t, MonitoredImGuiValue> {
 public:
-    using Base = SliderWidget<int32_t, MonitoredImGuiValue>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -338,7 +338,7 @@ protected:
 // Monitored Int32 Slider With Text
 class MonitoredSliderInt32WithText : public SliderWidget<int32_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = SliderWidget<int32_t, MonitoredImGuiValueWithText>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -396,7 +396,7 @@ protected:
 // Config Int32 Slider
 class ConfigSliderInt32 : public SliderWidget<int32_t, ConfigImGuiValue> {
 public:
-    using Base = SliderWidget<int32_t, ConfigImGuiValue>;
+    using Base = SliderWidget;
     
     ConfigSliderInt32(int32_t min_val, int32_t max_val, int32_t default_value)
         : Base(min_val, max_val, default_value)
@@ -449,7 +449,7 @@ protected:
 // Simple Double Slider
 class SimpleSliderDouble : public SliderWidget<double, SimpleImGuiValue> {
 public:
-    using Base = SliderWidget<double, SimpleImGuiValue>;
+    using Base = SliderWidget;
     
     SimpleSliderDouble(double min_val, double max_val, double initial_value, bool show_precision_input = false)
         : Base(min_val, max_val, initial_value)
@@ -516,7 +516,7 @@ private:
 // Monitored Double Slider
 class MonitoredSliderDouble : public SliderWidget<double, MonitoredImGuiValue> {
 public:
-    using Base = SliderWidget<double, MonitoredImGuiValue>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -602,7 +602,7 @@ private:
 // Monitored Double Slider With Text
 class MonitoredSliderDoubleWithText : public SliderWidget<double, MonitoredImGuiValueWithText> {
 public:
-    using Base = SliderWidget<double, MonitoredImGuiValueWithText>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -695,7 +695,7 @@ private:
 // Simple UInt8 Slider
 class SimpleSliderUInt8 : public SliderWidget<uint8_t, SimpleImGuiValue> {
 public:
-    using Base = SliderWidget<uint8_t, SimpleImGuiValue>;
+    using Base = SliderWidget;
     
     SimpleSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
         : Base(min_val, max_val, initial_value)
@@ -736,7 +736,7 @@ protected:
 // Monitored UInt8 Slider
 class MonitoredSliderUInt8 : public SliderWidget<uint8_t, MonitoredImGuiValue> {
 public:
-    using Base = SliderWidget<uint8_t, MonitoredImGuiValue>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -792,9 +792,7 @@ protected:
 // Monitored UInt8 Slider With Text
 class MonitoredSliderUInt8WithText : public SliderWidget<uint8_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = SliderWidget<uint8_t, MonitoredImGuiValueWithText>;
-    using typename Base::Getter;
-    using typename Base::Setter;
+    using Base = SliderWidget;
     
     MonitoredSliderUInt8WithText(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
         : Base(min_val, max_val, initial_value)
@@ -855,7 +853,7 @@ protected:
 // Simple UInt16 Slider
 class SimpleSliderUInt16 : public SliderWidget<uint16_t, SimpleImGuiValue> {
 public:
-    using Base = SliderWidget<uint16_t, SimpleImGuiValue>;
+    using Base = SliderWidget;
     
     SimpleSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
         : Base(min_val, max_val, initial_value)
@@ -896,7 +894,7 @@ protected:
 // Monitored UInt16 Slider
 class MonitoredSliderUInt16 : public SliderWidget<uint16_t, MonitoredImGuiValue> {
 public:
-    using Base = SliderWidget<uint16_t, MonitoredImGuiValue>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
@@ -952,7 +950,7 @@ protected:
 // Monitored UInt16 Slider With Text
 class MonitoredSliderUInt16WithText : public SliderWidget<uint16_t, MonitoredImGuiValueWithText> {
 public:
-    using Base = SliderWidget<uint16_t, MonitoredImGuiValueWithText>;
+    using Base = SliderWidget;
     using typename Base::Getter;
     using typename Base::Setter;
     
