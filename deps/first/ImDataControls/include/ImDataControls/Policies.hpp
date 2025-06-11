@@ -32,7 +32,7 @@ public:
     void set_external_getter(Getter getter) { m_getter = std::move(getter); }
     void set_external_setter(Setter setter) { m_setter = std::move(setter); }
     
-    void sync_from_external() {
+    virtual void sync_from_external() {
         if (m_getter && !has_pending_user_changes()) {
             T external_value = m_getter();
             if (get_value() != external_value) {

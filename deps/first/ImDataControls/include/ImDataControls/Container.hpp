@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "BasicWidgets.hpp"
 #include <memory>
 #include <vector>
 #include <unordered_map>
