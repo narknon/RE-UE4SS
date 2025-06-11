@@ -12,5 +12,7 @@ target(projectName)
     -- Dependencies
     add_deps("String", "Helpers")
     
-    -- ImGui is provided as a package, not a target
-    add_packages("imgui", { public = true })
+    -- ImGui is added privately - not exported to dependent targets
+    -- This allows parent projects to configure ImGui with their own settings
+    -- Parent projects must provide their own ImGui
+    add_packages("imgui")
