@@ -13,7 +13,7 @@
 namespace RC::ImDataControls {
 
 // Container for managing multiple ImGui values
-class ImGuiValueContainer {
+class ImDataValueContainer {
 public:
     using ValuePtr = std::shared_ptr<IImGuiDrawable>;
     using ChangeCallback = std::function<void()>;
@@ -195,33 +195,33 @@ public:
     
     // Check if any value has pending changes
     [[nodiscard]] bool has_pending_changes() const {
-        // Check ConfigImGuiValue types for pending changes
+        // Check ImDataConfigValue types for pending changes
         for (const auto& [id, value] : m_ordered_values) {
             auto type_it = m_value_types.find(id);
             if (type_it != m_value_types.end()) {
                 // Check all config types
-                if (type_it->second == std::type_index(typeid(ConfigToggle))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigToggle>(value)) {
+                if (type_it->second == std::type_index(typeid(ImDataConfigToggle))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigToggle>(value)) {
                         if (config->has_pending_changes()) return true;
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigFloat))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigFloat>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigFloat))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigFloat>(value)) {
                         if (config->has_pending_changes()) return true;
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigDouble))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigDouble>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigDouble))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigDouble>(value)) {
                         if (config->has_pending_changes()) return true;
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigInt32))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigInt32>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigInt32))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigInt32>(value)) {
                         if (config->has_pending_changes()) return true;
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigString))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigString>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigString))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigString>(value)) {
                         if (config->has_pending_changes()) return true;
                     }
                 }
@@ -236,28 +236,28 @@ public:
             auto type_it = m_value_types.find(id);
             if (type_it != m_value_types.end()) {
                 // Apply changes for config types
-                if (type_it->second == std::type_index(typeid(ConfigToggle))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigToggle>(value)) {
+                if (type_it->second == std::type_index(typeid(ImDataConfigToggle))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigToggle>(value)) {
                         config->apply_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigFloat))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigFloat>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigFloat))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigFloat>(value)) {
                         config->apply_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigDouble))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigDouble>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigDouble))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigDouble>(value)) {
                         config->apply_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigInt32))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigInt32>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigInt32))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigInt32>(value)) {
                         config->apply_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigString))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigString>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigString))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigString>(value)) {
                         config->apply_changes();
                     }
                 }
@@ -275,28 +275,28 @@ public:
             auto type_it = m_value_types.find(id);
             if (type_it != m_value_types.end()) {
                 // Revert changes for config types
-                if (type_it->second == std::type_index(typeid(ConfigToggle))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigToggle>(value)) {
+                if (type_it->second == std::type_index(typeid(ImDataConfigToggle))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigToggle>(value)) {
                         config->revert_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigFloat))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigFloat>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigFloat))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigFloat>(value)) {
                         config->revert_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigDouble))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigDouble>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigDouble))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigDouble>(value)) {
                         config->revert_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigInt32))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigInt32>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigInt32))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigInt32>(value)) {
                         config->revert_changes();
                     }
                 }
-                else if (type_it->second == std::type_index(typeid(ConfigString))) {
-                    if (auto config = std::dynamic_pointer_cast<ConfigString>(value)) {
+                else if (type_it->second == std::type_index(typeid(ImDataConfigString))) {
+                    if (auto config = std::dynamic_pointer_cast<ImDataConfigString>(value)) {
                         config->revert_changes();
                     }
                 }
@@ -321,32 +321,32 @@ public:
     }
     
     // Convenience methods for adding common types
-    auto add_toggle(const std::string& id, bool initial_value) -> std::weak_ptr<SimpleToggle> {
-        return add_value(id, SimpleToggle::create(initial_value));
+    auto add_toggle(const std::string& id, bool initial_value) -> std::weak_ptr<ImDataSimpleToggle> {
+        return add_value(id, ImDataSimpleToggle::create(initial_value));
     }
     
-    auto add_float(const std::string& id, float initial_value) -> std::weak_ptr<SimpleFloat> {
-        return add_value(id, SimpleFloat::create(initial_value));
+    auto add_float(const std::string& id, float initial_value) -> std::weak_ptr<ImDataSimpleFloat> {
+        return add_value(id, ImDataSimpleFloat::create(initial_value));
     }
     
-    auto add_double(const std::string& id, double initial_value) -> std::weak_ptr<SimpleDouble> {
-        return add_value(id, SimpleDouble::create(initial_value));
+    auto add_double(const std::string& id, double initial_value) -> std::weak_ptr<ImDataSimpleDouble> {
+        return add_value(id, ImDataSimpleDouble::create(initial_value));
     }
     
-    auto add_int(const std::string& id, int32_t initial_value) -> std::weak_ptr<SimpleInt32> {
-        return add_value(id, SimpleInt32::create(initial_value));
+    auto add_int(const std::string& id, int32_t initial_value) -> std::weak_ptr<ImDataSimpleInt32> {
+        return add_value(id, ImDataSimpleInt32::create(initial_value));
     }
     
-    auto add_string(const std::string& id, const std::string& initial_value) -> std::weak_ptr<SimpleString> {
-        return add_value(id, SimpleString::create(initial_value));
+    auto add_string(const std::string& id, const std::string& initial_value) -> std::weak_ptr<ImDataSimpleString> {
+        return add_value(id, ImDataSimpleString::create(initial_value));
     }
     
-    auto add_slider(const std::string& id, float min_val, float max_val, float initial_value) -> std::weak_ptr<SimpleSliderFloat> {
-        return add_value(id, SimpleSliderFloat::create(min_val, max_val, initial_value));
+    auto add_slider(const std::string& id, float min_val, float max_val, float initial_value) -> std::weak_ptr<ImDataSimpleSliderFloat> {
+        return add_value(id, ImDataSimpleSliderFloat::create(min_val, max_val, initial_value));
     }
     
-    auto add_slider_int(const std::string& id, int32_t min_val, int32_t max_val, int32_t initial_value) -> std::weak_ptr<SimpleSliderInt32> {
-        return add_value(id, SimpleSliderInt32::create(min_val, max_val, initial_value));
+    auto add_slider_int(const std::string& id, int32_t min_val, int32_t max_val, int32_t initial_value) -> std::weak_ptr<ImDataSimpleSliderInt32> {
+        return add_value(id, ImDataSimpleSliderInt32::create(min_val, max_val, initial_value));
     }
     
 private:
