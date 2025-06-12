@@ -17,6 +17,7 @@ namespace RC::ImDataControls {
 template<typename T>
 class DeferredUpdatePolicy : public IDeferredUpdate {
 public:
+    virtual ~DeferredUpdatePolicy() = default;
     // IDeferredUpdate implementation
     void apply_changes() override {
         if (has_pending_changes()) {
@@ -60,6 +61,7 @@ private:
 template<typename T>
 class ExternalSyncPolicy : public IExternalSync {
 public:
+    virtual ~ExternalSyncPolicy() = default;
     using Getter = std::function<T()>;
     using Setter = std::function<void(const T&)>;
     
@@ -101,6 +103,7 @@ protected:
 template<typename T>
 class ValidationPolicy : public IValidatable {
 public:
+    virtual ~ValidationPolicy() = default;
     using Validator = std::function<std::expected<T, std::string>(const T&)>;
     
     bool validate() override {
@@ -143,6 +146,7 @@ private:
 template<typename T>
 class ValueHistoryPolicy : public IHistorical {
 public:
+    virtual ~ValueHistoryPolicy() = default;
     bool can_undo() const override { 
         return m_current_index > 0; 
     }
@@ -205,6 +209,7 @@ private:
 template<typename T>
 class TextRepresentationPolicy : public ITextRepresentation {
 public:
+    virtual ~TextRepresentationPolicy() = default;
     bool should_show_text_representation() const override { return m_show_text; }
     void set_show_text_representation(bool show) override { m_show_text = show; }
     
@@ -260,6 +265,7 @@ private:
 template<typename T>
 class CallbackPolicy : public ICustomCallbacks {
 public:
+    virtual ~CallbackPolicy() = default;
     using TooltipCallback = std::function<void()>;
     using ContextMenuCallback = std::function<void()>;
     using ChangeCallback = std::function<void(const T&, const T&)>;
@@ -320,6 +326,7 @@ private:
 template<typename T>
 class VisibilityPolicy : public IVisibilityControl {
 public:
+    virtual ~VisibilityPolicy() = default;
     bool is_visible() const override { return m_visible; }
     void set_visible(bool visible) override { m_visible = visible; }
     bool is_advanced() const override { return m_is_advanced; }
@@ -336,6 +343,7 @@ private:
 template<typename T>
 class StringConversionPolicy : public IStringConvertible {
 public:
+    virtual ~StringConversionPolicy() = default;
     std::string to_string() const override {
         if constexpr (std::is_same_v<T, std::string>) {
             return get_value();
@@ -385,6 +393,7 @@ protected:
 template<typename T>
 class ImmediateApplyPolicy : public IImmediateApply {
 public:
+    virtual ~ImmediateApplyPolicy() = default;
     void set_immediate_apply(bool immediate) override { m_immediate_apply = immediate; }
     bool is_immediate_apply() const override { return m_immediate_apply; }
     
@@ -460,6 +469,7 @@ private:
 template<typename T>
 class DefaultValuePolicy {
 public:
+    virtual ~DefaultValuePolicy() = default;
     DefaultValuePolicy() = default;
     explicit DefaultValuePolicy(T default_value) 
         : m_default_value(std::move(default_value)) {}
