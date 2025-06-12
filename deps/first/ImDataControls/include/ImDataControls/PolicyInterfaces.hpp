@@ -5,8 +5,21 @@
 
 namespace RC::ImDataControls {
 
-// Forward declarations
-class IImGuiDrawable;
+// Base drawing interface - pure virtual
+class IImGuiDrawable {
+public:
+    virtual ~IImGuiDrawable() = default;
+    virtual bool draw(const char* label) = 0;
+    virtual bool is_changed() const = 0;
+};
+
+// Value source tracking
+enum class ValueSource {
+    User,      // User changed via UI
+    External,  // External system (e.g., game engine)
+    Default,   // Initial/default value
+    Config     // Loaded from configuration
+};
 
 // Base interface for all value controls
 class IValueControl : public IImGuiDrawable {
