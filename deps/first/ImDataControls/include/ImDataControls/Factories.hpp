@@ -280,6 +280,112 @@ namespace RC::ImDataControls {
     return ImDataMonitoredSliderUInt16WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
+// Factory functions for advanced monitored widgets
+
+[[nodiscard]] inline auto make_imdata_monitored_combo(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    const std::vector<std::string>& options,
+    int32_t default_value = 0)
+{
+    auto combo = ImDataMonitoredCombo::create(getter, setter, default_value);
+    combo->set_options(options);
+    return combo;
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_drag_float(
+    std::function<float()> getter,
+    std::function<void(float)> setter,
+    float default_value = 0.0f,
+    float speed = 1.0f,
+    float min = 0.0f,
+    float max = 0.0f)
+{
+    auto drag = ImDataMonitoredDragFloat::create(getter, setter, default_value);
+    drag->set_speed(speed);
+    drag->set_range(min, max);
+    return drag;
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_drag_int(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    int32_t default_value = 0,
+    float speed = 1.0f,
+    int32_t min = 0,
+    int32_t max = 0)
+{
+    auto drag = ImDataMonitoredDragInt::create(getter, setter, default_value);
+    drag->set_speed(speed);
+    drag->set_range(min, max);
+    return drag;
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_drag_double(
+    std::function<double()> getter,
+    std::function<void(double)> setter,
+    double default_value = 0.0,
+    float speed = 1.0f,
+    double min = 0.0,
+    double max = 0.0)
+{
+    auto drag = ImDataMonitoredDragDouble::create(getter, setter, default_value);
+    drag->set_speed(speed);
+    drag->set_range(min, max);
+    return drag;
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_color3(
+    std::function<std::array<float, 3>()> getter,
+    std::function<void(const std::array<float, 3>&)> setter,
+    float r = 1.0f,
+    float g = 1.0f,
+    float b = 1.0f)
+{
+    return ImDataMonitoredColor3::create(std::move(getter), std::move(setter), {r, g, b});
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_color4(
+    std::function<std::array<float, 4>()> getter,
+    std::function<void(const std::array<float, 4>&)> setter,
+    float r = 1.0f,
+    float g = 1.0f,
+    float b = 1.0f,
+    float a = 1.0f)
+{
+    return ImDataMonitoredColor4::create(std::move(getter), std::move(setter), {r, g, b, a});
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_vector2(
+    std::function<std::array<float, 2>()> getter,
+    std::function<void(const std::array<float, 2>&)> setter,
+    float x = 0.0f,
+    float y = 0.0f)
+{
+    return ImDataMonitoredVector2::create(std::move(getter), std::move(setter), {x, y});
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_vector3(
+    std::function<std::array<float, 3>()> getter,
+    std::function<void(const std::array<float, 3>&)> setter,
+    float x = 0.0f,
+    float y = 0.0f,
+    float z = 0.0f)
+{
+    return ImDataMonitoredVector3::create(std::move(getter), std::move(setter), {x, y, z});
+}
+
+[[nodiscard]] inline auto make_imdata_monitored_radio_button(
+    std::function<int32_t()> getter,
+    std::function<void(int32_t)> setter,
+    const std::vector<std::string>& options,
+    int32_t default_value = 0)
+{
+    auto radio = ImDataMonitoredRadioButton::create(getter, setter, default_value);
+    radio->set_options(options);
+    return radio;
+}
+
 // Convenience template for creating monitored values from member pointers
 template<typename ObjectType, typename ValueType>
 [[nodiscard]] auto make_imdata_monitored_member(
