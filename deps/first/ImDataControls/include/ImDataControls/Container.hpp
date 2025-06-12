@@ -16,11 +16,9 @@ namespace RC::ImDataControls {
 // Container for managing multiple ImGui values
 class ImDataValueContainer {
 public:
-    ImDataValueContainer(const std::string& name = "") : m_name(name) {}
-    
-    template<typename T = StringType, 
-             typename = std::enable_if_t<!std::is_same_v<T, std::string>>>
-    ImDataValueContainer(const StringType& name) : m_name(RC::to_utf8_string(name)) {}
+    template<RC::StringLike T = const char*>
+    explicit ImDataValueContainer(T&& name = "") 
+        : m_name(RC::to_utf8_string(std::forward<T>(name))) {}
     
     template<typename T>
     T* add_value(const std::string& id, std::unique_ptr<T> value) {
@@ -193,36 +191,51 @@ public:
         m_on_applied = std::move(callback);
     }
     
-    // Convenience methods with StringType support
-    auto add_toggle(const std::string& id, bool initial_value, 
-                    const std::string& label = "", const std::string& tooltip = "") {
+    // Convenience methods
+    template<RC::StringLike IdT, 
+             RC::StringLike LabelT = const char*, 
+             RC::StringLike TooltipT = const char*>
+    auto add_toggle(IdT&& id, bool initial_value, 
+                    LabelT&& label = "", 
+                    TooltipT&& tooltip = "") {
         auto toggle = ImDataSimpleToggle::create(initial_value);
-        toggle->set_name(label);
-        toggle->set_tooltip(tooltip);
-        return add_value(id, std::move(toggle));
+        
+        // Handle empty strings efficiently
+        if constexpr (std::is_same_v<std::decay_t<LabelT>, const char*>) {
+            if (label && *label) toggle->set_name(label);
+        } else {
+            auto label_str = RC::to_utf8_string(std::forward<LabelT>(label));
+            if (!label_str.empty()) toggle->set_name(std::move(label_str));
+        }
+        
+        if constexpr (std::is_same_v<std::decay_t<TooltipT>, const char*>) {
+            if (tooltip && *tooltip) toggle->set_tooltip(tooltip);
+        } else {
+            auto tooltip_str = RC::to_utf8_string(std::forward<TooltipT>(tooltip));
+            if (!tooltip_str.empty()) toggle->set_tooltip(std::move(tooltip_str));
+        }
+        
+        return add_value(RC::to_utf8_string(std::forward<IdT>(id)), 
+                         std::move(toggle));
     }
     
-    template<typename T = StringType,
-             typename = std::enable_if_t<!std::is_same_v<T, std::string>>>
-    auto add_toggle(const std::string& id, bool initial_value, 
-                    const StringType& label, const StringType& tooltip = StringType{}) {
-        auto toggle = ImDataSimpleToggle::create(initial_value);
-        toggle->set_name(label);
-        toggle->set_tooltip(tooltip);
-        return add_value(id, std::move(toggle));
+    template<RC::StringLike IdT>
+    auto add_float(IdT&& id, float initial_value) {
+        return add_value(RC::to_utf8_string(std::forward<IdT>(id)), 
+                         ImDataSimpleFloat::create(initial_value));
     }
     
-    auto add_float(const std::string& id, float initial_value) {
-        return add_value(id, ImDataSimpleFloat::create(initial_value));
+    template<RC::StringLike IdT>
+    auto add_slider(IdT&& id, float min, float max, float initial_value) {
+        return add_value(RC::to_utf8_string(std::forward<IdT>(id)), 
+                         ImDataSimpleSliderFloat::create(min, max, initial_value));
     }
     
-    auto add_slider(const std::string& id, float min, float max, float initial_value) {
-        return add_value(id, ImDataSimpleSliderFloat::create(min, max, initial_value));
-    }
-    
-    auto add_combo(const std::string& id, const std::vector<std::string>& options, 
+    template<RC::StringLike IdT>
+    auto add_combo(IdT&& id, const std::vector<std::string>& options, 
                    int32_t initial_value = 0) {
-        return add_value(id, std::make_unique<ImDataSimpleCombo>(options, initial_value));
+        return add_value(RC::to_utf8_string(std::forward<IdT>(id)), 
+                         std::make_unique<ImDataSimpleCombo>(options, initial_value));
     }
     
 private:

@@ -23,35 +23,22 @@ public:
     using Base = ComposedType<ValueType>;
     using Base::Base;
     
-    // StringType support with only std::string and StringType overloads
-    void set_name(const std::string& name) { 
-        this->m_name = name; 
+    template<RC::StringLike T>
+    void set_name(T&& name) { 
+        this->m_name = RC::to_utf8_string(std::forward<T>(name)); 
     }
     
-    template<typename T = StringType>
-    std::enable_if_t<!std::is_same_v<T, std::string>>
-    set_name(const StringType& name) { 
-        this->m_name = RC::to_utf8_string(name); 
-    }
-    
-    void set_tooltip(const std::string& tooltip) { 
-        this->m_tooltip = tooltip; 
-    }
-    
-    template<typename T = StringType>
-    std::enable_if_t<!std::is_same_v<T, std::string>>
-    set_tooltip(const StringType& tooltip) { 
-        this->m_tooltip = RC::to_utf8_string(tooltip); 
+    template<RC::StringLike T>
+    void set_tooltip(T&& tooltip) { 
+        this->m_tooltip = RC::to_utf8_string(std::forward<T>(tooltip)); 
     }
     
 protected:
-    // Helper for getting display label
     const char* get_display_label(const char* override_label) const {
         return override_label ? override_label : 
                (!this->m_name.empty() ? this->m_name.c_str() : "##unnamed");
     }
     
-    // Common draw helpers
     void begin_disabled_if_readonly() {
         if (this->get_edit_mode() == IEditModeControl::EditMode::ReadOnly) {
             ImGui::BeginDisabled();

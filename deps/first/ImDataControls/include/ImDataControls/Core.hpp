@@ -7,44 +7,53 @@
 #include <memory>
 #include <functional>
 #include <Helpers/String.hpp>
+#include <Helpers/StringCache.hpp>
 #include <String/StringType.hpp>
 #include "PolicyInterfaces.hpp"
 #include "Policies.hpp"
 
 namespace RC::ImDataControls {
 
-// Concrete implementation with convenience overloads
+// Update ImGuiDrawableBase implementation
 class ImGuiDrawableBase : public virtual IImGuiDrawable {
 public:
     virtual ~ImGuiDrawableBase() = default;
     
-    // IImGuiDrawable implementation
+    // IImGuiDrawable implementation (required by interface)
     bool draw(const char* label) override { 
         return draw_impl(label); 
     }
     
-    // Additional overloads for convenience
-    [[nodiscard]] bool draw(const std::string& label) { 
-        return draw_impl(label.c_str()); 
+    /**
+     * Draw the widget with the given label.
+     * 
+     * @param label The label to display. Any string-like type is accepted.
+     * 
+     * Thread Safety: This method is thread-safe with respect to the widget's
+     * internal state. However, if 'label' refers to data shared between threads,
+     * the caller must ensure no other thread modifies it during this call.
+     * 
+     * Performance: Non-UTF8 strings are automatically cached for efficiency.
+     * String literals (const char*) have zero overhead.
+     */
+    template<RC::StringLike T>
+    [[nodiscard]] bool draw(T&& label) {
+        if constexpr (std::is_same_v<std::decay_t<T>, const char*>) {
+            return draw_impl(label);  // Zero overhead for string literals
+        } else {
+            // Use high-performance cache for all other string types
+            const char* cached_label = RC::GetThreadLocalStringCache().convert(std::forward<T>(label));
+            return draw_impl(cached_label);
+        }
     }
     
-    // StringType overload (only if different from std::string)
-    template<typename T = StringType>
-    [[nodiscard]] std::enable_if_t<!std::is_same_v<T, std::string>, bool>
-    draw(const StringType& label) {
-        m_label_cache = RC::to_utf8_string(label);
-        return draw_impl(m_label_cache.c_str());
-    }
-    
+    // Special handling for nullptr
     [[nodiscard]] bool draw(std::nullptr_t) { 
         return draw_impl(nullptr); 
     }
     
 protected:
     virtual bool draw_impl(const char* label) = 0;
-    
-private:
-    mutable std::string m_label_cache;
 };
 
 // Base value storage - now inherits from ImGuiDrawableBase
@@ -83,6 +92,17 @@ public:
     void set_name(const std::string& name) override { m_name = name; }
     const std::string& get_tooltip() const override { return m_tooltip; }
     void set_tooltip(const std::string& tooltip) override { m_tooltip = tooltip; }
+    
+    // Add concept-based string setters alongside the virtual ones
+    template<RC::StringLike U>
+    void set_name(U&& name) { 
+        m_name = RC::to_utf8_string(std::forward<U>(name)); 
+    }
+    
+    template<RC::StringLike U>
+    void set_tooltip(U&& tooltip) { 
+        m_tooltip = RC::to_utf8_string(std::forward<U>(tooltip)); 
+    }
     
     // IEditModeControl implementation
     EditMode get_edit_mode() const override { return m_edit_mode; }
