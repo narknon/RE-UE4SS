@@ -9,11 +9,44 @@
 #include <vector>
 #include <filesystem>
 #include <cassert>
+#include <concepts>
+#include <ranges>
 
 #include <String/StringType.hpp>
 
 namespace RC
 {
+    // =======================================================================
+    // MODERN C++20 STRING CONCEPTS
+    // =======================================================================
+    template <typename T>
+    concept Character = std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
+                        std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> ||
+                        std::is_same_v<T, char32_t>;
+
+    template <typename T>
+    concept StringLikeRange = std::ranges::contiguous_range<T> &&
+                              Character<std::ranges::range_value_t<T>>;
+
+    template <typename T>
+    concept StringLikePointer = std::is_pointer_v<std::decay_t<T>> &&
+                                Character<std::remove_pointer_t<std::decay_t<T>>>;
+
+    template <typename T>
+    concept StringLike = StringLikeRange<T> ||
+                         StringLikePointer<T> ||
+                         std::is_same_v<std::decay_t<T>, std::filesystem::path>;
+
+    template <StringLike T>
+    using string_char_t = std::remove_pointer_t<std::decay_t<
+        std::conditional_t<StringLikePointer<T>, T, 
+                           decltype(std::ranges::data(std::declval<T&>()))>
+    >>;
+
+    template <typename T>
+    concept Utf8StringLike = StringLike<T> && 
+                             std::is_same_v<string_char_t<T>, char>;
+
     /* explode_by_occurrence -> START
 
     FUNCTION: explode_by_occurrence
@@ -296,66 +329,71 @@ namespace RC
 
     // Auto String Conversion
 
+    // =======================================================================
+    // DEPRECATED C++17 TRAITS
+    // =======================================================================
+    #define RC_DEPRECATED_STRING_TRAIT [[deprecated("This trait is deprecated. Use RC::StringLike concept instead. See upgrade guide for details.")]]
+
     // All possible char types in this project
     template <typename T>
-    struct _can_be_string_view_t : std::false_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t : std::false_type
     {
     };
     template <>
-    struct _can_be_string_view_t<wchar_t*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<wchar_t*> : std::true_type
     {
     };
     template <>
-    struct _can_be_string_view_t<char*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<char*> : std::true_type
     {
     };
     template <>
-    struct _can_be_string_view_t<char16_t*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<char16_t*> : std::true_type
     {
     };
     template <>
-    struct _can_be_string_view_t<const wchar_t*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<const wchar_t*> : std::true_type
     {
     };
     template <>
-    struct _can_be_string_view_t<const char*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<const char*> : std::true_type
     {
     };
     template <>
-    struct _can_be_string_view_t<const char16_t*> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT _can_be_string_view_t<const char16_t*> : std::true_type
     {
     };
 
     template <typename T>
-    struct can_be_string_view_t : _can_be_string_view_t<std::decay_t<T>>
+    struct RC_DEPRECATED_STRING_TRAIT can_be_string_view_t : _can_be_string_view_t<std::decay_t<T>>
     {
     };
 
     template <typename T>
-    struct is_string_like_t : std::false_type
+    struct RC_DEPRECATED_STRING_TRAIT is_string_like_t : std::false_type
     {
     };
 
     template <typename CharT>
-    struct is_string_like_t<std::basic_string<CharT>> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT is_string_like_t<std::basic_string<CharT>> : std::true_type
     {
         // T is a string or string view of CharT
     };
 
     template <typename CharT>
-    struct is_string_like_t<std::basic_string_view<CharT>> : std::true_type
+    struct RC_DEPRECATED_STRING_TRAIT is_string_like_t<std::basic_string_view<CharT>> : std::true_type
     {
         // T is a string or string view of CharT
     };
 
     template <typename T, typename CharT>
-    struct is_charT_string_type : std::disjunction<std::is_same<T, std::basic_string<CharT>>, std::is_same<T, std::basic_string_view<CharT>>>
+    struct RC_DEPRECATED_STRING_TRAIT is_charT_string_type : std::disjunction<std::is_same<T, std::basic_string<CharT>>, std::is_same<T, std::basic_string_view<CharT>>>
     {
         // T is a string or string view of CharT
     };
 
     template <typename T, typename CharT>
-    struct not_charT_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_charT_string_type<std::decay_t<T>, CharT>>>
+    struct RC_DEPRECATED_STRING_TRAIT not_charT_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_charT_string_type<std::decay_t<T>, CharT>>>
     {
         // 1. T is a string or string view
         // 2. T is not a string or string view of CharT
@@ -471,29 +509,37 @@ namespace RC
     }
 
     // Convert any string-like to a string of generic CharT
-    // Or pass through if it's already a string(view) of CharType or if we can't convert it
-    template <typename CharT, typename T>
+    template <typename TargetCharT, typename T>
     auto inline to_charT(T&& arg)
     {
-        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
+        if constexpr (StringLike<T>)
         {
-            // std::filesystem::path has its own conversion functions
-            return to_charT_string_path<CharT>(std::forward<T>(arg));
+            using SourceCharT = string_char_t<T>;
+
+            if constexpr (std::is_same_v<SourceCharT, TargetCharT>) {
+                // Already correct type - pass through
+                return std::forward<T>(arg);
+            }
+            else if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path>) {
+                // Special handling for filesystem paths
+                return to_charT_string_path<TargetCharT>(arg);
+            }
+            else {
+                // Convert via string_view
+                std::basic_string_view<SourceCharT> view;
+                if constexpr (StringLikePointer<T>) {
+                    view = std::basic_string_view<SourceCharT>(arg);
+                } else {
+                    view = std::basic_string_view<SourceCharT>(
+                        std::ranges::data(arg), 
+                        std::ranges::size(arg)
+                    );
+                }
+                return to_charT_string<TargetCharT>(view);
+            }
         }
-        else if constexpr (can_be_string_view_t<T>::value)
-        {
-            // If T is a char pointer, it can be treated as a string view
-            return to_charT<CharT>(stringviewify(std::forward<T>(arg)));
-        }
-        else if constexpr (not_charT_string_like_t<T, CharT>::value)
-        {
-            // If T is a string or string view but not using CharT, convert it
-            return to_charT_string<CharT>(std::forward<T>(arg));
-        }
-        else
-        {
-            // If T is already a string or string view using CharT, pass through
-            // Or if we can't convert it, pass through
+        else {
+            // Not string-like, pass through unchanged
             return std::forward<T>(arg);
         }
     }
@@ -511,10 +557,24 @@ namespace RC
         return to_charT<TargetCharT>(std::forward<T>(arg));
     }
 
-    template <typename T>
+    template <StringLike T>
     auto inline to_utf8_string(T&& arg) -> std::string
     {
-        return ensure_str_as<char>(std::forward<T>(arg));
+        // Fast path for already UTF-8
+        if constexpr (Utf8StringLike<T>) {
+            if constexpr (StringLikePointer<T>) {
+                return std::string(arg);
+            }
+            else if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+                return std::forward<T>(arg);  // Perfect forwarding
+            }
+            else {
+                return std::string(std::ranges::data(arg), std::ranges::size(arg));
+            }
+        }
+        else {
+            return to_charT<char>(std::forward<T>(arg));
+        }
     }
 
     // You can add more to_* function if needed
