@@ -35,13 +35,13 @@ protected:
 // ============================================================================
 
 // Simple Toggle - No policies, just a checkbox
-class SimpleToggle : public BasicWidget<bool, SimpleImGuiValue> {
+class ImDataSimpleToggle : public BasicWidget<bool, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
-        return std::make_unique<SimpleToggle>(initial_value);
+        return std::make_unique<ImDataSimpleToggle>(initial_value);
     }
     
 protected:
@@ -69,17 +69,17 @@ protected:
 };
 
 // Monitored Toggle - With external sync
-class MonitoredToggle : public BasicWidget<bool, MonitoredImGuiValue> {
+class ImDataMonitoredToggle : public BasicWidget<bool, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
-        return std::make_unique<MonitoredToggle>(initial_value);
+        return std::make_unique<ImDataMonitoredToggle>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, bool default_value = false) {
-        return std::make_unique<MonitoredToggle>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredToggle>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -109,17 +109,17 @@ protected:
 };
 
 // Monitored Toggle With Text - With external sync and text representation
-class MonitoredToggleWithText : public BasicWidget<bool, MonitoredImGuiValueWithText> {
+class ImDataMonitoredToggleWithText : public BasicWidget<bool, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool initial_value = false) {
-        return std::make_unique<MonitoredToggleWithText>(initial_value);
+        return std::make_unique<ImDataMonitoredToggleWithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, bool default_value = false) {
-        return std::make_unique<MonitoredToggleWithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredToggleWithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -152,13 +152,13 @@ protected:
 };
 
 // Config Toggle - With validation and deferred updates
-class ConfigToggle : public BasicWidget<bool, ConfigImGuiValue> {
+class ImDataConfigToggle : public BasicWidget<bool, ImDataConfigValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(bool default_value = false) {
-        return std::make_unique<ConfigToggle>(default_value);
+        return std::make_unique<ImDataConfigToggle>(default_value);
     }
     
 protected:
@@ -202,13 +202,13 @@ protected:
 // ============================================================================
 
 // Simple Float - No policies
-class SimpleFloat : public BasicWidget<float, SimpleImGuiValue> {
+class ImDataSimpleFloat : public BasicWidget<float, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
-        return std::make_unique<SimpleFloat>(initial_value);
+        return std::make_unique<ImDataSimpleFloat>(initial_value);
     }
     
 protected:
@@ -236,17 +236,17 @@ protected:
 };
 
 // Monitored Float - With external sync
-class MonitoredFloat : public BasicWidget<float, MonitoredImGuiValue> {
+class ImDataMonitoredFloat : public BasicWidget<float, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
-        return std::make_unique<MonitoredFloat>(initial_value);
+        return std::make_unique<ImDataMonitoredFloat>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, float default_value = 0.0f) {
-        return std::make_unique<MonitoredFloat>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredFloat>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -276,17 +276,17 @@ protected:
 };
 
 // Monitored Float With Text - With external sync and text representation
-class MonitoredFloatWithText : public BasicWidget<float, MonitoredImGuiValueWithText> {
+class ImDataMonitoredFloatWithText : public BasicWidget<float, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float initial_value = 0.0f) {
-        return std::make_unique<MonitoredFloatWithText>(initial_value);
+        return std::make_unique<ImDataMonitoredFloatWithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, float default_value = 0.0f) {
-        return std::make_unique<MonitoredFloatWithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredFloatWithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -319,13 +319,13 @@ protected:
 };
 
 // Config Float - With validation and deferred updates
-class ConfigFloat : public BasicWidget<float, ConfigImGuiValue> {
+class ImDataConfigFloat : public BasicWidget<float, ImDataConfigValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(float default_value = 0.0f) {
-        return std::make_unique<ConfigFloat>(default_value);
+        return std::make_unique<ImDataConfigFloat>(default_value);
     }
     
 protected:
@@ -379,13 +379,13 @@ protected:
 // ============================================================================
 
 // Simple Double - No policies
-class SimpleDouble : public BasicWidget<double, SimpleImGuiValue> {
+class ImDataSimpleDouble : public BasicWidget<double, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
-        return std::make_unique<SimpleDouble>(initial_value);
+        return std::make_unique<ImDataSimpleDouble>(initial_value);
     }
     
 protected:
@@ -414,17 +414,17 @@ protected:
 };
 
 // Monitored Double - With external sync
-class MonitoredDouble : public BasicWidget<double, MonitoredImGuiValue> {
+class ImDataMonitoredDouble : public BasicWidget<double, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
-        return std::make_unique<MonitoredDouble>(initial_value);
+        return std::make_unique<ImDataMonitoredDouble>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, double default_value = 0.0) {
-        return std::make_unique<MonitoredDouble>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredDouble>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -454,17 +454,17 @@ protected:
 };
 
 // Monitored Double With Text - With external sync and text representation
-class MonitoredDoubleWithText : public BasicWidget<double, MonitoredImGuiValueWithText> {
+class ImDataMonitoredDoubleWithText : public BasicWidget<double, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double initial_value = 0.0) {
-        return std::make_unique<MonitoredDoubleWithText>(initial_value);
+        return std::make_unique<ImDataMonitoredDoubleWithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, double default_value = 0.0) {
-        return std::make_unique<MonitoredDoubleWithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredDoubleWithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -497,13 +497,13 @@ protected:
 };
 
 // Config Double - With validation and deferred updates
-class ConfigDouble : public BasicWidget<double, ConfigImGuiValue> {
+class ImDataConfigDouble : public BasicWidget<double, ImDataConfigValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(double default_value = 0.0) {
-        return std::make_unique<ConfigDouble>(default_value);
+        return std::make_unique<ImDataConfigDouble>(default_value);
     }
     
 protected:
@@ -547,13 +547,13 @@ protected:
 // ============================================================================
 
 // Simple Int32 - No policies
-class SimpleInt32 : public BasicWidget<int32_t, SimpleImGuiValue> {
+class ImDataSimpleInt32 : public BasicWidget<int32_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
-        return std::make_unique<SimpleInt32>(initial_value);
+        return std::make_unique<ImDataSimpleInt32>(initial_value);
     }
     
 protected:
@@ -581,17 +581,17 @@ protected:
 };
 
 // Monitored Int32 - With external sync
-class MonitoredInt32 : public BasicWidget<int32_t, MonitoredImGuiValue> {
+class ImDataMonitoredInt32 : public BasicWidget<int32_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
-        return std::make_unique<MonitoredInt32>(initial_value);
+        return std::make_unique<ImDataMonitoredInt32>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int32_t default_value = 0) {
-        return std::make_unique<MonitoredInt32>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredInt32>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -621,17 +621,17 @@ protected:
 };
 
 // Monitored Int32 With Text - With external sync and text representation
-class MonitoredInt32WithText : public BasicWidget<int32_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredInt32WithText : public BasicWidget<int32_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t initial_value = 0) {
-        return std::make_unique<MonitoredInt32WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredInt32WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int32_t default_value = 0) {
-        return std::make_unique<MonitoredInt32WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredInt32WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -664,13 +664,13 @@ protected:
 };
 
 // Config Int32 - With validation and deferred updates
-class ConfigInt32 : public BasicWidget<int32_t, ConfigImGuiValue> {
+class ImDataConfigInt32 : public BasicWidget<int32_t, ImDataConfigValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int32_t default_value = 0) {
-        return std::make_unique<ConfigInt32>(default_value);
+        return std::make_unique<ImDataConfigInt32>(default_value);
     }
     
 protected:
@@ -714,13 +714,13 @@ protected:
 // ============================================================================
 
 // Simple String - No policies
-class SimpleString : public BasicWidget<std::string, SimpleImGuiValue> {
+class ImDataSimpleString : public BasicWidget<std::string, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "") {
-        return std::make_unique<SimpleString>(initial_value);
+        return std::make_unique<ImDataSimpleString>(initial_value);
     }
     
 protected:
@@ -759,17 +759,17 @@ private:
 };
 
 // Monitored String - With external sync
-class MonitoredString : public BasicWidget<std::string, MonitoredImGuiValue> {
+class ImDataMonitoredString : public BasicWidget<std::string, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "") {
-        return std::make_unique<MonitoredString>(initial_value);
+        return std::make_unique<ImDataMonitoredString>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, const std::string& default_value = "") {
-        return std::make_unique<MonitoredString>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredString>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -808,13 +808,13 @@ private:
 };
 
 // Config String - With validation and deferred updates
-class ConfigString : public BasicWidget<std::string, ConfigImGuiValue> {
+class ImDataConfigString : public BasicWidget<std::string, ImDataConfigValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& default_value = "") {
-        return std::make_unique<ConfigString>(default_value);
+        return std::make_unique<ImDataConfigString>(default_value);
     }
     
 protected:
@@ -869,13 +869,13 @@ private:
 // ============================================================================
 
 // Simple Int64 - No policies
-class SimpleInt64 : public BasicWidget<int64_t, SimpleImGuiValue> {
+class ImDataSimpleInt64 : public BasicWidget<int64_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
-        return std::make_unique<SimpleInt64>(initial_value);
+        return std::make_unique<ImDataSimpleInt64>(initial_value);
     }
     
 protected:
@@ -929,17 +929,17 @@ private:
 };
 
 // Monitored Int64 - With external sync
-class MonitoredInt64 : public BasicWidget<int64_t, MonitoredImGuiValue> {
+class ImDataMonitoredInt64 : public BasicWidget<int64_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
-        return std::make_unique<MonitoredInt64>(initial_value);
+        return std::make_unique<ImDataMonitoredInt64>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int64_t default_value = 0) {
-        return std::make_unique<MonitoredInt64>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredInt64>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -999,17 +999,17 @@ private:
 };
 
 // Monitored Int64 With Text
-class MonitoredInt64WithText : public BasicWidget<int64_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredInt64WithText : public BasicWidget<int64_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(int64_t initial_value = 0) {
-        return std::make_unique<MonitoredInt64WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredInt64WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int64_t default_value = 0) {
-        return std::make_unique<MonitoredInt64WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredInt64WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1076,13 +1076,13 @@ private:
 // ============================================================================
 
 // Simple UInt8 - No policies
-class SimpleUInt8 : public BasicWidget<uint8_t, SimpleImGuiValue> {
+class ImDataSimpleUInt8 : public BasicWidget<uint8_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
-        return std::make_unique<SimpleUInt8>(initial_value);
+        return std::make_unique<ImDataSimpleUInt8>(initial_value);
     }
     
 protected:
@@ -1115,17 +1115,17 @@ protected:
 };
 
 // Monitored UInt8 - With external sync
-class MonitoredUInt8 : public BasicWidget<uint8_t, MonitoredImGuiValue> {
+class ImDataMonitoredUInt8 : public BasicWidget<uint8_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt8>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt8>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint8_t default_value = 0) {
-        return std::make_unique<MonitoredUInt8>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt8>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1156,17 +1156,17 @@ protected:
 };
 
 // Monitored UInt8 With Text
-class MonitoredUInt8WithText : public BasicWidget<uint8_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredUInt8WithText : public BasicWidget<uint8_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint8_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt8WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt8WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint8_t default_value = 0) {
-        return std::make_unique<MonitoredUInt8WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt8WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1204,13 +1204,13 @@ protected:
 // ============================================================================
 
 // Simple UInt16 - No policies
-class SimpleUInt16 : public BasicWidget<uint16_t, SimpleImGuiValue> {
+class ImDataSimpleUInt16 : public BasicWidget<uint16_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
-        return std::make_unique<SimpleUInt16>(initial_value);
+        return std::make_unique<ImDataSimpleUInt16>(initial_value);
     }
     
 protected:
@@ -1243,17 +1243,17 @@ protected:
 };
 
 // Monitored UInt16 - With external sync
-class MonitoredUInt16 : public BasicWidget<uint16_t, MonitoredImGuiValue> {
+class ImDataMonitoredUInt16 : public BasicWidget<uint16_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt16>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt16>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint16_t default_value = 0) {
-        return std::make_unique<MonitoredUInt16>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt16>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1284,17 +1284,17 @@ protected:
 };
 
 // Monitored UInt16 With Text
-class MonitoredUInt16WithText : public BasicWidget<uint16_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredUInt16WithText : public BasicWidget<uint16_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint16_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt16WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt16WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint16_t default_value = 0) {
-        return std::make_unique<MonitoredUInt16WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt16WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1332,13 +1332,13 @@ protected:
 // ============================================================================
 
 // Simple UInt32 - No policies
-class SimpleUInt32 : public BasicWidget<uint32_t, SimpleImGuiValue> {
+class ImDataSimpleUInt32 : public BasicWidget<uint32_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
-        return std::make_unique<SimpleUInt32>(initial_value);
+        return std::make_unique<ImDataSimpleUInt32>(initial_value);
     }
     
 protected:
@@ -1392,17 +1392,17 @@ private:
 };
 
 // Monitored UInt32 - With external sync
-class MonitoredUInt32 : public BasicWidget<uint32_t, MonitoredImGuiValue> {
+class ImDataMonitoredUInt32 : public BasicWidget<uint32_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt32>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt32>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint32_t default_value = 0) {
-        return std::make_unique<MonitoredUInt32>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt32>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1462,17 +1462,17 @@ private:
 };
 
 // Monitored UInt32 With Text
-class MonitoredUInt32WithText : public BasicWidget<uint32_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredUInt32WithText : public BasicWidget<uint32_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint32_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt32WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt32WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint32_t default_value = 0) {
-        return std::make_unique<MonitoredUInt32WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt32WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1539,13 +1539,13 @@ private:
 // ============================================================================
 
 // Simple UInt64 - No policies
-class SimpleUInt64 : public BasicWidget<uint64_t, SimpleImGuiValue> {
+class ImDataSimpleUInt64 : public BasicWidget<uint64_t, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
-        return std::make_unique<SimpleUInt64>(initial_value);
+        return std::make_unique<ImDataSimpleUInt64>(initial_value);
     }
     
 protected:
@@ -1599,17 +1599,17 @@ private:
 };
 
 // Monitored UInt64 - With external sync
-class MonitoredUInt64 : public BasicWidget<uint64_t, MonitoredImGuiValue> {
+class ImDataMonitoredUInt64 : public BasicWidget<uint64_t, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt64>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt64>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint64_t default_value = 0) {
-        return std::make_unique<MonitoredUInt64>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt64>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1669,17 +1669,17 @@ private:
 };
 
 // Monitored UInt64 With Text
-class MonitoredUInt64WithText : public BasicWidget<uint64_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredUInt64WithText : public BasicWidget<uint64_t, ImDataMonitoredValueWithText> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(uint64_t initial_value = 0) {
-        return std::make_unique<MonitoredUInt64WithText>(initial_value);
+        return std::make_unique<ImDataMonitoredUInt64WithText>(initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint64_t default_value = 0) {
-        return std::make_unique<MonitoredUInt64WithText>(std::move(getter), std::move(setter), default_value);
+        return std::make_unique<ImDataMonitoredUInt64WithText>(std::move(getter), std::move(setter), default_value);
     }
     
 protected:
@@ -1746,13 +1746,13 @@ private:
 // ============================================================================
 
 // Simple TextMultiline - No policies
-class SimpleTextMultiline : public BasicWidget<std::string, SimpleImGuiValue> {
+class ImDataSimpleTextMultiline : public BasicWidget<std::string, ImDataSimpleValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "", const ImVec2& size = ImVec2(-1, 0)) {
-        auto widget = std::make_unique<SimpleTextMultiline>(initial_value);
+        auto widget = std::make_unique<ImDataSimpleTextMultiline>(initial_value);
         widget->m_size = size;
         return widget;
     }
@@ -1798,19 +1798,19 @@ private:
 };
 
 // Monitored TextMultiline - With external sync
-class MonitoredTextMultiline : public BasicWidget<std::string, MonitoredImGuiValue> {
+class ImDataMonitoredTextMultiline : public BasicWidget<std::string, ImDataMonitoredValue> {
 public:
     using Base = BasicWidget;
     using Base::Base;
     
     static auto create(const std::string& initial_value = "", const ImVec2& size = ImVec2(-1, 0)) {
-        auto widget = std::make_unique<MonitoredTextMultiline>(initial_value);
+        auto widget = std::make_unique<ImDataMonitoredTextMultiline>(initial_value);
         widget->m_size = size;
         return widget;
     }
     
     static auto create(Getter getter, Setter setter, const std::string& default_value = "", const ImVec2& size = ImVec2(-1, 0)) {
-        auto widget = std::make_unique<MonitoredTextMultiline>(std::move(getter), std::move(setter), default_value);
+        auto widget = std::make_unique<ImDataMonitoredTextMultiline>(std::move(getter), std::move(setter), default_value);
         widget->m_size = size;
         return widget;
     }
@@ -1856,16 +1856,16 @@ private:
 };
 
 // Type aliases for compatibility
-using ImGuiToggle = SimpleToggle;
-using ImGuiFloat = SimpleFloat;
-using ImGuiDouble = SimpleDouble;
-using ImGuiInt32 = SimpleInt32;
-using ImGuiInt64 = SimpleInt64;
-using ImGuiUInt8 = SimpleUInt8;
-using ImGuiUInt16 = SimpleUInt16;
-using ImGuiUInt32 = SimpleUInt32;
-using ImGuiUInt64 = SimpleUInt64;
-using ImGuiString = SimpleString;
-using ImGuiTextMultiline = SimpleTextMultiline;
+using ImGuiToggle = ImDataSimpleToggle;
+using ImGuiFloat = ImDataSimpleFloat;
+using ImGuiDouble = ImDataSimpleDouble;
+using ImGuiInt32 = ImDataSimpleInt32;
+using ImGuiInt64 = ImDataSimpleInt64;
+using ImGuiUInt8 = ImDataSimpleUInt8;
+using ImGuiUInt16 = ImDataSimpleUInt16;
+using ImGuiUInt32 = ImDataSimpleUInt32;
+using ImGuiUInt64 = ImDataSimpleUInt64;
+using ImGuiString = ImDataSimpleString;
+using ImGuiTextMultiline = ImDataSimpleTextMultiline;
 
 } // namespace RC::ImDataControls
