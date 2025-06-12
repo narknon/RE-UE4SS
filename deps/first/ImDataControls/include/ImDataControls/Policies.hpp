@@ -299,8 +299,8 @@ protected:
                 m_custom_context_menu();
             } else {
                 if (ImGui::MenuItem("Reset to Default")) {
-                    if constexpr (requires { reset_to_default(); }) {
-                        reset_to_default();
+                    if constexpr (requires { this->reset_to_default(); }) {
+                        this->reset_to_default();
                     }
                 }
             }
