@@ -158,6 +158,8 @@ public:
         ValueSourcePolicy<T>,
         ChangeNotificationPolicy<T>
     >;
+
+    using Base::operator=;
     
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
@@ -228,6 +230,8 @@ public:
         ChangeNotificationPolicy<T>,
         TextRepresentationPolicy<T>
     >;
+
+    using Base::operator=;
 
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
@@ -301,7 +305,6 @@ public:
     
     explicit ImDataConfigValue(T default_value = T{})
         : Base(std::move(default_value))
-        , DefaultValuePolicy<T>(default_value)
     {
         this->set_default_value(default_value);
     }
