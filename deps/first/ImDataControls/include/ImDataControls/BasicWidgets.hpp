@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <string>
 #include <algorithm>
+#include <Helpers/String.hpp>
+#include <String/StringType.hpp>
 
 namespace RC::ImDataControls {
 
