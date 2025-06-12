@@ -11,11 +11,11 @@
 namespace RC::ImDataControls {
 
 // Forward declarations
-template<typename T> class SimpleImGuiValue;
-template<typename T> class MonitoredImGuiValue;
-template<typename T> class MonitoredImGuiValueWithText;
-template<typename T> class ConfigImGuiValue;
-template<typename T> class FullImGuiValue;
+template<typename T> class ImDataSimpleValue;
+template<typename T> class ImDataMonitoredValue;
+template<typename T> class ImDataMonitoredValueWithText;
+template<typename T> class ImDataConfigValue;
+template<typename T> class ImDataFullValue;
 
 // Base interface with template string handling
 class IImGuiDrawable {
@@ -112,21 +112,21 @@ protected:
     void reset_value(const value_type& value) { Base::operator=(value); }
 };
 
-// SimpleImGuiValue - Just BasicImGuiValue with no policies (zero overhead)
+// ImDataSimpleValue - Just BasicImGuiValue with no policies (zero overhead)
 template<typename T>
-class SimpleImGuiValue : public BasicImGuiValue<T> {
+class ImDataSimpleValue : public BasicImGuiValue<T> {
 public:
     using Base = BasicImGuiValue<T>;
     using Base::Base;  // Inherit constructors
     
     static auto create(T initial_value = T{}) {
-        return std::make_unique<SimpleImGuiValue<T>>(std::move(initial_value));
+        return std::make_unique<ImDataSimpleValue<T>>(std::move(initial_value));
     }
 };
 
-// MonitoredImGuiValue - For external synchronization with thread safety
+// ImDataMonitoredValue - For external synchronization with thread safety
 template<typename T>
-class MonitoredImGuiValue : public ComposedValue<
+class ImDataMonitoredValue : public ComposedValue<
     BasicImGuiValue<T>,
     ExternalSyncPolicy<T>,
     ThreadSafetyPolicy<T>,
@@ -146,11 +146,11 @@ public:
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
     
-    explicit MonitoredImGuiValue(T initial_value = T{})
+    explicit ImDataMonitoredValue(T initial_value = T{})
         : Base(std::move(initial_value))
     {}
     
-    MonitoredImGuiValue(Getter getter, Setter setter, T default_value = T{})
+    ImDataMonitoredValue(Getter getter, Setter setter, T default_value = T{})
         : Base(std::move(default_value))
     {
         this->set_external_getter(std::move(getter));
@@ -161,11 +161,11 @@ public:
     }
     
     static auto create(T initial_value = T{}) {
-        return std::make_unique<MonitoredImGuiValue<T>>(std::move(initial_value));
+        return std::make_unique<ImDataMonitoredValue<T>>(std::move(initial_value));
     }
     
     static auto create(Getter getter, Setter setter, T default_value = T{}) {
-        return std::make_unique<MonitoredImGuiValue<T>>(
+        return std::make_unique<ImDataMonitoredValue<T>>(
             std::move(getter), std::move(setter), std::move(default_value)
         );
     }
@@ -198,9 +198,9 @@ public:
     }
 };
 
-// MonitoredImGuiValueWithText - For external synchronization with text representation
+// ImDataMonitoredValueWithText - For external synchronization with text representation
 template<typename T>
-class MonitoredImGuiValueWithText : public ComposedValue<
+class ImDataMonitoredValueWithText : public ComposedValue<
     BasicImGuiValue<T>,
     ExternalSyncPolicy<T>,
     ThreadSafetyPolicy<T>,
@@ -222,11 +222,11 @@ public:
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
     
-    explicit MonitoredImGuiValueWithText(T initial_value = T{})
+    explicit ImDataMonitoredValueWithText(T initial_value = T{})
         : Base(std::move(initial_value))
     {}
     
-    MonitoredImGuiValueWithText(Getter getter, Setter setter, T default_value = T{})
+    ImDataMonitoredValueWithText(Getter getter, Setter setter, T default_value = T{})
         : Base(std::move(default_value))
     {
         this->set_external_getter(std::move(getter));
@@ -237,11 +237,11 @@ public:
     }
     
     static auto create(T initial_value = T{}) {
-        return std::make_unique<MonitoredImGuiValueWithText<T>>(std::move(initial_value));
+        return std::make_unique<ImDataMonitoredValueWithText<T>>(std::move(initial_value));
     }
     
     static auto create(Getter getter, Setter setter, T default_value = T{}) {
-        return std::make_unique<MonitoredImGuiValueWithText<T>>(
+        return std::make_unique<ImDataMonitoredValueWithText<T>>(
             std::move(getter), std::move(setter), std::move(default_value)
         );
     }
@@ -278,9 +278,9 @@ protected:
     [[nodiscard]] const T& get_value() const override { return this->value(); }
 };
 
-// ConfigImGuiValue - For configuration with validation and deferred updates
+// ImDataConfigValue - For configuration with validation and deferred updates
 template<typename T>
-class ConfigImGuiValue : public ComposedValue<
+class ImDataConfigValue : public ComposedValue<
     BasicImGuiValue<T>,
     DeferredUpdatePolicy<T>,
     DefaultValuePolicy<T>,
@@ -296,14 +296,14 @@ public:
         ValueSourcePolicy<T>
     >;
     
-    explicit ConfigImGuiValue(T default_value = T{})
+    explicit ImDataConfigValue(T default_value = T{})
         : Base(std::move(default_value))
     {
         this->set_default_value(default_value); 
     }
     
     static auto create(T default_value = T{}) {
-        return std::make_unique<ConfigImGuiValue<T>>(std::move(default_value));
+        return std::make_unique<ImDataConfigValue<T>>(std::move(default_value));
     }
     
     // Override to validate before setting
@@ -326,9 +326,9 @@ public:
     }
 };
 
-// FullImGuiValue - All policies for maximum functionality
+// ImDataFullValue - All policies for maximum functionality
 template<typename T>
-class FullImGuiValue : public ComposedValue<
+class ImDataFullValue : public ComposedValue<
     BasicImGuiValue<T>,
     ExternalSyncPolicy<T>,
     ThreadSafetyPolicy<T>,
@@ -355,7 +355,7 @@ public:
     using typename ExternalSyncPolicy<T>::Getter;
     using typename ExternalSyncPolicy<T>::Setter;
     
-    explicit FullImGuiValue(T default_value = T{})
+    explicit ImDataFullValue(T default_value = T{})
         : Base(std::move(default_value))
         , DefaultValuePolicy<T>(default_value)
     {
@@ -363,7 +363,7 @@ public:
     }
     
     static auto create(T default_value = T{}) {
-        return std::make_unique<FullImGuiValue<T>>(std::move(default_value));
+        return std::make_unique<ImDataFullValue<T>>(std::move(default_value));
     }
     
     // Thread-safe operations with all features
