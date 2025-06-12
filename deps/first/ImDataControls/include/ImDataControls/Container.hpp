@@ -18,7 +18,7 @@ public:
     using ValuePtr = std::shared_ptr<IImGuiDrawable>;
     using ChangeCallback = std::function<void()>;
     
-    ImGuiValueContainer(const std::string& name = "")
+    ImDataValueContainer(const std::string& name = "")
         : m_name(name)
         , m_visible(true)
         , m_immediate_apply(false)
