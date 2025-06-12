@@ -22,7 +22,7 @@ enum class ValueSource {
 };
 
 // Base interface for all value controls
-class IValueControl : public IImGuiDrawable {
+class IValueControl : public virtual IImGuiDrawable {
 public:
     virtual ~IValueControl() = default;
     

@@ -14,7 +14,7 @@
 namespace RC::ImDataControls {
 
 // Concrete implementation with convenience overloads
-class ImGuiDrawableBase : public IImGuiDrawable {
+class ImGuiDrawableBase : public virtual IImGuiDrawable {
 public:
     virtual ~ImGuiDrawableBase() = default;
     
@@ -88,6 +88,11 @@ public:
     EditMode get_edit_mode() const override { return m_edit_mode; }
     void set_edit_mode(EditMode mode) override { m_edit_mode = mode; }
     bool is_editable() const override { return m_edit_mode == EditMode::Editable; }
+
+    bool draw(const char* label) override {
+        // This is the final overrider for IImGuiDrawable::draw.
+        return this->draw_impl(label);
+    }
     
     // Default draw implementation (will be overridden by widgets)
 protected:
