@@ -9,152 +9,152 @@ namespace RC::ImDataControls {
 
 // Factory functions for monitored values (without text representation)
 
-[[nodiscard]] inline auto make_monitored_toggle(
+[[nodiscard]] inline auto make_imdata_monitored_toggle(
     std::function<bool()> getter,
     std::function<void(bool)> setter,
     bool default_value = false)
 {
-    return MonitoredToggle::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredToggle::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_float(
+[[nodiscard]] inline auto make_imdata_monitored_float(
     std::function<float()> getter,
     std::function<void(float)> setter,
     float default_value = 0.0f)
 {
-    return MonitoredFloat::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredFloat::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_double(
+[[nodiscard]] inline auto make_imdata_monitored_double(
     std::function<double()> getter,
     std::function<void(double)> setter,
     double default_value = 0.0)
 {
-    return MonitoredDouble::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredDouble::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_int32(
+[[nodiscard]] inline auto make_imdata_monitored_int32(
     std::function<int32_t()> getter,
     std::function<void(int32_t)> setter,
     int32_t default_value = 0)
 {
-    return MonitoredInt32::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredInt32::create(std::move(getter), std::move(setter), default_value);
 }
 
 // Factory functions for monitored values with text representation
 
-[[nodiscard]] inline auto make_monitored_toggle_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_toggle_with_text(
     std::function<bool()> getter,
     std::function<void(bool)> setter,
     bool default_value = false)
 {
-    return MonitoredToggleWithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredToggleWithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_float_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_float_with_text(
     std::function<float()> getter,
     std::function<void(float)> setter,
     float default_value = 0.0f)
 {
-    return MonitoredFloatWithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredFloatWithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_double_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_double_with_text(
     std::function<double()> getter,
     std::function<void(double)> setter,
     double default_value = 0.0)
 {
-    return MonitoredDoubleWithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredDoubleWithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_int32_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_int32_with_text(
     std::function<int32_t()> getter,
     std::function<void(int32_t)> setter,
     int32_t default_value = 0)
 {
-    return MonitoredInt32WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredInt32WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_string(
+[[nodiscard]] inline auto make_imdata_monitored_string(
     std::function<std::string()> getter,
     std::function<void(const std::string&)> setter,
     const std::string& default_value = "")
 {
-    return MonitoredString::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredString::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_int64(
+[[nodiscard]] inline auto make_imdata_monitored_int64(
     std::function<int64_t()> getter,
     std::function<void(int64_t)> setter,
     int64_t default_value = 0)
 {
-    return MonitoredInt64::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredInt64::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint8(
+[[nodiscard]] inline auto make_imdata_monitored_uint8(
     std::function<uint8_t()> getter,
     std::function<void(uint8_t)> setter,
     uint8_t default_value = 0)
 {
-    return MonitoredUInt8::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt8::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint16(
+[[nodiscard]] inline auto make_imdata_monitored_uint16(
     std::function<uint16_t()> getter,
     std::function<void(uint16_t)> setter,
     uint16_t default_value = 0)
 {
-    return MonitoredUInt16::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt16::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint32(
+[[nodiscard]] inline auto make_imdata_monitored_uint32(
     std::function<uint32_t()> getter,
     std::function<void(uint32_t)> setter,
     uint32_t default_value = 0)
 {
-    return MonitoredUInt32::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt32::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint64(
+[[nodiscard]] inline auto make_imdata_monitored_uint64(
     std::function<uint64_t()> getter,
     std::function<void(uint64_t)> setter,
     uint64_t default_value = 0)
 {
-    return MonitoredUInt64::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt64::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_text_multiline(
+[[nodiscard]] inline auto make_imdata_monitored_text_multiline(
     std::function<std::string()> getter,
     std::function<void(const std::string&)> setter,
     const std::string& default_value = "",
     const ImVec2& size = ImVec2(-1, 0))
 {
-    return MonitoredTextMultiline::create(std::move(getter), std::move(setter), default_value, size);
+    return ImDataMonitoredTextMultiline::create(std::move(getter), std::move(setter), default_value, size);
 }
 
 // Factory functions for monitored sliders (without text representation)
 
-[[nodiscard]] inline auto make_monitored_slider(
+[[nodiscard]] inline auto make_imdata_monitored_slider(
     std::function<float()> getter,
     std::function<void(float)> setter,
     float min_val,
     float max_val,
     float default_value = 0.0f)
 {
-    return MonitoredSliderFloat::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderFloat::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_int(
+[[nodiscard]] inline auto make_imdata_monitored_slider_int(
     std::function<int32_t()> getter,
     std::function<void(int32_t)> setter,
     int32_t min_val,
     int32_t max_val,
     int32_t default_value = 0)
 {
-    return MonitoredSliderInt32::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderInt32::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_double(
+[[nodiscard]] inline auto make_imdata_monitored_slider_double(
     std::function<double()> getter,
     std::function<void(double)> setter,
     double min_val,
@@ -162,74 +162,74 @@ namespace RC::ImDataControls {
     double default_value = 0.0,
     bool show_precision_input = false)
 {
-    return MonitoredSliderDouble::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+    return ImDataMonitoredSliderDouble::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
 }
 
 // Factory functions for monitored values with text representation (missing ones)
 
-[[nodiscard]] inline auto make_monitored_int64_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_int64_with_text(
     std::function<int64_t()> getter,
     std::function<void(int64_t)> setter,
     int64_t default_value = 0)
 {
-    return MonitoredInt64WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredInt64WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint8_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_uint8_with_text(
     std::function<uint8_t()> getter,
     std::function<void(uint8_t)> setter,
     uint8_t default_value = 0)
 {
-    return MonitoredUInt8WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt8WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint16_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_uint16_with_text(
     std::function<uint16_t()> getter,
     std::function<void(uint16_t)> setter,
     uint16_t default_value = 0)
 {
-    return MonitoredUInt16WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt16WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint32_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_uint32_with_text(
     std::function<uint32_t()> getter,
     std::function<void(uint32_t)> setter,
     uint32_t default_value = 0)
 {
-    return MonitoredUInt32WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt32WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_uint64_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_uint64_with_text(
     std::function<uint64_t()> getter,
     std::function<void(uint64_t)> setter,
     uint64_t default_value = 0)
 {
-    return MonitoredUInt64WithText::create(std::move(getter), std::move(setter), default_value);
+    return ImDataMonitoredUInt64WithText::create(std::move(getter), std::move(setter), default_value);
 }
 
 // Factory functions for monitored sliders with text representation
 
-[[nodiscard]] inline auto make_monitored_slider_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_slider_with_text(
     std::function<float()> getter,
     std::function<void(float)> setter,
     float min_val,
     float max_val,
     float default_value = 0.0f)
 {
-    return MonitoredSliderFloatWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderFloatWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_int_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_slider_int_with_text(
     std::function<int32_t()> getter,
     std::function<void(int32_t)> setter,
     int32_t min_val,
     int32_t max_val,
     int32_t default_value = 0)
 {
-    return MonitoredSliderInt32WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderInt32WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_double_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_slider_double_with_text(
     std::function<double()> getter,
     std::function<void(double)> setter,
     double min_val,
@@ -237,52 +237,52 @@ namespace RC::ImDataControls {
     double default_value = 0.0,
     bool show_precision_input = false)
 {
-    return MonitoredSliderDoubleWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+    return ImDataMonitoredSliderDoubleWithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_uint8(
+[[nodiscard]] inline auto make_imdata_monitored_slider_uint8(
     std::function<uint8_t()> getter,
     std::function<void(uint8_t)> setter,
     uint8_t min_val,
     uint8_t max_val,
     uint8_t default_value = 0)
 {
-    return MonitoredSliderUInt8::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderUInt8::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_uint16(
+[[nodiscard]] inline auto make_imdata_monitored_slider_uint16(
     std::function<uint16_t()> getter,
     std::function<void(uint16_t)> setter,
     uint16_t min_val,
     uint16_t max_val,
     uint16_t default_value = 0)
 {
-    return MonitoredSliderUInt16::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderUInt16::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_uint8_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_slider_uint8_with_text(
     std::function<uint8_t()> getter,
     std::function<void(uint8_t)> setter,
     uint8_t min_val,
     uint8_t max_val,
     uint8_t default_value = 0)
 {
-    return MonitoredSliderUInt8WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderUInt8WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
-[[nodiscard]] inline auto make_monitored_slider_uint16_with_text(
+[[nodiscard]] inline auto make_imdata_monitored_slider_uint16_with_text(
     std::function<uint16_t()> getter,
     std::function<void(uint16_t)> setter,
     uint16_t min_val,
     uint16_t max_val,
     uint16_t default_value = 0)
 {
-    return MonitoredSliderUInt16WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
+    return ImDataMonitoredSliderUInt16WithText::create(std::move(getter), std::move(setter), min_val, max_val, default_value);
 }
 
 // Convenience template for creating monitored values from member pointers
 template<typename ObjectType, typename ValueType>
-[[nodiscard]] auto make_monitored_member(
+[[nodiscard]] auto make_imdata_monitored_member(
     ObjectType* object,
     ValueType ObjectType::*member,
     ValueType default_value = ValueType{})
@@ -296,37 +296,37 @@ template<typename ObjectType, typename ValueType>
     };
     
     if constexpr (std::is_same_v<ValueType, bool>) {
-        return make_monitored_toggle(getter, setter, default_value);
+        return make_imdata_monitored_toggle(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, float>) {
-        return make_monitored_float(getter, setter, default_value);
+        return make_imdata_monitored_float(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, double>) {
-        return make_monitored_double(getter, setter, default_value);
+        return make_imdata_monitored_double(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, int32_t>) {
-        return make_monitored_int32(getter, setter, default_value);
+        return make_imdata_monitored_int32(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, int64_t>) {
-        return make_monitored_int64(getter, setter, default_value);
+        return make_imdata_monitored_int64(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, uint8_t>) {
-        return make_monitored_uint8(getter, setter, default_value);
+        return make_imdata_monitored_uint8(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, uint16_t>) {
-        return make_monitored_uint16(getter, setter, default_value);
+        return make_imdata_monitored_uint16(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, uint32_t>) {
-        return make_monitored_uint32(getter, setter, default_value);
+        return make_imdata_monitored_uint32(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, uint64_t>) {
-        return make_monitored_uint64(getter, setter, default_value);
+        return make_imdata_monitored_uint64(getter, setter, default_value);
     }
     else if constexpr (std::is_same_v<ValueType, std::string>) {
-        return make_monitored_string(getter, setter, default_value);
+        return make_imdata_monitored_string(getter, setter, default_value);
     }
     else {
-        static_assert(sizeof(ValueType) == 0, "Unsupported type for make_monitored_member");
+        static_assert(sizeof(ValueType) == 0, "Unsupported type for make_imdata_monitored_member");
     }
 }
 
