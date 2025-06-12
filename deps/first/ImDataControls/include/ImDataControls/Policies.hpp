@@ -8,31 +8,63 @@
 #include <variant>
 #include <concepts>
 #include <imgui.h>
+#include "PolicyInterfaces.hpp"
 
 namespace RC::ImDataControls {
 
-// Forward declarations
-enum class ValueSource {
-    User,      // User changed via UI
-    External,  // External system (e.g., game engine)
-    Default,   // Initial/default value
-    Config     // Loaded from configuration
+// Update each policy to implement its interface
+
+template<typename T>
+class DeferredUpdatePolicy : public IDeferredUpdate {
+public:
+    // IDeferredUpdate implementation
+    void apply_changes() override {
+        if (has_pending_changes()) {
+            set_current_value(m_pending_value.value());
+            m_pending_value.reset();
+            m_is_dirty = false;
+        }
+    }
+    
+    void revert_changes() override {
+        m_pending_value.reset();
+        m_is_dirty = false;
+    }
+    
+    bool has_pending_changes() const override {
+        return m_pending_value.has_value() && 
+               m_pending_value.value() != get_current_value();
+    }
+    
+    // Existing template methods remain...
+    [[nodiscard]] const T& get_pending_value() const {
+        return m_pending_value.value_or(get_current_value());
+    }
+    
+    void set_pending_value(const T& value) {
+        m_pending_value = value;
+        m_is_dirty = true;
+    }
+    
+    [[nodiscard]] bool is_dirty() const { return m_is_dirty; }
+    
+protected:
+    virtual const T& get_current_value() const = 0;
+    virtual void set_current_value(const T& value) = 0;
+    
+private:
+    std::optional<T> m_pending_value;
+    bool m_is_dirty = false;
 };
 
-// Policy 1: External Synchronization
 template<typename T>
-class ExternalSyncPolicy {
+class ExternalSyncPolicy : public IExternalSync {
 public:
-    using value_type = T;
     using Getter = std::function<T()>;
     using Setter = std::function<void(const T&)>;
     
-    virtual ~ExternalSyncPolicy() = default;
-    
-    void set_external_getter(Getter getter) { m_getter = std::move(getter); }
-    void set_external_setter(Setter setter) { m_setter = std::move(setter); }
-    
-    virtual void sync_from_external() {
+    // IExternalSync implementation
+    void sync_from_external() override {
         if (m_getter && !has_pending_user_changes()) {
             T external_value = m_getter();
             if (get_value() != external_value) {
@@ -42,14 +74,20 @@ public:
         }
     }
     
-    void sync_to_external() {
+    void sync_to_external() override {
         if (m_setter) {
             m_setter(get_value());
         }
     }
     
+    bool is_externally_synced() const override {
+        return m_getter || m_setter;
+    }
+    
+    void set_external_getter(Getter getter) { m_getter = std::move(getter); }
+    void set_external_setter(Setter setter) { m_setter = std::move(setter); }
+    
 protected:
-    // These methods must be provided by the composed class
     virtual T& get_value() = 0;
     virtual const T& get_value() const = 0;
     virtual void set_value(const T& value) = 0;
@@ -60,219 +98,117 @@ protected:
     ValueSource m_last_source = ValueSource::Default;
 };
 
-// Policy 2: Thread Safety
 template<typename T>
-class ThreadSafetyPolicy {
+class ValidationPolicy : public IValidatable {
 public:
-    using value_type = T;
-    
-    virtual ~ThreadSafetyPolicy() = default;
-    
-    class ReadLock {
-    public:
-        explicit ReadLock(const ThreadSafetyPolicy& policy) 
-            : m_lock(policy.m_mutex) {}
-        
-    private:
-        std::shared_lock<std::shared_mutex> m_lock;
-    };
-    
-    class WriteLock {
-    public:
-        explicit WriteLock(ThreadSafetyPolicy& policy)
-            : m_lock(policy.m_mutex) {}
-            
-    private:
-        std::unique_lock<std::shared_mutex> m_lock;
-    };
-    
-    [[nodiscard]] ReadLock read_lock() const { return ReadLock(*this); }
-    [[nodiscard]] WriteLock write_lock() { return WriteLock(*this); }
-    
-protected:
-    mutable std::shared_mutex m_mutex;
-};
-
-// Policy 3: Value Source Tracking
-template<typename T>
-class ValueSourcePolicy {
-public:
-    using value_type = T;
-    
-    virtual ~ValueSourcePolicy() = default;
-    
-    [[nodiscard]] ValueSource get_last_source() const { return m_last_source; }
-    
-protected:
-    void track_source(ValueSource source) { m_last_source = source; }
-    
-private:
-    ValueSource m_last_source = ValueSource::Default;
-};
-
-// Policy 4: Change Notification
-template<typename T>
-class ChangeNotificationPolicy {
-public:
-    using value_type = T;
-    using ChangeCallback = std::function<void(const T& old_value, const T& new_value)>;
-    using SimpleChangeCallback = std::function<void()>;
-    
-    virtual ~ChangeNotificationPolicy() = default;
-    
-    void add_change_listener(ChangeCallback callback) {
-        m_change_callbacks.push_back(std::move(callback));
-    }
-    
-    void add_simple_change_listener(SimpleChangeCallback callback) {
-        m_simple_callbacks.push_back(std::move(callback));
-    }
-    
-    void clear_change_listeners() {
-        m_change_callbacks.clear();
-        m_simple_callbacks.clear();
-    }
-    
-protected:
-    void notify_change(const T& old_value, const T& new_value) {
-        for (const auto& callback : m_change_callbacks) {
-            callback(old_value, new_value);
-        }
-        for (const auto& callback : m_simple_callbacks) {
-            callback();
-        }
-    }
-    
-private:
-    std::vector<ChangeCallback> m_change_callbacks;
-    std::vector<SimpleChangeCallback> m_simple_callbacks;
-};
-
-// Policy 5: Deferred Update
-template<typename T>
-class DeferredUpdatePolicy {
-public:
-    using value_type = T;
-    
-    virtual ~DeferredUpdatePolicy() = default;
-    
-    [[nodiscard]] bool has_pending_changes() const {
-        return m_pending_value.has_value() && 
-               m_pending_value.value() != get_current_value();
-    }
-    
-    [[nodiscard]] const T& get_pending_value() const {
-        return m_pending_value.value_or(get_current_value());
-    }
-    
-    void set_pending_value(const T& value) {
-        m_pending_value = value;
-        m_is_dirty = true;
-    }
-    
-    void apply_changes() {
-        if (has_pending_changes()) {
-            set_current_value(m_pending_value.value());
-            m_pending_value.reset();
-            m_is_dirty = false;
-        }
-    }
-    
-    void revert_changes() {
-        m_pending_value.reset();
-        m_is_dirty = false;
-    }
-    
-    [[nodiscard]] bool is_dirty() const { return m_is_dirty; }
-    
-protected:
-    // These must be provided by the composed class
-    virtual const T& get_current_value() const = 0;
-    virtual void set_current_value(const T& value) = 0;
-    
-private:
-    std::optional<T> m_pending_value;
-    bool m_is_dirty = false;
-};
-
-// Policy 6: Default Value
-template<typename T>
-class DefaultValuePolicy {
-public:
-    using value_type = T;
-    
-    virtual ~DefaultValuePolicy() = default;
-    
-    explicit DefaultValuePolicy(T default_value = T{})
-        : m_default_value(std::move(default_value)) {}
-    
-    [[nodiscard]] const T& get_default_value() const { return m_default_value; }
-
-    void set_default_value(T new_default) {
-        m_default_value = std::move(new_default);
-    }
-    
-    void reset_to_default() {
-        reset_value(m_default_value);
-    }
-    
-protected:
-    // Must be provided by composed class
-    virtual void reset_value(const T& value) = 0;
-    
-private:
-    T m_default_value;
-};
-
-// Policy 7: Validation
-template<typename T>
-class ValidationPolicy {
-public:
-    using value_type = T;
     using Validator = std::function<std::expected<T, std::string>(const T&)>;
     
-    virtual ~ValidationPolicy() = default;
+    bool validate() override {
+        if constexpr (requires { get_value(); }) {
+            auto result = validate(get_value());
+            m_last_validation_error = result.has_value() ? "" : result.error();
+            return result.has_value();
+        }
+        return true;
+    }
+    
+    bool is_valid() const override {
+        return m_last_validation_error.empty();
+    }
+    
+    std::string get_validation_error() const override {
+        return m_last_validation_error;
+    }
+    
+    // Template methods
+    [[nodiscard]] std::expected<T, std::string> validate(const T& value) const {
+        if (m_validator) {
+            return m_validator(value);
+        }
+        return value;
+    }
     
     void set_validator(Validator validator) {
         m_validator = std::move(validator);
     }
     
-    [[nodiscard]] std::expected<T, std::string> validate(const T& value) const {
-        if (m_validator) {
-            return m_validator(value);
-        }
-        return value; // No validation, accept any value
-    }
-    
-    [[nodiscard]] bool is_valid(const T& value) const {
-        return validate(value).has_value();
-    }
-    
-    [[nodiscard]] std::string get_validation_error(const T& value) const {
-        auto result = validate(value);
-        return result.has_value() ? "" : result.error();
-    }
+protected:
+    virtual const T& get_value() const = 0;
     
 private:
     Validator m_validator;
+    mutable std::string m_last_validation_error;
 };
 
-// Policy 8: Text Representation Display
 template<typename T>
-class TextRepresentationPolicy {
+class ValueHistoryPolicy : public IHistorical {
 public:
-    using value_type = T;
+    bool can_undo() const override { 
+        return m_current_index > 0; 
+    }
     
-    virtual ~TextRepresentationPolicy() = default;
+    bool can_redo() const override { 
+        return m_current_index < m_history.size() - 1; 
+    }
     
-    void set_show_text_representation(bool show) { m_show_text = show; }
-    [[nodiscard]] bool should_show_text_representation() const { return m_show_text; }
+    void undo() override {
+        if (can_undo()) {
+            m_current_index--;
+            if constexpr (requires { set_value(T{}); }) {
+                set_value(m_history[m_current_index]);
+            }
+        }
+    }
     
-    void set_text_format(const std::string& format) { m_text_format = format; }
-    [[nodiscard]] const std::string& get_text_format() const { return m_text_format; }
+    void redo() override {
+        if (can_redo()) {
+            m_current_index++;
+            if constexpr (requires { set_value(T{}); }) {
+                set_value(m_history[m_current_index]);
+            }
+        }
+    }
     
-    // Get text representation of current value
-    [[nodiscard]] std::string get_text_representation() const {
+    void clear_history() override {
+        m_history.clear();
+        m_current_index = 0;
+    }
+    
+    size_t history_size() const override {
+        return m_history.size();
+    }
+    
+    void push_history(const T& value) {
+        if (m_current_index < m_history.size() - 1) {
+            m_history.erase(m_history.begin() + m_current_index + 1, m_history.end());
+        }
+        m_history.push_back(value);
+        m_current_index = m_history.size() - 1;
+        
+        if (m_history.size() > m_max_history_size) {
+            m_history.erase(m_history.begin());
+            m_current_index--;
+        }
+    }
+    
+protected:
+    virtual void set_value(const T& value) = 0;
+    
+private:
+    std::vector<T> m_history;
+    size_t m_current_index = 0;
+    size_t m_max_history_size = 100;
+};
+
+// Add new policies
+
+template<typename T>
+class TextRepresentationPolicy : public ITextRepresentation {
+public:
+    bool should_show_text_representation() const override { return m_show_text; }
+    void set_show_text_representation(bool show) override { m_show_text = show; }
+    
+    std::string get_text_representation() const override {
         const T& value = get_value();
         
         if constexpr (std::is_same_v<T, bool>) {
@@ -283,7 +219,6 @@ public:
         }
         else if constexpr (std::is_floating_point_v<T>) {
             if (m_text_format.empty()) {
-                // Default format for floating point
                 char buffer[64];
                 if constexpr (std::is_same_v<T, float>) {
                     snprintf(buffer, sizeof(buffer), "%.3f", value);
@@ -292,7 +227,6 @@ public:
                 }
                 return std::string(buffer);
             } else {
-                // Use custom format string
                 char buffer[128];
                 snprintf(buffer, sizeof(buffer), m_text_format.c_str(), value);
                 return std::string(buffer);
@@ -306,7 +240,8 @@ public:
         }
     }
     
-    // Draw text representation after the widget
+    void set_text_format(const std::string& format) { m_text_format = format; }
+    
     void draw_text_representation() {
         if (m_show_text && ImGui::GetCurrentContext()) {
             ImGui::SameLine();
@@ -315,80 +250,237 @@ public:
     }
     
 protected:
-    // Bridge to get current value from composed class
-    [[nodiscard]] virtual const T& get_value() const = 0;
+    virtual const T& get_value() const = 0;
     
 private:
-    bool m_show_text = true;  // Default to showing text representation
-    std::string m_text_format;  // Optional printf-style format string
+    bool m_show_text = true;
+    std::string m_text_format;
 };
 
-// Policy 9: Value History (Undo/Redo)
 template<typename T>
-class ValueHistoryPolicy {
+class CallbackPolicy : public ICustomCallbacks {
 public:
-    using value_type = T;
+    using TooltipCallback = std::function<void()>;
+    using ContextMenuCallback = std::function<void()>;
+    using ChangeCallback = std::function<void(const T&, const T&)>;
     
-    virtual ~ValueHistoryPolicy() = default;
+    void set_custom_tooltip_callback(TooltipCallback cb) override { 
+        m_custom_tooltip = std::move(cb); 
+    }
     
-    void push_history(const T& value) {
-        // Remove any redo history when pushing new value
-        if (m_current_index < m_history.size() - 1) {
-            m_history.erase(m_history.begin() + m_current_index + 1, m_history.end());
-        }
-        
-        m_history.push_back(value);
-        m_current_index = m_history.size() - 1;
-        
-        // Limit history size
-        if (m_history.size() > m_max_history_size) {
-            m_history.erase(m_history.begin());
-            m_current_index--;
+    void set_custom_context_menu_callback(ContextMenuCallback cb) override { 
+        m_custom_context_menu = std::move(cb); 
+    }
+    
+    void set_change_callback(ChangeCallback cb) {
+        m_change_callback = std::move(cb);
+    }
+    
+protected:
+    void render_tooltip() {
+        if (m_custom_tooltip && ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            m_custom_tooltip();
+            ImGui::EndTooltip();
+        } else if (!m_tooltip_text.empty() && ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", m_tooltip_text.c_str());
         }
     }
     
-    [[nodiscard]] bool can_undo() const { return m_current_index > 0; }
-    [[nodiscard]] bool can_redo() const { return m_current_index < m_history.size() - 1; }
-    
-    [[nodiscard]] std::optional<T> undo() {
-        if (can_undo()) {
-            m_current_index--;
-            return m_history[m_current_index];
+    void render_context_menu(const char* id = nullptr) {
+        if (ImGui::BeginPopupContextItem(id)) {
+            if (m_custom_context_menu) {
+                m_custom_context_menu();
+            } else {
+                if (ImGui::MenuItem("Reset to Default")) {
+                    if constexpr (requires { reset_to_default(); }) {
+                        reset_to_default();
+                    }
+                }
+            }
+            ImGui::EndPopup();
         }
-        return std::nullopt;
     }
     
-    [[nodiscard]] std::optional<T> redo() {
-        if (can_redo()) {
-            m_current_index++;
-            return m_history[m_current_index];
+    void notify_change(const T& old_value, const T& new_value) {
+        if (m_change_callback) {
+            m_change_callback(old_value, new_value);
         }
-        return std::nullopt;
     }
     
-    void clear_history() {
-        m_history.clear();
-        m_current_index = 0;
-    }
-    
-    void set_max_history_size(size_t size) { m_max_history_size = size; }
+    void set_tooltip_text(const std::string& tooltip) { m_tooltip_text = tooltip; }
     
 private:
-    std::vector<T> m_history;
-    size_t m_current_index = 0;
-    size_t m_max_history_size = 100;
+    TooltipCallback m_custom_tooltip;
+    ContextMenuCallback m_custom_context_menu;
+    ChangeCallback m_change_callback;
+    std::string m_tooltip_text;
 };
 
-// Concept to check if a type is a policy
-template<typename P>
-concept IsPolicy = requires {
-    typename P::value_type;
+template<typename T>
+class VisibilityPolicy : public IVisibilityControl {
+public:
+    bool is_visible() const override { return m_visible; }
+    void set_visible(bool visible) override { m_visible = visible; }
+    bool is_advanced() const override { return m_is_advanced; }
+    void set_advanced(bool advanced) override { m_is_advanced = advanced; }
+    const std::string& get_group() const override { return m_group; }
+    void set_group(const std::string& group) override { m_group = group; }
+    
+private:
+    bool m_visible = true;
+    bool m_is_advanced = false;
+    std::string m_group;
 };
 
-// Helper to extract value type from policies
-template<typename... Policies>
-struct PolicyValueType {
-    using type = typename std::tuple_element_t<0, std::tuple<Policies...>>::value_type;
+template<typename T>
+class StringConversionPolicy : public IStringConvertible {
+public:
+    std::string to_string() const override {
+        if constexpr (std::is_same_v<T, std::string>) {
+            return get_value();
+        } else if constexpr (std::is_same_v<T, bool>) {
+            return get_value() ? "true" : "false";
+        } else if constexpr (std::is_arithmetic_v<T>) {
+            return std::to_string(get_value());
+        } else {
+            return "<unsupported>";
+        }
+    }
+    
+    bool from_string(const std::string& str) override {
+        try {
+            if constexpr (std::is_same_v<T, std::string>) {
+                set_value(str);
+                return true;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                set_value(str == "true" || str == "1");
+                return true;
+            } else if constexpr (std::is_integral_v<T>) {
+                if constexpr (std::is_unsigned_v<T>) {
+                    set_value(static_cast<T>(std::stoull(str)));
+                } else {
+                    set_value(static_cast<T>(std::stoll(str)));
+                }
+                return true;
+            } else if constexpr (std::is_floating_point_v<T>) {
+                if constexpr (std::is_same_v<T, float>) {
+                    set_value(std::stof(str));
+                } else {
+                    set_value(std::stod(str));
+                }
+                return true;
+            }
+        } catch (...) {
+            return false;
+        }
+        return false;
+    }
+    
+protected:
+    virtual const T& get_value() const = 0;
+    virtual void set_value(const T& value) = 0;
+};
+
+template<typename T>
+class ImmediateApplyPolicy : public IImmediateApply {
+public:
+    void set_immediate_apply(bool immediate) override { m_immediate_apply = immediate; }
+    bool is_immediate_apply() const override { return m_immediate_apply; }
+    
+protected:
+    bool handle_change() {
+        if (m_immediate_apply && has_pending_changes()) {
+            apply_changes();
+            return true;
+        }
+        return false;
+    }
+    
+    virtual bool has_pending_changes() const { return false; }
+    virtual void apply_changes() {}
+    
+private:
+    bool m_immediate_apply = false;
+};
+
+// Keep existing policies unchanged
+template<typename T>
+class ThreadSafetyPolicy {
+public:
+    using SharedLock = std::shared_lock<std::shared_mutex>;
+    using UniqueLock = std::unique_lock<std::shared_mutex>;
+    
+    [[nodiscard]] SharedLock read_lock() const {
+        return SharedLock(m_mutex);
+    }
+    
+    [[nodiscard]] UniqueLock write_lock() const {
+        return UniqueLock(m_mutex);
+    }
+    
+private:
+    mutable std::shared_mutex m_mutex;
+};
+
+template<typename T>
+class ValueSourcePolicy {
+public:
+    [[nodiscard]] ValueSource get_last_source() const { return m_last_source; }
+    
+protected:
+    void track_source(ValueSource source) {
+        m_last_source = source;
+    }
+    
+private:
+    ValueSource m_last_source = ValueSource::Default;
+};
+
+template<typename T>
+class ChangeNotificationPolicy {
+public:
+    using ChangeCallback = std::function<void(const T& old_value, const T& new_value)>;
+    
+    void set_on_change_callback(ChangeCallback callback) {
+        m_on_change = std::move(callback);
+    }
+    
+protected:
+    void notify_change(const T& old_value, const T& new_value) {
+        if (m_on_change) {
+            m_on_change(old_value, new_value);
+        }
+    }
+    
+private:
+    ChangeCallback m_on_change;
+};
+
+template<typename T>
+class DefaultValuePolicy {
+public:
+    DefaultValuePolicy() = default;
+    explicit DefaultValuePolicy(T default_value) 
+        : m_default_value(std::move(default_value)) {}
+    
+    void set_default_value(const T& value) {
+        m_default_value = value;
+    }
+    
+    [[nodiscard]] const T& get_default_value() const {
+        return m_default_value;
+    }
+    
+    void reset_to_default() {
+        reset_value(m_default_value);
+    }
+    
+protected:
+    virtual void reset_value(const T& value) = 0;
+    
+private:
+    T m_default_value{};
 };
 
 } // namespace RC::ImDataControls
