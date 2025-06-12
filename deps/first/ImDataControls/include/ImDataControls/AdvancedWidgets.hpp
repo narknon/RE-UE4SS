@@ -45,7 +45,7 @@ class ImDataSimpleSliderFloat : public SliderWidget<float, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
-    SimpleSliderFloat(float min_val, float max_val, float initial_value)
+    ImDataSimpleSliderFloat(float min_val, float max_val, float initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
@@ -84,11 +84,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderFloat(float min_val, float max_val, float initial_value)
+    ImDataMonitoredSliderFloat(float min_val, float max_val, float initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderFloat(Getter getter, Setter setter, float min_val, float max_val, float default_value)
+    ImDataMonitoredSliderFloat(Getter getter, Setter setter, float min_val, float max_val, float default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -139,11 +139,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderFloatWithText(float min_val, float max_val, float initial_value)
+    ImDataMonitoredSliderFloatWithText(float min_val, float max_val, float initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderFloatWithText(Getter getter, Setter setter, float min_val, float max_val, float default_value)
+    ImDataMonitoredSliderFloatWithText(Getter getter, Setter setter, float min_val, float max_val, float default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -195,7 +195,7 @@ class ImDataConfigSliderFloat : public SliderWidget<float, ImDataConfigValue> {
 public:
     using Base = SliderWidget;
     
-    ConfigSliderFloat(float min_val, float max_val, float default_value)
+    ImDataConfigSliderFloat(float min_val, float max_val, float default_value)
         : Base(min_val, max_val, default_value)
     {}
     
@@ -248,7 +248,7 @@ class ImDataSimpleSliderInt32 : public SliderWidget<int32_t, ImDataSimpleValue> 
 public:
     using Base = SliderWidget;
     
-    SimpleSliderInt32(int32_t min_val, int32_t max_val, int32_t initial_value)
+    ImDataSimpleSliderInt32(int32_t min_val, int32_t max_val, int32_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
@@ -287,11 +287,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderInt32(int32_t min_val, int32_t max_val, int32_t initial_value)
+    ImDataMonitoredSliderInt32(int32_t min_val, int32_t max_val, int32_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderInt32(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value)
+    ImDataMonitoredSliderInt32(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -342,11 +342,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderInt32WithText(int32_t min_val, int32_t max_val, int32_t initial_value)
+    ImDataMonitoredSliderInt32WithText(int32_t min_val, int32_t max_val, int32_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderInt32WithText(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value)
+    ImDataMonitoredSliderInt32WithText(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -398,7 +398,7 @@ class ImDataConfigSliderInt32 : public SliderWidget<int32_t, ImDataConfigValue> 
 public:
     using Base = SliderWidget;
     
-    ConfigSliderInt32(int32_t min_val, int32_t max_val, int32_t default_value)
+    ImDataConfigSliderInt32(int32_t min_val, int32_t max_val, int32_t default_value)
         : Base(min_val, max_val, default_value)
     {}
     
@@ -451,7 +451,7 @@ class ImDataSimpleSliderDouble : public SliderWidget<double, ImDataSimpleValue> 
 public:
     using Base = SliderWidget;
     
-    SimpleSliderDouble(double min_val, double max_val, double initial_value, bool show_precision_input = false)
+    ImDataSimpleSliderDouble(double min_val, double max_val, double initial_value, bool show_precision_input = false)
         : Base(min_val, max_val, initial_value)
         , m_show_precision_input(show_precision_input)
     {}
@@ -520,12 +520,12 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderDouble(double min_val, double max_val, double initial_value, bool show_precision_input = false)
+    ImDataMonitoredSliderDouble(double min_val, double max_val, double initial_value, bool show_precision_input = false)
         : Base(min_val, max_val, initial_value)
         , m_show_precision_input(show_precision_input)
     {}
     
-    MonitoredSliderDouble(Getter getter, Setter setter, double min_val, double max_val, double default_value, bool show_precision_input = false)
+    ImDataMonitoredSliderDouble(Getter getter, Setter setter, double min_val, double max_val, double default_value, bool show_precision_input = false)
         : Base(min_val, max_val, default_value)
         , m_show_precision_input(show_precision_input)
     {
@@ -606,12 +606,12 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderDoubleWithText(double min_val, double max_val, double initial_value, bool show_precision_input = false)
+    ImDataMonitoredSliderDoubleWithText(double min_val, double max_val, double initial_value, bool show_precision_input = false)
         : Base(min_val, max_val, initial_value)
         , m_show_precision_input(show_precision_input)
     {}
     
-    MonitoredSliderDoubleWithText(Getter getter, Setter setter, double min_val, double max_val, double default_value, bool show_precision_input = false)
+    ImDataMonitoredSliderDoubleWithText(Getter getter, Setter setter, double min_val, double max_val, double default_value, bool show_precision_input = false)
         : Base(min_val, max_val, default_value)
         , m_show_precision_input(show_precision_input)
     {
@@ -697,7 +697,7 @@ class ImDataSimpleSliderUInt8 : public SliderWidget<uint8_t, ImDataSimpleValue> 
 public:
     using Base = SliderWidget;
     
-    SimpleSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+    ImDataSimpleSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
@@ -740,11 +740,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+    ImDataMonitoredSliderUInt8(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderUInt8(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
+    ImDataMonitoredSliderUInt8(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -794,11 +794,11 @@ class ImDataMonitoredSliderUInt8WithText : public SliderWidget<uint8_t, ImDataMo
 public:
     using Base = SliderWidget;
     
-    MonitoredSliderUInt8WithText(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
+    ImDataMonitoredSliderUInt8WithText(uint8_t min_val, uint8_t max_val, uint8_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderUInt8WithText(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
+    ImDataMonitoredSliderUInt8WithText(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -855,7 +855,7 @@ class ImDataSimpleSliderUInt16 : public SliderWidget<uint16_t, ImDataSimpleValue
 public:
     using Base = SliderWidget;
     
-    SimpleSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+    ImDataSimpleSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
@@ -898,11 +898,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+    ImDataMonitoredSliderUInt16(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderUInt16(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
+    ImDataMonitoredSliderUInt16(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
@@ -954,11 +954,11 @@ public:
     using typename Base::Getter;
     using typename Base::Setter;
     
-    MonitoredSliderUInt16WithText(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
+    ImDataMonitoredSliderUInt16WithText(uint16_t min_val, uint16_t max_val, uint16_t initial_value)
         : Base(min_val, max_val, initial_value)
     {}
     
-    MonitoredSliderUInt16WithText(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
+    ImDataMonitoredSliderUInt16WithText(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value)
         : Base(min_val, max_val, default_value)
     {
         this->set_external_getter(std::move(getter));
