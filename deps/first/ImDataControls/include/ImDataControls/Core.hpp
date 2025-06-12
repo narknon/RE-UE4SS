@@ -128,17 +128,77 @@ protected:
     void reset_value(const value_type& value) { Base::operator=(value); }
 };
 
-// Simple value with no policies
+// Simple value with no additional policies
 template<typename T>
 using ImDataSimpleValue = ComposedValue<BasicImGuiValue<T>>;
 
-// Monitored value with external sync
+// Monitored value with specialized methods
 template<typename T>
-using ImDataMonitoredValue = ComposedValue<BasicImGuiValue<T>, 
-    ExternalSyncPolicy<T>, 
-    ThreadSafetyPolicy<T>, 
-    ValueSourcePolicy<T>, 
-    ChangeNotificationPolicy<T>>;
+class ImDataMonitoredValue : public ComposedValue<
+    BasicImGuiValue<T>,
+    ExternalSyncPolicy<T>,
+    ThreadSafetyPolicy<T>,
+    ValueSourcePolicy<T>,
+    ChangeNotificationPolicy<T>
+> {
+public:
+    using Base = ComposedValue<
+        BasicImGuiValue<T>,
+        ExternalSyncPolicy<T>,
+        ThreadSafetyPolicy<T>,
+        ValueSourcePolicy<T>,
+        ChangeNotificationPolicy<T>
+    >;
+    
+    using typename ExternalSyncPolicy<T>::Getter;
+    using typename ExternalSyncPolicy<T>::Setter;
+    
+    explicit ImDataMonitoredValue(T initial_value = T{})
+        : Base(std::move(initial_value))
+    {}
+    
+    ImDataMonitoredValue(Getter getter, Setter setter, T default_value = T{})
+        : Base(std::move(default_value))
+    {
+        this->set_external_getter(std::move(getter));
+        this->set_external_setter(std::move(setter));
+        if (this->m_getter) {
+            this->sync_from_external();
+        }
+    }
+    
+    static auto create(T initial_value = T{}) {
+        return std::make_unique<ImDataMonitoredValue<T>>(std::move(initial_value));
+    }
+    
+    static auto create(Getter getter, Setter setter, T default_value = T{}) {
+        return std::make_unique<ImDataMonitoredValue<T>>(
+            std::move(getter), std::move(setter), std::move(default_value)
+        );
+    }
+    
+    // Thread-safe operations
+    [[nodiscard]] T get() const {
+        auto lock = this->read_lock();
+        return this->value();
+    }
+    
+    void set(const T& new_value) {
+        T old_value;
+        {
+            auto lock = this->write_lock();
+            old_value = this->value();
+            if (old_value != new_value) {
+                this->operator=(new_value);
+                this->track_source(ValueSource::User);
+            }
+        }
+        if (old_value != new_value) {
+            this->notify_change(old_value, new_value);
+            this->sync_to_external();
+        }
+    }
+};
 
 // Monitored value with text representation
 template<typename T>
@@ -149,14 +209,57 @@ using ImDataMonitoredValueWithText = ComposedValue<BasicImGuiValue<T>,
     ChangeNotificationPolicy<T>,
     TextRepresentationPolicy<T>>;
 
-// Config value with deferred updates
+// Config value with specialized methods
 template<typename T>
-using ImDataConfigValue = ComposedValue<BasicImGuiValue<T>, 
-    DeferredUpdatePolicy<T>, 
-    DefaultValuePolicy<T>, 
-    ValidationPolicy<T>, 
-    ValueSourcePolicy<T>, 
-    ChangeNotificationPolicy<T>>;
+class ImDataConfigValue : public ComposedValue<
+    BasicImGuiValue<T>,
+    DeferredUpdatePolicy<T>,
+    DefaultValuePolicy<T>,
+    ValidationPolicy<T>,
+    ValueSourcePolicy<T>,
+    ChangeNotificationPolicy<T>
+> {
+public:
+    using Base = ComposedValue<
+        BasicImGuiValue<T>,
+        DeferredUpdatePolicy<T>,
+        DefaultValuePolicy<T>,
+        ValidationPolicy<T>,
+        ValueSourcePolicy<T>,
+        ChangeNotificationPolicy<T>
+    >;
+    
+    explicit ImDataConfigValue(T default_value = T{})
+        : Base(std::move(default_value))
+        , DefaultValuePolicy<T>(default_value)
+    {
+        this->set_default_value(default_value);
+    }
+    
+    static auto create(T default_value = T{}) {
+        return std::make_unique<ImDataConfigValue<T>>(std::move(default_value));
+    }
+    
+    // Try to set with validation
+    bool try_set(const T& new_value) {
+        auto result = this->validate(new_value);
+        if (result.has_value()) {
+            this->set_pending_value(result.value());
+            this->track_source(ValueSource::User);
+            return true;
+        }
+        return false;
+    }
+    
+    // Get validation error for current pending value
+    [[nodiscard]] std::string get_error() const {
+        if (this->has_pending_changes()) {
+            auto result = this->validate(this->get_pending_value());
+            return result.has_value() ? "" : result.error();
+        }
+        return "";
+    }
+};
 
 // Full value with all policies
 template<typename T>
