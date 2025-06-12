@@ -8,17 +8,22 @@
 #include <functional>
 #include <Helpers/String.hpp>
 #include <String/StringType.hpp>
-#include "Policies.hpp"
 #include "PolicyInterfaces.hpp"
+#include "Policies.hpp"
 
 namespace RC::ImDataControls {
 
-// Base drawing interface with proper StringType support
-class IImGuiDrawable {
+// Concrete implementation with convenience overloads
+class ImGuiDrawableBase : public IImGuiDrawable {
 public:
-    virtual ~IImGuiDrawable() = default;
+    virtual ~ImGuiDrawableBase() = default;
     
-    // std::string overload
+    // IImGuiDrawable implementation
+    bool draw(const char* label) override { 
+        return draw_impl(label); 
+    }
+    
+    // Additional overloads for convenience
     [[nodiscard]] bool draw(const std::string& label) { 
         return draw_impl(label.c_str()); 
     }
@@ -31,16 +36,9 @@ public:
         return draw_impl(m_label_cache.c_str());
     }
     
-    // Also support raw pointers
-    [[nodiscard]] bool draw(const char* label) { 
-        return draw_impl(label); 
-    }
-    
     [[nodiscard]] bool draw(std::nullptr_t) { 
         return draw_impl(nullptr); 
     }
-    
-    [[nodiscard]] virtual bool is_changed() const = 0;
     
 protected:
     virtual bool draw_impl(const char* label) = 0;
@@ -49,9 +47,9 @@ private:
     mutable std::string m_label_cache;
 };
 
-// Base value storage with metadata support
+// Base value storage - now inherits from ImGuiDrawableBase
 template<typename T>
-class BasicImGuiValue : public IValueControl, public IEditModeControl {
+class BasicImGuiValue : public ImGuiDrawableBase, public IValueControl, public IEditModeControl {
 public:
     using value_type = T;
     using pointer = std::unique_ptr<BasicImGuiValue<T>>;
@@ -90,6 +88,12 @@ public:
     EditMode get_edit_mode() const override { return m_edit_mode; }
     void set_edit_mode(EditMode mode) override { m_edit_mode = mode; }
     bool is_editable() const override { return m_edit_mode == EditMode::Editable; }
+    
+    // Default draw implementation (will be overridden by widgets)
+protected:
+    bool draw_impl(const char* label) override {
+        return false; // Base implementation does nothing
+    }
     
 protected:
     T m_value;
@@ -132,7 +136,7 @@ protected:
 template<typename T>
 using ImDataSimpleValue = ComposedValue<BasicImGuiValue<T>>;
 
-// Monitored value with specialized methods
+// Enhanced composition with specialized methods for monitored values
 template<typename T>
 class ImDataMonitoredValue : public ComposedValue<
     BasicImGuiValue<T>,
@@ -209,7 +213,7 @@ using ImDataMonitoredValueWithText = ComposedValue<BasicImGuiValue<T>,
     ChangeNotificationPolicy<T>,
     TextRepresentationPolicy<T>>;
 
-// Config value with specialized methods
+// Similar pattern for ConfigValue
 template<typename T>
 class ImDataConfigValue : public ComposedValue<
     BasicImGuiValue<T>,
