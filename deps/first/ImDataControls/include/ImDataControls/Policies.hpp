@@ -297,13 +297,7 @@ protected:
         if (ImGui::BeginPopupContextItem(id)) {
             if (m_custom_context_menu) {
                 m_custom_context_menu();
-            } else {
-                if (ImGui::MenuItem("Reset to Default")) {
-                    if constexpr (requires { this->reset_to_default(); }) {
-                        this->reset_to_default();
-                    }
-                }
-            }
+            } 
             ImGui::EndPopup();
         }
     }
