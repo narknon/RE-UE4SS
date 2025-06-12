@@ -1013,4 +1013,518 @@ using ImGuiSliderInt32 = ImDataSimpleSliderInt32;
 using ImGuiSliderUInt8 = ImDataSimpleSliderUInt8;
 using ImGuiSliderUInt16 = ImDataSimpleSliderUInt16;
 
+// ============================================================================
+// Combo Box Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataComboWidget : public BasicWidget<int32_t, ComposedType> {
+public:
+    using Base = BasicWidget<int32_t, ComposedType>;
+    
+    ImDataComboWidget(const std::vector<std::string>& options, int32_t initial_value = 0)
+        : Base(initial_value), m_options(options) {
+        update_option_pointers();
+    }
+    
+    void set_options(const std::vector<std::string>& options) {
+        m_options = options;
+        update_option_pointers();
+        this->m_value = std::clamp(this->m_value, 0, 
+                                   static_cast<int32_t>(m_options.size() - 1));
+    }
+    
+    [[nodiscard]] const std::vector<std::string>& get_options() const { 
+        return m_options; 
+    }
+    
+    [[nodiscard]] std::string get_selected_text() const {
+        if (this->m_value >= 0 && this->m_value < static_cast<int32_t>(m_options.size())) {
+            return m_options[this->m_value];
+        }
+        return "";
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: %s", this->get_display_label(label), 
+                       get_selected_text().c_str());
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        int32_t temp_value = this->m_value;
+        bool changed = ImGui::Combo(this->get_display_label(label), &temp_value,
+                                   m_option_pointers.data(),
+                                   static_cast<int32_t>(m_option_pointers.size()));
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    void update_option_pointers() {
+        m_option_pointers.clear();
+        for (const auto& option : m_options) {
+            m_option_pointers.push_back(option.c_str());
+        }
+    }
+    
+    std::vector<std::string> m_options;
+    std::vector<const char*> m_option_pointers;
+};
+
+// Type aliases
+using ImDataSimpleCombo = ImDataComboWidget<ImDataSimpleValue>;
+using ImDataMonitoredCombo = ImDataComboWidget<ImDataMonitoredValue>;
+using ImDataConfigCombo = ImDataComboWidget<ImDataConfigValue>;
+
+// ============================================================================
+// Drag Float Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataDragFloatWidget : public BasicWidget<float, ComposedType> {
+public:
+    using Base = BasicWidget<float, ComposedType>;
+    
+    ImDataDragFloatWidget(float initial_value = 0.0f, float speed = 1.0f, 
+                          float min = 0.0f, float max = 0.0f)
+        : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
+    
+    void set_speed(float speed) { m_speed = speed; }
+    void set_range(float min, float max) { m_min = min; m_max = max; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: %.3f", this->get_display_label(label), this->m_value);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        float temp_value = this->m_value;
+        bool changed = ImGui::DragFloat(this->get_display_label(label), 
+                                       &temp_value, m_speed, m_min, m_max);
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    float m_speed;
+    float m_min;
+    float m_max;
+};
+
+using ImDataSimpleDragFloat = ImDataDragFloatWidget<ImDataSimpleValue>;
+using ImDataMonitoredDragFloat = ImDataDragFloatWidget<ImDataMonitoredValue>;
+
+// Similar implementations for DragInt, DragDouble...
+
+// ============================================================================
+// Color3 Widget (RGB)
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataColor3Widget : public BasicWidget<std::array<float, 3>, ComposedType> {
+public:
+    using Base = BasicWidget<std::array<float, 3>, ComposedType>;
+    
+    ImDataColor3Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f)
+        : Base({r, g, b}) {}
+    
+    void set_rgb(float r, float g, float b) {
+        this->m_value = {r, g, b};
+    }
+    
+    [[nodiscard]] float r() const { return this->m_value[0]; }
+    [[nodiscard]] float g() const { return this->m_value[1]; }
+    [[nodiscard]] float b() const { return this->m_value[2]; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: (%.2f, %.2f, %.2f)", this->get_display_label(label),
+                       this->m_value[0], this->m_value[1], this->m_value[2]);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        std::array<float, 3> temp_value = this->m_value;
+        bool changed = ImGui::ColorEdit3(this->get_display_label(label), 
+                                        temp_value.data());
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+};
+
+using ImDataSimpleColor3 = ImDataColor3Widget<ImDataSimpleValue>;
+using ImDataMonitoredColor3 = ImDataColor3Widget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Vector2 Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataVector2Widget : public BasicWidget<std::array<float, 2>, ComposedType> {
+public:
+    using Base = BasicWidget<std::array<float, 2>, ComposedType>;
+    
+    ImDataVector2Widget(float x = 0.0f, float y = 0.0f)
+        : Base({x, y}) {}
+    
+    void set_xy(float x, float y) {
+        this->m_value = {x, y};
+    }
+    
+    [[nodiscard]] float x() const { return this->m_value[0]; }
+    [[nodiscard]] float y() const { return this->m_value[1]; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: (%.3f, %.3f)", this->get_display_label(label),
+                       this->m_value[0], this->m_value[1]);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        std::array<float, 2> temp_value = this->m_value;
+        bool changed = ImGui::InputFloat2(this->get_display_label(label), 
+                                         temp_value.data());
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+};
+
+using ImDataSimpleVector2 = ImDataVector2Widget<ImDataSimpleValue>;
+using ImDataMonitoredVector2 = ImDataVector2Widget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Vector3 Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataVector3Widget : public BasicWidget<std::array<float, 3>, ComposedType> {
+public:
+    using Base = BasicWidget<std::array<float, 3>, ComposedType>;
+    
+    ImDataVector3Widget(float x = 0.0f, float y = 0.0f, float z = 0.0f)
+        : Base({x, y, z}) {}
+    
+    void set_xyz(float x, float y, float z) {
+        this->m_value = {x, y, z};
+    }
+    
+    [[nodiscard]] float x() const { return this->m_value[0]; }
+    [[nodiscard]] float y() const { return this->m_value[1]; }
+    [[nodiscard]] float z() const { return this->m_value[2]; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: (%.3f, %.3f, %.3f)", this->get_display_label(label),
+                       this->m_value[0], this->m_value[1], this->m_value[2]);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        std::array<float, 3> temp_value = this->m_value;
+        bool changed = ImGui::InputFloat3(this->get_display_label(label), 
+                                         temp_value.data());
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+};
+
+using ImDataSimpleVector3 = ImDataVector3Widget<ImDataSimpleValue>;
+using ImDataMonitoredVector3 = ImDataVector3Widget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Color4 Widget (RGBA)
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataColor4Widget : public BasicWidget<std::array<float, 4>, ComposedType> {
+public:
+    using Base = BasicWidget<std::array<float, 4>, ComposedType>;
+    
+    ImDataColor4Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f)
+        : Base({r, g, b, a}) {}
+    
+    void set_rgba(float r, float g, float b, float a) {
+        this->m_value = {r, g, b, a};
+    }
+    
+    [[nodiscard]] float r() const { return this->m_value[0]; }
+    [[nodiscard]] float g() const { return this->m_value[1]; }
+    [[nodiscard]] float b() const { return this->m_value[2]; }
+    [[nodiscard]] float a() const { return this->m_value[3]; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: (%.2f, %.2f, %.2f, %.2f)", this->get_display_label(label),
+                       this->m_value[0], this->m_value[1], this->m_value[2], this->m_value[3]);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        std::array<float, 4> temp_value = this->m_value;
+        bool changed = ImGui::ColorEdit4(this->get_display_label(label), 
+                                        temp_value.data());
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+};
+
+using ImDataSimpleColor4 = ImDataColor4Widget<ImDataSimpleValue>;
+using ImDataMonitoredColor4 = ImDataColor4Widget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Drag Int Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataDragIntWidget : public BasicWidget<int32_t, ComposedType> {
+public:
+    using Base = BasicWidget<int32_t, ComposedType>;
+    
+    ImDataDragIntWidget(int32_t initial_value = 0, float speed = 1.0f, 
+                        int32_t min = 0, int32_t max = 0)
+        : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
+    
+    void set_speed(float speed) { m_speed = speed; }
+    void set_range(int32_t min, int32_t max) { m_min = min; m_max = max; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: %d", this->get_display_label(label), this->m_value);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        int32_t temp_value = this->m_value;
+        bool changed = ImGui::DragInt(this->get_display_label(label), 
+                                     &temp_value, m_speed, m_min, m_max);
+        
+        if (changed && this->is_editable()) {
+            if constexpr (requires { this->set(temp_value); }) {
+                this->set(temp_value);
+            } else {
+                this->m_value = temp_value;
+                this->m_changed = true;
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    float m_speed;
+    int32_t m_min;
+    int32_t m_max;
+};
+
+using ImDataSimpleDragInt = ImDataDragIntWidget<ImDataSimpleValue>;
+using ImDataMonitoredDragInt = ImDataDragIntWidget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Drag Double Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataDragDoubleWidget : public BasicWidget<double, ComposedType> {
+public:
+    using Base = BasicWidget<double, ComposedType>;
+    
+    ImDataDragDoubleWidget(double initial_value = 0.0, float speed = 1.0f, 
+                           double min = 0.0, double max = 0.0)
+        : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
+    
+    void set_speed(float speed) { m_speed = speed; }
+    void set_range(double min, double max) { m_min = min; m_max = max; }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: %.6f", this->get_display_label(label), this->m_value);
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        double temp_value = this->m_value;
+        float temp_float = static_cast<float>(temp_value);
+        bool changed = ImGui::DragFloat(this->get_display_label(label), 
+                                       &temp_float, m_speed, 
+                                       static_cast<float>(m_min), 
+                                       static_cast<float>(m_max));
+        
+        if (changed) {
+            temp_value = static_cast<double>(temp_float);
+            if (this->is_editable()) {
+                if constexpr (requires { this->set(temp_value); }) {
+                    this->set(temp_value);
+                } else {
+                    this->m_value = temp_value;
+                    this->m_changed = true;
+                }
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    float m_speed;
+    double m_min;
+    double m_max;
+};
+
+using ImDataSimpleDragDouble = ImDataDragDoubleWidget<ImDataSimpleValue>;
+using ImDataMonitoredDragDouble = ImDataDragDoubleWidget<ImDataMonitoredValue>;
+
+// ============================================================================
+// Radio Button Widget
+// ============================================================================
+
+template<typename ComposedType>
+class ImDataRadioButtonWidget : public BasicWidget<int32_t, ComposedType> {
+public:
+    using Base = BasicWidget<int32_t, ComposedType>;
+    
+    ImDataRadioButtonWidget(const std::vector<std::string>& options, int32_t initial_value = 0)
+        : Base(initial_value), m_options(options) {}
+    
+    void set_options(const std::vector<std::string>& options) {
+        m_options = options;
+        this->m_value = std::clamp(this->m_value, 0, 
+                                   static_cast<int32_t>(m_options.size() - 1));
+    }
+    
+    [[nodiscard]] const std::vector<std::string>& get_options() const { 
+        return m_options; 
+    }
+    
+protected:
+    bool draw_impl(const char* label) override {
+        if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
+            ImGui::Text("%s: %s", this->get_display_label(label), 
+                       (this->m_value >= 0 && this->m_value < static_cast<int32_t>(m_options.size())) 
+                       ? m_options[this->m_value].c_str() : "");
+            return false;
+        }
+        
+        this->begin_disabled_if_readonly();
+        
+        ImGui::Text("%s", this->get_display_label(label));
+        
+        bool changed = false;
+        for (int32_t i = 0; i < static_cast<int32_t>(m_options.size()); ++i) {
+            if (ImGui::RadioButton(m_options[i].c_str(), &this->m_value, i)) {
+                changed = true;
+                if (this->is_editable()) {
+                    if constexpr (requires { this->set(this->m_value); }) {
+                        this->set(this->m_value);
+                    } else {
+                        this->m_changed = true;
+                    }
+                }
+            }
+            if (i < static_cast<int32_t>(m_options.size()) - 1) {
+                ImGui::SameLine();
+            }
+        }
+        
+        this->end_disabled_if_readonly();
+        
+        return changed && this->is_editable();
+    }
+    
+private:
+    std::vector<std::string> m_options;
+};
+
+using ImDataSimpleRadioButton = ImDataRadioButtonWidget<ImDataSimpleValue>;
+using ImDataMonitoredRadioButton = ImDataRadioButtonWidget<ImDataMonitoredValue>;
+
 } // namespace RC::ImDataControls
