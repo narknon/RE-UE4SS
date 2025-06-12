@@ -132,7 +132,7 @@ protected:
         bool changed = ImGui::Checkbox(label ? label : "##toggle", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -172,7 +172,7 @@ protected:
         bool changed = ImGui::Checkbox(label ? label : "##toggle", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -299,7 +299,7 @@ protected:
         bool changed = ImGui::InputFloat(label ? label : "##float", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -339,7 +339,7 @@ protected:
         bool changed = ImGui::InputFloat(label ? label : "##float", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -477,7 +477,7 @@ protected:
         bool changed = ImGui::InputDouble(label ? label : "##double", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -517,7 +517,7 @@ protected:
         bool changed = ImGui::InputDouble(label ? label : "##double", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -644,7 +644,7 @@ protected:
         bool changed = ImGui::InputInt(label ? label : "##int32", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -684,7 +684,7 @@ protected:
         bool changed = ImGui::InputInt(label ? label : "##int32", &temp_value);
         
         if (changed && is_editable()) {
-            set(temp_value);
+            this->set(temp_value);
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -828,7 +828,7 @@ protected:
         bool changed = ImGui::InputText(label ? label : "##string", m_buffer.data(), m_buffer.size());
         
         if (changed && is_editable()) {
-            set(std::string(m_buffer.data()));
+            this->set(std::string(m_buffer.data()));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1007,7 +1007,7 @@ protected:
             try {
                 int64_t new_value = std::stoll(buffer);
                 if (new_value != m_value && is_editable()) {
-                    set(new_value);
+                    this->set(new_value);
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1077,7 +1077,7 @@ protected:
             try {
                 int64_t new_value = std::stoll(buffer);
                 if (new_value != m_value && is_editable()) {
-                    set(new_value);
+                    this->set(new_value);
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1179,7 +1179,7 @@ protected:
         
         if (changed && is_editable()) {
             temp_value = std::clamp(temp_value, 0, 255);
-            set(static_cast<uint8_t>(temp_value));
+            this->set(static_cast<uint8_t>(temp_value));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1220,7 +1220,7 @@ protected:
         
         if (changed && is_editable()) {
             temp_value = std::clamp(temp_value, 0, 255);
-            set(static_cast<uint8_t>(temp_value));
+            this->set(static_cast<uint8_t>(temp_value));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1307,7 +1307,7 @@ protected:
         
         if (changed && is_editable()) {
             temp_value = std::clamp(temp_value, 0, 65535);
-            set(static_cast<uint16_t>(temp_value));
+            this->set(static_cast<uint16_t>(temp_value));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1348,7 +1348,7 @@ protected:
         
         if (changed && is_editable()) {
             temp_value = std::clamp(temp_value, 0, 65535);
-            set(static_cast<uint16_t>(temp_value));
+            this->set(static_cast<uint16_t>(temp_value));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1470,7 +1470,7 @@ protected:
             try {
                 uint64_t new_value = std::stoull(buffer);
                 if (new_value <= UINT32_MAX && new_value != m_value && is_editable()) {
-                    set(static_cast<uint32_t>(new_value));
+                    this->set(static_cast<uint32_t>(new_value));
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1540,7 +1540,7 @@ protected:
             try {
                 uint64_t new_value = std::stoull(buffer);
                 if (new_value <= UINT32_MAX && new_value != m_value && is_editable()) {
-                    set(static_cast<uint32_t>(new_value));
+                    this->set(static_cast<uint32_t>(new_value));
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1677,7 +1677,7 @@ protected:
             try {
                 uint64_t new_value = std::stoull(buffer);
                 if (new_value != m_value && is_editable()) {
-                    set(new_value);
+                    this->set(new_value);
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1747,7 +1747,7 @@ protected:
             try {
                 uint64_t new_value = std::stoull(buffer);
                 if (new_value != m_value && is_editable()) {
-                    set(new_value);
+                    this->set(new_value);
                     changed = true;
                 }
                 m_buffer = buffer;
@@ -1875,7 +1875,7 @@ protected:
                                                  m_buffer.data(), m_buffer.size(), m_size);
         
         if (changed && is_editable()) {
-            set(std::string(m_buffer.data()));
+            this->set(std::string(m_buffer.data()));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
