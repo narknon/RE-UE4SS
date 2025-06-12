@@ -297,7 +297,23 @@ protected:
         if (ImGui::BeginPopupContextItem(id)) {
             if (m_custom_context_menu) {
                 m_custom_context_menu();
-            } 
+            } else {
+                // Conditionally add the "Reset to Default" option using a C++20 generic lambda.
+                // This pattern avoids linter errors from checking for a method on 'this' that only
+                // exists in a composed policy (e.g., DefaultValuePolicy). The `if constexpr`
+                // ensures this check is performed at compile-time with zero runtime cost.
+                auto try_render_reset_option = [this]<typename PolicyHost>(PolicyHost* p) {
+                    if constexpr (requires { p->reset_to_default(); }) {
+                        if (ImGui::MenuItem("Reset to Default")) {
+                            p->reset_to_default();
+                        }
+                    }
+                };
+
+                // Pass 'this' to the lambda. The compiler will deduce PolicyHost as the
+                // concrete type of the final composed widget, resolving the check correctly.
+                try_render_reset_option(this);
+            }
             ImGui::EndPopup();
         }
     }
