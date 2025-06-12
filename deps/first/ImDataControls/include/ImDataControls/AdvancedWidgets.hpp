@@ -1017,7 +1017,7 @@ using ImGuiSliderUInt16 = ImDataSimpleSliderUInt16;
 // Combo Box Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataComboWidget : public BasicWidget<int32_t, ComposedType> {
 public:
     using Base = BasicWidget<int32_t, ComposedType>;
@@ -1095,7 +1095,7 @@ using ImDataConfigCombo = ImDataComboWidget<ImDataConfigValue>;
 // Drag Float Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataDragFloatWidget : public BasicWidget<float, ComposedType> {
 public:
     using Base = BasicWidget<float, ComposedType>;
@@ -1149,7 +1149,7 @@ using ImDataMonitoredDragFloat = ImDataDragFloatWidget<ImDataMonitoredValue>;
 // Color3 Widget (RGB)
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataColor3Widget : public BasicWidget<std::array<float, 3>, ComposedType> {
 public:
     using Base = BasicWidget<std::array<float, 3>, ComposedType>;
@@ -1201,7 +1201,7 @@ using ImDataMonitoredColor3 = ImDataColor3Widget<ImDataMonitoredValue>;
 // Vector2 Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataVector2Widget : public BasicWidget<std::array<float, 2>, ComposedType> {
 public:
     using Base = BasicWidget<std::array<float, 2>, ComposedType>;
@@ -1252,7 +1252,7 @@ using ImDataMonitoredVector2 = ImDataVector2Widget<ImDataMonitoredValue>;
 // Vector3 Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataVector3Widget : public BasicWidget<std::array<float, 3>, ComposedType> {
 public:
     using Base = BasicWidget<std::array<float, 3>, ComposedType>;
@@ -1304,7 +1304,7 @@ using ImDataMonitoredVector3 = ImDataVector3Widget<ImDataMonitoredValue>;
 // Color4 Widget (RGBA)
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataColor4Widget : public BasicWidget<std::array<float, 4>, ComposedType> {
 public:
     using Base = BasicWidget<std::array<float, 4>, ComposedType>;
@@ -1357,7 +1357,7 @@ using ImDataMonitoredColor4 = ImDataColor4Widget<ImDataMonitoredValue>;
 // Drag Int Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataDragIntWidget : public BasicWidget<int32_t, ComposedType> {
 public:
     using Base = BasicWidget<int32_t, ComposedType>;
@@ -1409,7 +1409,7 @@ using ImDataMonitoredDragInt = ImDataDragIntWidget<ImDataMonitoredValue>;
 // Drag Double Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataDragDoubleWidget : public BasicWidget<double, ComposedType> {
 public:
     using Base = BasicWidget<double, ComposedType>;
@@ -1467,7 +1467,7 @@ using ImDataMonitoredDragDouble = ImDataDragDoubleWidget<ImDataMonitoredValue>;
 // Radio Button Widget
 // ============================================================================
 
-template<typename ComposedType>
+template<template<typename> class ComposedType>
 class ImDataRadioButtonWidget : public BasicWidget<int32_t, ComposedType> {
 public:
     using Base = BasicWidget<int32_t, ComposedType>;
