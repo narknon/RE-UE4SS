@@ -41,7 +41,7 @@ protected:
 // ============================================================================
 
 // Simple Float Slider
-class SimpleSliderFloat : public SliderWidget<float, SimpleImGuiValue> {
+class ImDataSimpleSliderFloat : public SliderWidget<float, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
@@ -50,7 +50,7 @@ public:
     {}
     
     static auto create(float min_val, float max_val, float initial_value = 0.0f) {
-        return std::make_unique<SimpleSliderFloat>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataSimpleSliderFloat>(min_val, max_val, initial_value);
     }
     
 protected:
@@ -78,7 +78,7 @@ protected:
 };
 
 // Monitored Float Slider
-class MonitoredSliderFloat : public SliderWidget<float, MonitoredImGuiValue> {
+class ImDataMonitoredSliderFloat : public SliderWidget<float, ImDataMonitoredValue> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -99,11 +99,11 @@ public:
     }
     
     static auto create(float min_val, float max_val, float initial_value = 0.0f) {
-        return std::make_unique<MonitoredSliderFloat>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderFloat>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, float min_val, float max_val, float default_value = 0.0f) {
-        return std::make_unique<MonitoredSliderFloat>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderFloat>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -133,7 +133,7 @@ protected:
 };
 
 // Monitored Float Slider With Text
-class MonitoredSliderFloatWithText : public SliderWidget<float, MonitoredImGuiValueWithText> {
+class ImDataMonitoredSliderFloatWithText : public SliderWidget<float, ImDataMonitoredValueWithText> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -154,11 +154,11 @@ public:
     }
     
     static auto create(float min_val, float max_val, float initial_value = 0.0f) {
-        return std::make_unique<MonitoredSliderFloatWithText>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderFloatWithText>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, float min_val, float max_val, float default_value = 0.0f) {
-        return std::make_unique<MonitoredSliderFloatWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderFloatWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -191,7 +191,7 @@ protected:
 };
 
 // Config Float Slider
-class ConfigSliderFloat : public SliderWidget<float, ConfigImGuiValue> {
+class ImDataConfigSliderFloat : public SliderWidget<float, ImDataConfigValue> {
 public:
     using Base = SliderWidget;
     
@@ -200,7 +200,7 @@ public:
     {}
     
     static auto create(float min_val, float max_val, float default_value = 0.0f) {
-        return std::make_unique<ConfigSliderFloat>(min_val, max_val, default_value);
+        return std::make_unique<ImDataConfigSliderFloat>(min_val, max_val, default_value);
     }
     
 protected:
@@ -244,7 +244,7 @@ protected:
 // ============================================================================
 
 // Simple Int32 Slider
-class SimpleSliderInt32 : public SliderWidget<int32_t, SimpleImGuiValue> {
+class ImDataSimpleSliderInt32 : public SliderWidget<int32_t, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
@@ -253,7 +253,7 @@ public:
     {}
     
     static auto create(int32_t min_val, int32_t max_val, int32_t initial_value = 0) {
-        return std::make_unique<SimpleSliderInt32>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataSimpleSliderInt32>(min_val, max_val, initial_value);
     }
     
 protected:
@@ -281,7 +281,7 @@ protected:
 };
 
 // Monitored Int32 Slider
-class MonitoredSliderInt32 : public SliderWidget<int32_t, MonitoredImGuiValue> {
+class ImDataMonitoredSliderInt32 : public SliderWidget<int32_t, ImDataMonitoredValue> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -302,11 +302,11 @@ public:
     }
     
     static auto create(int32_t min_val, int32_t max_val, int32_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderInt32>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderInt32>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value = 0) {
-        return std::make_unique<MonitoredSliderInt32>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderInt32>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -336,7 +336,7 @@ protected:
 };
 
 // Monitored Int32 Slider With Text
-class MonitoredSliderInt32WithText : public SliderWidget<int32_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredSliderInt32WithText : public SliderWidget<int32_t, ImDataMonitoredValueWithText> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -357,11 +357,11 @@ public:
     }
     
     static auto create(int32_t min_val, int32_t max_val, int32_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderInt32WithText>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderInt32WithText>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, int32_t min_val, int32_t max_val, int32_t default_value = 0) {
-        return std::make_unique<MonitoredSliderInt32WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderInt32WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -394,7 +394,7 @@ protected:
 };
 
 // Config Int32 Slider
-class ConfigSliderInt32 : public SliderWidget<int32_t, ConfigImGuiValue> {
+class ImDataConfigSliderInt32 : public SliderWidget<int32_t, ImDataConfigValue> {
 public:
     using Base = SliderWidget;
     
@@ -403,7 +403,7 @@ public:
     {}
     
     static auto create(int32_t min_val, int32_t max_val, int32_t default_value = 0) {
-        return std::make_unique<ConfigSliderInt32>(min_val, max_val, default_value);
+        return std::make_unique<ImDataConfigSliderInt32>(min_val, max_val, default_value);
     }
     
 protected:
@@ -447,7 +447,7 @@ protected:
 // ============================================================================
 
 // Simple Double Slider
-class SimpleSliderDouble : public SliderWidget<double, SimpleImGuiValue> {
+class ImDataSimpleSliderDouble : public SliderWidget<double, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
@@ -457,7 +457,7 @@ public:
     {}
     
     static auto create(double min_val, double max_val, double initial_value = 0.0, bool show_precision_input = false) {
-        return std::make_unique<SimpleSliderDouble>(min_val, max_val, initial_value, show_precision_input);
+        return std::make_unique<ImDataSimpleSliderDouble>(min_val, max_val, initial_value, show_precision_input);
     }
     
 protected:
@@ -514,7 +514,7 @@ private:
 };
 
 // Monitored Double Slider
-class MonitoredSliderDouble : public SliderWidget<double, MonitoredImGuiValue> {
+class ImDataMonitoredSliderDouble : public SliderWidget<double, ImDataMonitoredValue> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -537,11 +537,11 @@ public:
     }
     
     static auto create(double min_val, double max_val, double initial_value = 0.0, bool show_precision_input = false) {
-        return std::make_unique<MonitoredSliderDouble>(min_val, max_val, initial_value, show_precision_input);
+        return std::make_unique<ImDataMonitoredSliderDouble>(min_val, max_val, initial_value, show_precision_input);
     }
     
     static auto create(Getter getter, Setter setter, double min_val, double max_val, double default_value = 0.0, bool show_precision_input = false) {
-        return std::make_unique<MonitoredSliderDouble>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+        return std::make_unique<ImDataMonitoredSliderDouble>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
     }
     
 protected:
@@ -600,7 +600,7 @@ private:
 };
 
 // Monitored Double Slider With Text
-class MonitoredSliderDoubleWithText : public SliderWidget<double, MonitoredImGuiValueWithText> {
+class ImDataMonitoredSliderDoubleWithText : public SliderWidget<double, ImDataMonitoredValueWithText> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -623,11 +623,11 @@ public:
     }
     
     static auto create(double min_val, double max_val, double initial_value = 0.0, bool show_precision_input = false) {
-        return std::make_unique<MonitoredSliderDoubleWithText>(min_val, max_val, initial_value, show_precision_input);
+        return std::make_unique<ImDataMonitoredSliderDoubleWithText>(min_val, max_val, initial_value, show_precision_input);
     }
     
     static auto create(Getter getter, Setter setter, double min_val, double max_val, double default_value = 0.0, bool show_precision_input = false) {
-        return std::make_unique<MonitoredSliderDoubleWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
+        return std::make_unique<ImDataMonitoredSliderDoubleWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
     }
     
 protected:
@@ -693,7 +693,7 @@ private:
 // ============================================================================
 
 // Simple UInt8 Slider
-class SimpleSliderUInt8 : public SliderWidget<uint8_t, SimpleImGuiValue> {
+class ImDataSimpleSliderUInt8 : public SliderWidget<uint8_t, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
@@ -702,7 +702,7 @@ public:
     {}
     
     static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
-        return std::make_unique<SimpleSliderUInt8>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataSimpleSliderUInt8>(min_val, max_val, initial_value);
     }
     
 protected:
@@ -734,7 +734,7 @@ protected:
 };
 
 // Monitored UInt8 Slider
-class MonitoredSliderUInt8 : public SliderWidget<uint8_t, MonitoredImGuiValue> {
+class ImDataMonitoredSliderUInt8 : public SliderWidget<uint8_t, ImDataMonitoredValue> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -755,11 +755,11 @@ public:
     }
     
     static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderUInt8>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderUInt8>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value = 0) {
-        return std::make_unique<MonitoredSliderUInt8>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderUInt8>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -790,7 +790,7 @@ protected:
 };
 
 // Monitored UInt8 Slider With Text
-class MonitoredSliderUInt8WithText : public SliderWidget<uint8_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredSliderUInt8WithText : public SliderWidget<uint8_t, ImDataMonitoredValueWithText> {
 public:
     using Base = SliderWidget;
     
@@ -809,11 +809,11 @@ public:
     }
     
     static auto create(uint8_t min_val, uint8_t max_val, uint8_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderUInt8WithText>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderUInt8WithText>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint8_t min_val, uint8_t max_val, uint8_t default_value = 0) {
-        return std::make_unique<MonitoredSliderUInt8WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderUInt8WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -851,7 +851,7 @@ protected:
 // ============================================================================
 
 // Simple UInt16 Slider
-class SimpleSliderUInt16 : public SliderWidget<uint16_t, SimpleImGuiValue> {
+class ImDataSimpleSliderUInt16 : public SliderWidget<uint16_t, ImDataSimpleValue> {
 public:
     using Base = SliderWidget;
     
@@ -860,7 +860,7 @@ public:
     {}
     
     static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
-        return std::make_unique<SimpleSliderUInt16>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataSimpleSliderUInt16>(min_val, max_val, initial_value);
     }
     
 protected:
@@ -892,7 +892,7 @@ protected:
 };
 
 // Monitored UInt16 Slider
-class MonitoredSliderUInt16 : public SliderWidget<uint16_t, MonitoredImGuiValue> {
+class ImDataMonitoredSliderUInt16 : public SliderWidget<uint16_t, ImDataMonitoredValue> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -913,11 +913,11 @@ public:
     }
     
     static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderUInt16>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderUInt16>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value = 0) {
-        return std::make_unique<MonitoredSliderUInt16>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderUInt16>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -948,7 +948,7 @@ protected:
 };
 
 // Monitored UInt16 Slider With Text
-class MonitoredSliderUInt16WithText : public SliderWidget<uint16_t, MonitoredImGuiValueWithText> {
+class ImDataMonitoredSliderUInt16WithText : public SliderWidget<uint16_t, ImDataMonitoredValueWithText> {
 public:
     using Base = SliderWidget;
     using typename Base::Getter;
@@ -969,11 +969,11 @@ public:
     }
     
     static auto create(uint16_t min_val, uint16_t max_val, uint16_t initial_value = 0) {
-        return std::make_unique<MonitoredSliderUInt16WithText>(min_val, max_val, initial_value);
+        return std::make_unique<ImDataMonitoredSliderUInt16WithText>(min_val, max_val, initial_value);
     }
     
     static auto create(Getter getter, Setter setter, uint16_t min_val, uint16_t max_val, uint16_t default_value = 0) {
-        return std::make_unique<MonitoredSliderUInt16WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
+        return std::make_unique<ImDataMonitoredSliderUInt16WithText>(std::move(getter), std::move(setter), min_val, max_val, default_value);
     }
     
 protected:
@@ -1007,10 +1007,10 @@ protected:
 };
 
 // Type aliases for compatibility
-using ImGuiSlider = SimpleSliderFloat;
-using ImGuiSliderDouble = SimpleSliderDouble;
-using ImGuiSliderInt32 = SimpleSliderInt32;
-using ImGuiSliderUInt8 = SimpleSliderUInt8;
-using ImGuiSliderUInt16 = SimpleSliderUInt16;
+using ImGuiSlider = ImDataSimpleSliderFloat;
+using ImGuiSliderDouble = ImDataSimpleSliderDouble;
+using ImGuiSliderInt32 = ImDataSimpleSliderInt32;
+using ImGuiSliderUInt8 = ImDataSimpleSliderUInt8;
+using ImGuiSliderUInt16 = ImDataSimpleSliderUInt16;
 
 } // namespace RC::ImDataControls
