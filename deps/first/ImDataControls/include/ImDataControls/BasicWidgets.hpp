@@ -8,14 +8,7 @@
 #include <String/StringType.hpp>
 
 namespace RC::ImDataControls {
-
-// Edit modes for controlling widget interaction
-enum class EditMode {
-    Editable,   // Normal user-editable control
-    ReadOnly,   // Displays value with disabled controls (grayed out)
-    ViewOnly    // Minimal text-only display
-};
-
+    
 // Base template for widget types
 template<typename ValueType, template<typename> class ComposedType>
 class BasicWidget : public ComposedType<ValueType> {
