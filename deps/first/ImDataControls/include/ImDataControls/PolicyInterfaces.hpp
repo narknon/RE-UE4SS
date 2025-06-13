@@ -39,39 +39,16 @@ public:
     virtual const std::string& get_tooltip() const = 0;
     virtual void set_tooltip(const std::string& tooltip) = 0;
     
-    // Add Query Interface pattern
+    // Just declare the query interface methods
     template<typename T>
-    T* query_interface() {
-        if (get_capabilities_for<T>()) {
-            return reinterpret_cast<T*>(this);
-        }
-        return nullptr;
-    }
-
+    T* query_interface();
+    
     template<typename T>
-    const T* query_interface() const {
-        if (get_capabilities_for<T>()) {
-            return reinterpret_cast<const T*>(this);
-        }
-        return nullptr;
-    }
+    const T* query_interface() const;
 
 private:
     template<typename T>
-    bool get_capabilities_for() const {
-        auto caps = get_capabilities();
-        if constexpr (std::is_same_v<T, IDeferredUpdate>) return caps.has_deferred_update;
-        else if constexpr (std::is_same_v<T, IExternalSync>) return caps.has_external_sync;
-        else if constexpr (std::is_same_v<T, IValidatable>) return caps.has_validation;
-        else if constexpr (std::is_same_v<T, IHistorical>) return caps.has_history;
-        else if constexpr (std::is_same_v<T, IVisibilityControl>) return caps.has_visibility;
-        else if constexpr (std::is_same_v<T, IStringConvertible>) return caps.has_string_conversion;
-        else if constexpr (std::is_same_v<T, ITextRepresentation>) return caps.has_text_representation;
-        else if constexpr (std::is_same_v<T, ICustomCallbacks>) return caps.has_custom_callbacks;
-        else if constexpr (std::is_same_v<T, IImmediateApply>) return caps.has_immediate_apply;
-        else if constexpr (std::is_same_v<T, IEditModeControl>) return true; // Always available
-        else return false;
-    }
+    bool get_capabilities_for() const;
 };
 
 // Capability: Deferred updates
@@ -197,5 +174,37 @@ struct Capabilities {
         , has_immediate_apply(false)
     {}
 };
+
+    template<typename T>
+T* IValueControl::query_interface() {
+        if (get_capabilities_for<T>()) {
+            return reinterpret_cast<T*>(this);
+        }
+        return nullptr;
+    }
+
+    template<typename T>
+    const T* IValueControl::query_interface() const {
+        if (get_capabilities_for<T>()) {
+            return reinterpret_cast<const T*>(this);
+        }
+        return nullptr;
+    }
+
+    template<typename T>
+    bool IValueControl::get_capabilities_for() const {
+        auto caps = get_capabilities();
+        if constexpr (std::is_same_v<T, IDeferredUpdate>) return caps.has_deferred_update;
+        else if constexpr (std::is_same_v<T, IExternalSync>) return caps.has_external_sync;
+        else if constexpr (std::is_same_v<T, IValidatable>) return caps.has_validation;
+        else if constexpr (std::is_same_v<T, IHistorical>) return caps.has_history;
+        else if constexpr (std::is_same_v<T, IVisibilityControl>) return caps.has_visibility;
+        else if constexpr (std::is_same_v<T, IStringConvertible>) return caps.has_string_conversion;
+        else if constexpr (std::is_same_v<T, ITextRepresentation>) return caps.has_text_representation;
+        else if constexpr (std::is_same_v<T, ICustomCallbacks>) return caps.has_custom_callbacks;
+        else if constexpr (std::is_same_v<T, IImmediateApply>) return caps.has_immediate_apply;
+        else if constexpr (std::is_same_v<T, IEditModeControl>) return true; // Always available
+        else return false;
+    }
 
 } // namespace RC::ImDataControls
