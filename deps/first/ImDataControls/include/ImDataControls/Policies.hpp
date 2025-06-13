@@ -37,9 +37,12 @@ public:
                m_pending_value.value() != get_current_value();
     }
     
-    // Existing template methods remain...
     [[nodiscard]] const T& get_pending_value() const {
-        return m_pending_value.value_or(get_current_value());
+        if (m_pending_value.has_value()) {
+            return m_pending_value.value();
+        } else {
+            return get_current_value();
+        }
     }
     
     void set_pending_value(const T& value) {
