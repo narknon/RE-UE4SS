@@ -88,6 +88,10 @@ public:
     void clear_changed() { m_changed = false; }
     
     // IValueControl implementation
+    Capabilities get_capabilities() const override {
+        return Capabilities{}; // All false by default
+    }
+    
     const std::string& get_name() const override { return m_name; }
     void set_name(const std::string& name) override { m_name = name; }
     const std::string& get_tooltip() const override { return m_tooltip; }
@@ -140,6 +144,44 @@ public:
         : Base(std::forward<Args>(args)...)
         , Policies()...
     {}
+    
+    // Automatically build capabilities from included policies at compile time
+    Capabilities get_capabilities() const override {
+        Capabilities caps;
+        
+        // Use fold expression to check each policy
+        ([&]{
+            if constexpr (std::is_base_of_v<IDeferredUpdate, Policies>) { 
+                caps.has_deferred_update = true; 
+            }
+            if constexpr (std::is_base_of_v<IExternalSync, Policies>) { 
+                caps.has_external_sync = true; 
+            }
+            if constexpr (std::is_base_of_v<IValidatable, Policies>) { 
+                caps.has_validation = true; 
+            }
+            if constexpr (std::is_base_of_v<IHistorical, Policies>) { 
+                caps.has_history = true; 
+            }
+            if constexpr (std::is_base_of_v<IVisibilityControl, Policies>) { 
+                caps.has_visibility = true; 
+            }
+            if constexpr (std::is_base_of_v<IStringConvertible, Policies>) { 
+                caps.has_string_conversion = true; 
+            }
+            if constexpr (std::is_base_of_v<ITextRepresentation, Policies>) { 
+                caps.has_text_representation = true; 
+            }
+            if constexpr (std::is_base_of_v<ICustomCallbacks, Policies>) { 
+                caps.has_custom_callbacks = true; 
+            }
+            if constexpr (std::is_base_of_v<IImmediateApply, Policies>) { 
+                caps.has_immediate_apply = true; 
+            }
+        }(), ...);
+        
+        return caps;
+    }
     
 protected:
     // Bridge methods for policies
