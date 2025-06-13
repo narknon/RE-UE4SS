@@ -1154,5 +1154,71 @@ namespace RC
             }
             return std::nullopt;
         }
+        
+        /**
+         * Platform-safe string copy that handles the differences between 
+         * strncpy_s (Windows) and strncpy (other platforms).
+         * Ensures null termination on all platforms.
+         * 
+         * @param dest Destination buffer
+         * @param dest_size Size of destination buffer
+         * @param src Source string
+         * @param count Maximum number of characters to copy (excluding null terminator)
+         */
+        inline void safe_string_copy(char* dest, size_t dest_size, 
+                                   const char* src, size_t count)
+        {
+#ifdef PLATFORM_WINDOWS
+            strncpy_s(dest, dest_size, src, count);
+#else
+            size_t copy_count = std::min(count, dest_size - 1);
+            strncpy(dest, src, copy_count);
+            dest[copy_count] = '\0';
+#endif
+        }
+
+        /**
+         * Platform-safe string copy for arrays with automatic size detection.
+         * 
+         * @param dest Destination array
+         * @param src Source string
+         */
+        template<size_t N>
+        inline void safe_string_copy(char (&dest)[N], const char* src)
+        {
+            safe_string_copy(dest, N, src, N - 1);
+        }
+
+        /**
+         * Platform-safe wide string copy.
+         * 
+         * @param dest Destination buffer
+         * @param dest_size Size of destination buffer in wide characters
+         * @param src Source wide string
+         * @param count Maximum number of wide characters to copy (excluding null terminator)
+         */
+        inline void safe_string_copy(wchar_t* dest, size_t dest_size,
+                                   const wchar_t* src, size_t count)
+        {
+#ifdef PLATFORM_WINDOWS
+            wcsncpy_s(dest, dest_size, src, count);
+#else
+            size_t copy_count = std::min(count, dest_size - 1);
+            wcsncpy(dest, src, copy_count);
+            dest[copy_count] = L'\0';
+#endif
+        }
+
+        /**
+         * Platform-safe wide string copy for arrays with automatic size detection.
+         * 
+         * @param dest Destination wide character array
+         * @param src Source wide string
+         */
+        template<size_t N>
+        inline void safe_string_copy(wchar_t (&dest)[N], const wchar_t* src)
+        {
+            safe_string_copy(dest, N, src, N - 1);
+        }
     } // namespace String
 } // namespace RC
