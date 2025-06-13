@@ -1741,6 +1741,7 @@ public:
     }
     
     void set_size(const ImVec2& size) { m_size = size; }
+    [[nodiscard]] const ImVec2& get_size() const { return m_size; }
     
 protected:
     bool draw_impl(const char* label) override {
@@ -1799,6 +1800,7 @@ public:
     }
     
     void set_size(const ImVec2& size) { m_size = size; }
+    [[nodiscard]] const ImVec2& get_size() const { return m_size; }
     
 protected:
     bool draw_impl(const char* label) override {

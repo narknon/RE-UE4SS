@@ -460,6 +460,8 @@ public:
         return std::make_unique<ImDataSimpleSliderDouble>(min_val, max_val, initial_value, show_precision_input);
     }
     
+    [[nodiscard]] bool get_show_precision_input() const { return m_show_precision_input; }
+    
 protected:
     bool draw_impl(const char* label) override {
         if (this->m_edit_mode == EditMode::ViewOnly) {
@@ -543,6 +545,8 @@ public:
     static auto create(Getter getter, Setter setter, double min_val, double max_val, double default_value = 0.0, bool show_precision_input = false) {
         return std::make_unique<ImDataMonitoredSliderDouble>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
     }
+    
+    [[nodiscard]] bool get_show_precision_input() const { return m_show_precision_input; }
     
 protected:
     bool draw_impl(const char* label) override {
@@ -629,6 +633,8 @@ public:
     static auto create(Getter getter, Setter setter, double min_val, double max_val, double default_value = 0.0, bool show_precision_input = false) {
         return std::make_unique<ImDataMonitoredSliderDoubleWithText>(std::move(getter), std::move(setter), min_val, max_val, default_value, show_precision_input);
     }
+    
+    [[nodiscard]] bool get_show_precision_input() const { return m_show_precision_input; }
     
 protected:
     bool draw_impl(const char* label) override {
@@ -1121,6 +1127,10 @@ public:
     void set_speed(float speed) { m_speed = speed; }
     void set_range(float min, float max) { m_min = min; m_max = max; }
     
+    [[nodiscard]] float get_speed() const { return m_speed; }
+    [[nodiscard]] float get_min() const { return m_min; }
+    [[nodiscard]] float get_max() const { return m_max; }
+    
 protected:
     bool draw_impl(const char* label) override {
         if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
@@ -1410,6 +1420,10 @@ public:
     void set_speed(float speed) { m_speed = speed; }
     void set_range(int32_t min, int32_t max) { m_min = min; m_max = max; }
     
+    [[nodiscard]] float get_speed() const { return m_speed; }
+    [[nodiscard]] int32_t get_min() const { return m_min; }
+    [[nodiscard]] int32_t get_max() const { return m_max; }
+    
 protected:
     bool draw_impl(const char* label) override {
         if (this->get_edit_mode() == IEditModeControl::EditMode::ViewOnly) {
@@ -1467,6 +1481,10 @@ public:
     
     void set_speed(float speed) { m_speed = speed; }
     void set_range(double min, double max) { m_min = min; m_max = max; }
+    
+    [[nodiscard]] float get_speed() const { return m_speed; }
+    [[nodiscard]] double get_min() const { return m_min; }
+    [[nodiscard]] double get_max() const { return m_max; }
     
 protected:
     bool draw_impl(const char* label) override {
