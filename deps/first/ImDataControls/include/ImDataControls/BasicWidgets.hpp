@@ -783,7 +783,7 @@ protected:
     }
     
 private:
-    static thread_local std::vector<char> s_buffer;
+    inline static thread_local std::vector<char> s_buffer;
 };
 
 // Monitored String - With external sync
@@ -832,7 +832,7 @@ protected:
     }
     
 private:
-    static thread_local std::vector<char> s_buffer;
+    inline static thread_local std::vector<char> s_buffer;
 };
 
 // Config String - With validation and deferred updates
@@ -889,7 +889,7 @@ protected:
     }
     
 private:
-    static thread_local std::vector<char> s_buffer;
+    inline static thread_local std::vector<char> s_buffer;
 };
 
 // ============================================================================
@@ -1776,7 +1776,7 @@ protected:
     }
     
 private:
-    static thread_local std::vector<char> s_buffer;
+    inline static thread_local std::vector<char> s_buffer;
     ImVec2 m_size;
 };
 
@@ -1834,28 +1834,8 @@ protected:
     }
     
 private:
-    static thread_local std::vector<char> s_buffer;
+    inline static thread_local std::vector<char> s_buffer;
     ImVec2 m_size;
 };
-
-// Type aliases for compatibility
-using ImGuiToggle = ImDataSimpleToggle;
-using ImGuiFloat = ImDataSimpleFloat;
-using ImGuiDouble = ImDataSimpleDouble;
-using ImGuiInt32 = ImDataSimpleInt32;
-using ImGuiInt64 = ImDataSimpleInt64;
-using ImGuiUInt8 = ImDataSimpleUInt8;
-using ImGuiUInt16 = ImDataSimpleUInt16;
-using ImGuiUInt32 = ImDataSimpleUInt32;
-using ImGuiUInt64 = ImDataSimpleUInt64;
-using ImGuiString = ImDataSimpleString;
-using ImGuiTextMultiline = ImDataSimpleTextMultiline;
-
-// Thread-local buffer definitions for text string widgets
-thread_local std::vector<char> ImDataSimpleString::s_buffer;
-thread_local std::vector<char> ImDataMonitoredString::s_buffer;
-thread_local std::vector<char> ImDataConfigString::s_buffer;
-thread_local std::vector<char> ImDataSimpleTextMultiline::s_buffer;
-thread_local std::vector<char> ImDataMonitoredTextMultiline::s_buffer;
 
 } // namespace RC::ImDataControls
