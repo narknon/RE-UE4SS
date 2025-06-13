@@ -288,9 +288,10 @@ namespace RC::ImDataControls {
     const std::vector<std::string>& options,
     int32_t default_value = 0)
 {
-    auto combo = ImDataMonitoredCombo::create(getter, setter, default_value);
-    combo->set_options(options);
-    return combo;
+    return std::make_unique<ImDataMonitoredCombo>(
+        options,  // Widget-specific parameter first
+        std::move(getter), std::move(setter), default_value  // Base class parameters
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_drag_float(
@@ -301,10 +302,10 @@ namespace RC::ImDataControls {
     float min = 0.0f,
     float max = 0.0f)
 {
-    auto drag = ImDataMonitoredDragFloat::create(getter, setter, default_value);
-    drag->set_speed(speed);
-    drag->set_range(min, max);
-    return drag;
+    return std::make_unique<ImDataMonitoredDragFloat>(
+        speed, min, max,  // Widget-specific parameters
+        std::move(getter), std::move(setter), default_value  // Base class parameters
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_drag_int(
@@ -315,10 +316,10 @@ namespace RC::ImDataControls {
     int32_t min = 0,
     int32_t max = 0)
 {
-    auto drag = ImDataMonitoredDragInt::create(getter, setter, default_value);
-    drag->set_speed(speed);
-    drag->set_range(min, max);
-    return drag;
+    return std::make_unique<ImDataMonitoredDragInt>(
+        speed, min, max,  // Widget-specific parameters
+        std::move(getter), std::move(setter), default_value  // Base class parameters
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_drag_double(
@@ -329,10 +330,10 @@ namespace RC::ImDataControls {
     double min = 0.0,
     double max = 0.0)
 {
-    auto drag = ImDataMonitoredDragDouble::create(getter, setter, default_value);
-    drag->set_speed(speed);
-    drag->set_range(min, max);
-    return drag;
+    return std::make_unique<ImDataMonitoredDragDouble>(
+        speed, min, max,  // Widget-specific parameters
+        std::move(getter), std::move(setter), default_value  // Base class parameters
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_color3(
@@ -342,7 +343,9 @@ namespace RC::ImDataControls {
     float g = 1.0f,
     float b = 1.0f)
 {
-    return ImDataMonitoredColor3::create(std::move(getter), std::move(setter), {r, g, b});
+    return std::make_unique<ImDataMonitoredColor3>(
+        std::move(getter), std::move(setter), r, g, b
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_color4(
@@ -353,7 +356,9 @@ namespace RC::ImDataControls {
     float b = 1.0f,
     float a = 1.0f)
 {
-    return ImDataMonitoredColor4::create(std::move(getter), std::move(setter), {r, g, b, a});
+    return std::make_unique<ImDataMonitoredColor4>(
+        std::move(getter), std::move(setter), r, g, b, a
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_vector2(
@@ -362,7 +367,9 @@ namespace RC::ImDataControls {
     float x = 0.0f,
     float y = 0.0f)
 {
-    return ImDataMonitoredVector2::create(std::move(getter), std::move(setter), {x, y});
+    return std::make_unique<ImDataMonitoredVector2>(
+        std::move(getter), std::move(setter), x, y
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_vector3(
@@ -372,7 +379,9 @@ namespace RC::ImDataControls {
     float y = 0.0f,
     float z = 0.0f)
 {
-    return ImDataMonitoredVector3::create(std::move(getter), std::move(setter), {x, y, z});
+    return std::make_unique<ImDataMonitoredVector3>(
+        std::move(getter), std::move(setter), x, y, z
+    );
 }
 
 [[nodiscard]] inline auto make_imdata_monitored_radio_button(
@@ -381,9 +390,10 @@ namespace RC::ImDataControls {
     const std::vector<std::string>& options,
     int32_t default_value = 0)
 {
-    auto radio = ImDataMonitoredRadioButton::create(getter, setter, default_value);
-    radio->set_options(options);
-    return radio;
+    return std::make_unique<ImDataMonitoredRadioButton>(
+        options,  // Widget-specific parameter first
+        std::move(getter), std::move(setter), default_value  // Base class parameters
+    );
 }
 
 // Convenience template for creating monitored values from member pointers
