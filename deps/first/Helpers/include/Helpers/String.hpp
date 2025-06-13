@@ -20,9 +20,12 @@ namespace RC
     // MODERN C++20 STRING CONCEPTS
     // =======================================================================
     template <typename T>
-    concept Character = std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
-                        std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> ||
-                        std::is_same_v<T, char32_t>;
+    concept Character = 
+        std::is_same_v<std::remove_cv_t<T>, char> ||
+        std::is_same_v<std::remove_cv_t<T>, wchar_t> ||
+        std::is_same_v<std::remove_cv_t<T>, char8_t> ||
+        std::is_same_v<std::remove_cv_t<T>, char16_t> ||
+        std::is_same_v<std::remove_cv_t<T>, char32_t>;
 
     template <typename T>
     concept StringLikeRange = std::ranges::contiguous_range<T> &&
@@ -37,11 +40,23 @@ namespace RC
                          StringLikePointer<T> ||
                          std::is_same_v<std::decay_t<T>, std::filesystem::path>;
 
+    template <typename T>
+    struct string_char_helper {
+        using type = std::remove_cv_t<std::ranges::range_value_t<std::decay_t<T>>>;
+    };
+
+    template <StringLikePointer T>
+    struct string_char_helper<T> {
+        using type = std::remove_cv_t<std::remove_pointer_t<std::decay_t<T>>>;
+    };
+
+    template <>
+    struct string_char_helper<std::filesystem::path> {
+        using type = std::filesystem::path::value_type;
+    };
+
     template <StringLike T>
-    using string_char_t = std::remove_pointer_t<std::decay_t<
-        std::conditional_t<StringLikePointer<T>, T, 
-                           decltype(std::ranges::data(std::declval<T&>()))>
-    >>;
+    using string_char_t = typename string_char_helper<std::decay_t<T>>::type;
 
     template <typename T>
     concept Utf8StringLike = StringLike<T> && 
@@ -270,6 +285,34 @@ namespace RC
 #endif
     }
 
+    auto inline to_wstring(std::u32string_view input) -> std::wstring
+    {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+        // First convert char32_t to UTF-8, then UTF-8 to wchar_t
+        static std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u32_converter{};
+        std::string utf8_temp = u32_converter.to_bytes(input.data(), input.data() + input.length());
+        
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> wchar_converter{};
+        return wchar_converter.from_bytes(utf8_temp);
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+
+    auto inline to_wstring(std::u8string_view input) -> std::wstring
+    {
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
+        return converter.from_bytes(reinterpret_cast<const char*>(input.data()), 
+                                   reinterpret_cast<const char*>(input.data() + input.length()));
+#pragma warning(default : 4996)
+    }
+
     auto inline to_string(const std::wstring& input) -> std::string
     {
 #pragma warning(disable : 4996)
@@ -305,6 +348,37 @@ namespace RC
 #endif
     }
 
+    auto inline to_string(std::u32string_view input) -> std::string
+    {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter{};
+        return converter.to_bytes(input.data(), input.data() + input.length());
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+
+    auto inline to_string(std::u8string_view input) -> std::string
+    {
+        // u8string is already UTF-8, just need to convert types
+        return std::string(reinterpret_cast<const char*>(input.data()), input.length());
+    }
+
+    auto inline to_string(std::string_view input) -> std::string
+    {
+        return std::string(input);
+    }
+
+    auto inline to_string(const std::string& input) -> std::string
+    {
+        return input;
+    }
+
     auto inline to_u16string(const std::wstring& input) -> std::u16string
     {
         return {input.begin(), input.end()};
@@ -327,12 +401,61 @@ namespace RC
         return to_u16string(temp_input);
     }
 
+    auto inline to_u16string(std::u32string_view input) -> std::u16string
+    {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+        // Convert char32_t to UTF-8, then UTF-8 to char16_t
+        static std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u32_converter{};
+        std::string utf8_temp = u32_converter.to_bytes(input.data(), input.data() + input.length());
+        
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> u16_converter{};
+        return u16_converter.from_bytes(utf8_temp);
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+
+    auto inline to_u16string(std::u8string_view input) -> std::u16string
+    {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+        return converter.from_bytes(reinterpret_cast<const char*>(input.data()), 
+                                   reinterpret_cast<const char*>(input.data() + input.length()));
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+
+    auto inline to_u16string(const std::u16string& input) -> std::u16string
+    {
+        return input;
+    }
+
+    auto inline to_u16string(std::u16string_view input) -> std::u16string
+    {
+        return std::u16string{input};
+    }
+
     // Auto String Conversion
 
     // =======================================================================
     // DEPRECATED C++17 TRAITS
     // =======================================================================
+#ifdef ENABLE_STRING_TRAIT_DEPRECATION_WARNING
     #define RC_DEPRECATED_STRING_TRAIT [[deprecated("This trait is deprecated. Use RC::StringLike concept instead. See upgrade guide for details.")]]
+#else
+    #define RC_DEPRECATED_STRING_TRAIT
+#endif
 
     // All possible char types in this project
     template <typename T>
@@ -421,6 +544,32 @@ namespace RC
         else if constexpr (std::is_same_v<CharT, char>)
         {
             return to_string(std::forward<T>(arg));
+        }
+        else if constexpr (std::is_same_v<CharT, char32_t>)
+        {
+            // For now, convert through UTF-8
+            auto utf8 = to_string(std::forward<T>(arg));
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+            static std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter{};
+            return converter.from_bytes(utf8);
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+        }
+        else if constexpr (std::is_same_v<CharT, char8_t>)
+        {
+            // Convert to UTF-8 string and reinterpret
+            auto utf8 = to_string(std::forward<T>(arg));
+            return std::basic_string<char8_t>(reinterpret_cast<const char8_t*>(utf8.data()), utf8.length());
+        }
+        else
+        {
+            static_assert(sizeof(CharT) == 0, "Unsupported target character type");
         }
     }
 
@@ -525,17 +674,57 @@ namespace RC
                 return to_charT_string_path<TargetCharT>(arg);
             }
             else {
-                // Convert via string_view
-                std::basic_string_view<SourceCharT> view;
-                if constexpr (StringLikePointer<T>) {
-                    view = std::basic_string_view<SourceCharT>(arg);
-                } else {
-                    view = std::basic_string_view<SourceCharT>(
-                        std::ranges::data(arg), 
-                        std::ranges::size(arg)
-                    );
+                // Convert via string_view with explicit type handling
+                if constexpr (std::is_same_v<SourceCharT, char>) {
+                    if constexpr (StringLikePointer<T>) {
+                        std::string_view view(arg);
+                        return to_charT_string<TargetCharT>(view);
+                    } else {
+                        std::string_view view(std::ranges::data(arg), std::ranges::size(arg));
+                        return to_charT_string<TargetCharT>(view);
+                    }
                 }
-                return to_charT_string<TargetCharT>(view);
+                else if constexpr (std::is_same_v<SourceCharT, wchar_t>) {
+                    if constexpr (StringLikePointer<T>) {
+                        std::wstring_view view(arg);
+                        return to_charT_string<TargetCharT>(view);
+                    } else {
+                        std::wstring_view view(std::ranges::data(arg), std::ranges::size(arg));
+                        return to_charT_string<TargetCharT>(view);
+                    }
+                }
+                else if constexpr (std::is_same_v<SourceCharT, char16_t>) {
+                    if constexpr (StringLikePointer<T>) {
+                        std::u16string_view view(arg);
+                        return to_charT_string<TargetCharT>(view);
+                    } else {
+                        std::u16string_view view(std::ranges::data(arg), std::ranges::size(arg));
+                        return to_charT_string<TargetCharT>(view);
+                    }
+                }
+                else if constexpr (std::is_same_v<SourceCharT, char32_t>) {
+                    if constexpr (StringLikePointer<T>) {
+                        std::u32string_view view(arg);
+                        return to_charT_string<TargetCharT>(view);
+                    } else {
+                        std::u32string_view view(std::ranges::data(arg), std::ranges::size(arg));
+                        return to_charT_string<TargetCharT>(view);
+                    }
+                }
+                else if constexpr (std::is_same_v<SourceCharT, char8_t>) {
+                    if constexpr (StringLikePointer<T>) {
+                        std::u8string_view view(arg);
+                        return to_charT_string<TargetCharT>(view);
+                    } else {
+                        std::u8string_view view(std::ranges::data(arg), std::ranges::size(arg));
+                        return to_charT_string<TargetCharT>(view);
+                    }
+                }
+                else {
+                    // This should never happen if Character concept is complete
+                    static_assert(!std::is_same_v<SourceCharT, SourceCharT>, "Unsupported source character type in to_charT");
+                    return std::basic_string<TargetCharT>{};
+                }
             }
         }
         else {
