@@ -1179,7 +1179,7 @@ public:
     using Base = BasicWidget<std::array<float, 3>, ComposedType>;
     
     ImDataColor3Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f)
-        : Base({r, g, b}) {}
+        : Base(std::array<float,3>{r, g, b}) {}
     
     // Constructor for getter/setter types
     template<typename G, typename S>
@@ -1236,7 +1236,7 @@ public:
     using Base = BasicWidget<std::array<float, 2>, ComposedType>;
     
     ImDataVector2Widget(float x = 0.0f, float y = 0.0f)
-        : Base({x, y}) {}
+        : Base(std::array<float, 2>{x, y}) {}
     
     // Constructor for getter/setter types
     template<typename G, typename S>
@@ -1292,7 +1292,7 @@ public:
     using Base = BasicWidget<std::array<float, 3>, ComposedType>;
     
     ImDataVector3Widget(float x = 0.0f, float y = 0.0f, float z = 0.0f)
-        : Base({x, y, z}) {}
+        : Base(std::array<float, 3>{x, y, z}) {}
     
     // Constructor for getter/setter types
     template<typename G, typename S>
@@ -1349,7 +1349,7 @@ public:
     using Base = BasicWidget<std::array<float, 4>, ComposedType>;
     
     ImDataColor4Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f)
-        : Base({r, g, b, a}) {}
+        : Base(std::array<float, 4>{r, g, b, a}) {}
     
     // Constructor for getter/setter types
     template<typename G, typename S>
