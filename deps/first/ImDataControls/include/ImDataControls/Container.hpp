@@ -74,19 +74,17 @@ public:
         
         // Draw values
         for (const auto& [id, ptr] : m_ordered_values) {
-            auto caps = ptr->get_capabilities();
-            
             // Check visibility
-            if (caps.has_visibility) {
-                auto visibility = static_cast<IVisibilityControl*>(ptr);
+            if (auto visibility = ptr->query_interface<IVisibilityControl>()) {
                 if (!visibility->is_visible()) continue;
                 if (visibility->is_advanced() && !m_show_advanced) continue;
             }
             
             // Apply global edit mode if enabled
             if (m_apply_global_edit_mode) {
-                auto edit_control = static_cast<IEditModeControl*>(ptr);
-                edit_control->set_edit_mode(m_global_edit_mode);
+                if (auto edit_control = ptr->query_interface<IEditModeControl>()) {
+                    edit_control->set_edit_mode(m_global_edit_mode);
+                }
             }
             
             bool changed = ptr->draw(id.c_str());
@@ -123,9 +121,7 @@ public:
     
     [[nodiscard]] bool has_pending_changes() const {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_deferred_update) {
-                auto deferred = static_cast<IDeferredUpdate*>(value.get());
+            if (auto deferred = value->query_interface<IDeferredUpdate>()) {
                 if (deferred->has_pending_changes()) return true;
             }
         }
@@ -134,9 +130,7 @@ public:
     
     void apply_all() {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_deferred_update) {
-                auto deferred = static_cast<IDeferredUpdate*>(value.get());
+            if (auto deferred = value->query_interface<IDeferredUpdate>()) {
                 deferred->apply_changes();
             }
         }
@@ -145,9 +139,7 @@ public:
     
     void revert_all() {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_deferred_update) {
-                auto deferred = static_cast<IDeferredUpdate*>(value.get());
+            if (auto deferred = value->query_interface<IDeferredUpdate>()) {
                 deferred->revert_changes();
             }
         }
@@ -155,9 +147,7 @@ public:
     
     void sync_all_from_external() {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_external_sync) {
-                auto external = static_cast<IExternalSync*>(value.get());
+            if (auto external = value->query_interface<IExternalSync>()) {
                 external->sync_from_external();
             }
         }
@@ -165,9 +155,7 @@ public:
     
     void sync_all_to_external() {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_external_sync) {
-                auto external = static_cast<IExternalSync*>(value.get());
+            if (auto external = value->query_interface<IExternalSync>()) {
                 external->sync_to_external();
             }
         }
@@ -175,9 +163,7 @@ public:
     
     [[nodiscard]] bool has_advanced_values() const {
         for (const auto& [id, value] : m_values) {
-            auto caps = value->get_capabilities();
-            if (caps.has_visibility) {
-                auto visibility = static_cast<IVisibilityControl*>(value.get());
+            if (auto visibility = value->query_interface<IVisibilityControl>()) {
                 if (visibility->is_advanced()) return true;
             }
         }
