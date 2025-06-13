@@ -1228,6 +1228,11 @@ public:
     ImDataVector2Widget(float x = 0.0f, float y = 0.0f)
         : Base({x, y}) {}
     
+    // Constructor for getter/setter types
+    template<typename G, typename S>
+    ImDataVector2Widget(G&& getter, S&& setter, float x = 0.0f, float y = 0.0f)
+        : Base(std::forward<G>(getter), std::forward<S>(setter), {x, y}) {}
+    
     void set_xy(float x, float y) {
         this->m_value = {x, y};
     }
@@ -1278,6 +1283,11 @@ public:
     
     ImDataVector3Widget(float x = 0.0f, float y = 0.0f, float z = 0.0f)
         : Base({x, y, z}) {}
+    
+    // Constructor for getter/setter types
+    template<typename G, typename S>
+    ImDataVector3Widget(G&& getter, S&& setter, float x = 0.0f, float y = 0.0f, float z = 0.0f)
+        : Base(std::forward<G>(getter), std::forward<S>(setter), {x, y, z}) {}
     
     void set_xyz(float x, float y, float z) {
         this->m_value = {x, y, z};
@@ -1511,6 +1521,12 @@ public:
     
     ImDataRadioButtonWidget(const std::vector<std::string>& options, int32_t initial_value = 0)
         : Base(initial_value), m_options(options) {}
+    
+    // Constructor for types that need additional parameters (like getter/setter)
+    template<typename... BaseArgs>
+    ImDataRadioButtonWidget(const std::vector<std::string>& options, BaseArgs&&... base_args)
+        : Base(std::forward<BaseArgs>(base_args)...)
+        , m_options(options) {}
     
     void set_options(const std::vector<std::string>& options) {
         m_options = options;
