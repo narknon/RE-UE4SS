@@ -923,12 +923,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##int64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -988,12 +983,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##int64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1058,12 +1048,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##int64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1386,12 +1371,7 @@ protected:
         }
         
         char buffer[16];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint32", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1451,12 +1431,7 @@ protected:
         }
         
         char buffer[16];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint32", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1521,12 +1496,7 @@ protected:
         }
         
         char buffer[16];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint32", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1593,12 +1563,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1658,12 +1623,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
@@ -1728,12 +1688,7 @@ protected:
         }
         
         char buffer[32];
-#ifdef _WIN32
-    strncpy_s(buffer, sizeof(buffer), m_buffer.c_str(), sizeof(buffer) - 1);
-#else
-    strncpy(buffer, m_buffer.c_str(), sizeof(buffer) - 1);
-#endif
-        buffer[sizeof(buffer) - 1] = '\0';
+        RC::String::safe_string_copy(buffer, m_buffer.c_str());
         
         bool changed = false;
         if (ImGui::InputText(label ? label : "##uint64", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsDecimal)) {
