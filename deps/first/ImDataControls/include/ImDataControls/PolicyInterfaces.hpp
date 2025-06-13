@@ -21,10 +21,16 @@ enum class ValueSource {
     Config     // Loaded from configuration
 };
 
+// Forward declaration
+struct Capabilities;
+
 // Base interface for all value controls
 class IValueControl : public virtual IImGuiDrawable {
 public:
     virtual ~IValueControl() = default;
+    
+    // Capability detection
+    virtual Capabilities get_capabilities() const = 0;
     
     // Common metadata operations
     virtual const std::string& get_name() const = 0;
@@ -130,6 +136,31 @@ public:
     virtual ~IImmediateApply() = default;
     virtual void set_immediate_apply(bool immediate) = 0;
     virtual bool is_immediate_apply() const = 0;
+};
+
+// Capabilities structure for runtime capability detection
+struct Capabilities {
+    bool has_deferred_update : 1;
+    bool has_external_sync : 1;
+    bool has_validation : 1;
+    bool has_history : 1;
+    bool has_visibility : 1;
+    bool has_string_conversion : 1;
+    bool has_text_representation : 1;
+    bool has_custom_callbacks : 1;
+    bool has_immediate_apply : 1;
+    
+    constexpr Capabilities() 
+        : has_deferred_update(false)
+        , has_external_sync(false)
+        , has_validation(false)
+        , has_history(false)
+        , has_visibility(false)
+        , has_string_conversion(false)
+        , has_text_representation(false)
+        , has_custom_callbacks(false)
+        , has_immediate_apply(false)
+    {}
 };
 
 } // namespace RC::ImDataControls
