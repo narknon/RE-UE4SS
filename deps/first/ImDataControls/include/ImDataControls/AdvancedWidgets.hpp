@@ -1027,6 +1027,14 @@ public:
         update_option_pointers();
     }
     
+    // Constructor for types that need additional parameters (like getter/setter)
+    template<typename... BaseArgs>
+    ImDataComboWidget(const std::vector<std::string>& options, BaseArgs&&... base_args)
+        : Base(std::forward<BaseArgs>(base_args)...)
+        , m_options(options) {
+        update_option_pointers();
+    }
+    
     void set_options(const std::vector<std::string>& options) {
         m_options = options;
         update_option_pointers();
@@ -1104,6 +1112,12 @@ public:
                           float min = 0.0f, float max = 0.0f)
         : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
     
+    // Constructor for types that need additional parameters (like getter/setter)
+    template<typename... BaseArgs>
+    ImDataDragFloatWidget(float speed, float min, float max, BaseArgs&&... base_args)
+        : Base(std::forward<BaseArgs>(base_args)...)
+        , m_speed(speed), m_min(min), m_max(max) {}
+    
     void set_speed(float speed) { m_speed = speed; }
     void set_range(float min, float max) { m_min = min; m_max = max; }
     
@@ -1156,6 +1170,11 @@ public:
     
     ImDataColor3Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f)
         : Base({r, g, b}) {}
+    
+    // Constructor for getter/setter types
+    template<typename G, typename S>
+    ImDataColor3Widget(G&& getter, S&& setter, float r = 1.0f, float g = 1.0f, float b = 1.0f)
+        : Base(std::forward<G>(getter), std::forward<S>(setter), {r, g, b}) {}
     
     void set_rgb(float r, float g, float b) {
         this->m_value = {r, g, b};
@@ -1312,6 +1331,12 @@ public:
     ImDataColor4Widget(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f)
         : Base({r, g, b, a}) {}
     
+    // Constructor for getter/setter types
+    template<typename G, typename S>
+    ImDataColor4Widget(G&& getter, S&& setter, 
+                       float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f)
+        : Base(std::forward<G>(getter), std::forward<S>(setter), {r, g, b, a}) {}
+    
     void set_rgba(float r, float g, float b, float a) {
         this->m_value = {r, g, b, a};
     }
@@ -1366,6 +1391,12 @@ public:
                         int32_t min = 0, int32_t max = 0)
         : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
     
+    // Constructor for types that need additional parameters (like getter/setter)
+    template<typename... BaseArgs>
+    ImDataDragIntWidget(float speed, int32_t min, int32_t max, BaseArgs&&... base_args)
+        : Base(std::forward<BaseArgs>(base_args)...)
+        , m_speed(speed), m_min(min), m_max(max) {}
+    
     void set_speed(float speed) { m_speed = speed; }
     void set_range(int32_t min, int32_t max) { m_min = min; m_max = max; }
     
@@ -1417,6 +1448,12 @@ public:
     ImDataDragDoubleWidget(double initial_value = 0.0, float speed = 1.0f, 
                            double min = 0.0, double max = 0.0)
         : Base(initial_value), m_speed(speed), m_min(min), m_max(max) {}
+    
+    // Constructor for types that need additional parameters (like getter/setter)
+    template<typename... BaseArgs>
+    ImDataDragDoubleWidget(float speed, double min, double max, BaseArgs&&... base_args)
+        : Base(std::forward<BaseArgs>(base_args)...)
+        , m_speed(speed), m_min(min), m_max(max) {}
     
     void set_speed(float speed) { m_speed = speed; }
     void set_range(double min, double max) { m_min = min; m_max = max; }

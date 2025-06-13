@@ -23,6 +23,12 @@ public:
     using Base = ComposedType<ValueType>;
     using Base::Base;
     
+    // Perfect forwarding constructor
+    template<typename... Args>
+    explicit BasicWidget(Args&&... args) 
+        : Base(std::forward<Args>(args)...)
+    {}
+    
     template<RC::StringLike T>
     void set_name(T&& name) { 
         this->m_name = RC::to_utf8_string(std::forward<T>(name)); 
