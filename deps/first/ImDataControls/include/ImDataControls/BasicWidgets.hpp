@@ -763,15 +763,15 @@ protected:
         }
         
         // Ensure buffer is large enough
-        if (m_buffer.size() < m_value.size() + 256) {
-            m_buffer.resize(m_value.size() + 256);
+        if (s_buffer.size() < m_value.size() + 256) {
+            s_buffer.resize(m_value.size() + 256);
         }
-        std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
-        m_buffer[m_value.size()] = '\0';
+        std::copy(m_value.begin(), m_value.end(), s_buffer.begin());
+        s_buffer[m_value.size()] = '\0';
         
-        bool changed = ImGui::InputText(label ? label : "##string", m_buffer.data(), m_buffer.size());
+        bool changed = ImGui::InputText(label ? label : "##string", s_buffer.data(), s_buffer.size());
         if (changed) {
-            m_value = std::string(m_buffer.data());
+            m_value = std::string(s_buffer.data());
             m_changed = true;
         }
         
@@ -783,7 +783,7 @@ protected:
     }
     
 private:
-    mutable std::vector<char> m_buffer;
+    static thread_local std::vector<char> s_buffer;
 };
 
 // Monitored String - With external sync
@@ -812,16 +812,16 @@ protected:
         }
         
         // Ensure buffer is large enough
-        if (m_buffer.size() < m_value.size() + 256) {
-            m_buffer.resize(m_value.size() + 256);
+        if (s_buffer.size() < m_value.size() + 256) {
+            s_buffer.resize(m_value.size() + 256);
         }
-        std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
-        m_buffer[m_value.size()] = '\0';
+        std::copy(m_value.begin(), m_value.end(), s_buffer.begin());
+        s_buffer[m_value.size()] = '\0';
         
-        bool changed = ImGui::InputText(label ? label : "##string", m_buffer.data(), m_buffer.size());
+        bool changed = ImGui::InputText(label ? label : "##string", s_buffer.data(), s_buffer.size());
         
         if (changed && is_editable()) {
-            this->set(std::string(m_buffer.data()));
+            this->set(std::string(s_buffer.data()));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -832,7 +832,7 @@ protected:
     }
     
 private:
-    mutable std::vector<char> m_buffer;
+    static thread_local std::vector<char> s_buffer;
 };
 
 // Config String - With validation and deferred updates
@@ -860,16 +860,16 @@ protected:
         const std::string& current_value = has_pending_changes() ? get_pending_value() : m_value;
         
         // Ensure buffer is large enough
-        if (m_buffer.size() < current_value.size() + 256) {
-            m_buffer.resize(current_value.size() + 256);
+        if (s_buffer.size() < current_value.size() + 256) {
+            s_buffer.resize(current_value.size() + 256);
         }
-        std::copy(current_value.begin(), current_value.end(), m_buffer.begin());
-        m_buffer[current_value.size()] = '\0';
+        std::copy(current_value.begin(), current_value.end(), s_buffer.begin());
+        s_buffer[current_value.size()] = '\0';
         
-        bool changed = ImGui::InputText(label ? label : "##string", m_buffer.data(), m_buffer.size());
+        bool changed = ImGui::InputText(label ? label : "##string", s_buffer.data(), s_buffer.size());
         
         if (changed && is_editable()) {
-            try_set(std::string(m_buffer.data()));
+            try_set(std::string(s_buffer.data()));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -889,7 +889,7 @@ protected:
     }
     
 private:
-    mutable std::vector<char> m_buffer;
+    static thread_local std::vector<char> s_buffer;
 };
 
 // ============================================================================
@@ -1755,16 +1755,16 @@ protected:
         }
         
         // Ensure buffer is large enough
-        if (m_buffer.size() < m_value.size() + 1024) {
-            m_buffer.resize(m_value.size() + 1024);
+        if (s_buffer.size() < m_value.size() + 1024) {
+            s_buffer.resize(m_value.size() + 1024);
         }
-        std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
-        m_buffer[m_value.size()] = '\0';
+        std::copy(m_value.begin(), m_value.end(), s_buffer.begin());
+        s_buffer[m_value.size()] = '\0';
         
         bool changed = ImGui::InputTextMultiline(label ? label : "##textmultiline", 
-                                                 m_buffer.data(), m_buffer.size(), m_size);
+                                                 s_buffer.data(), s_buffer.size(), m_size);
         if (changed) {
-            m_value = std::string(m_buffer.data());
+            m_value = std::string(s_buffer.data());
             m_changed = true;
         }
         
@@ -1776,7 +1776,7 @@ protected:
     }
     
 private:
-    mutable std::vector<char> m_buffer;
+    static thread_local std::vector<char> s_buffer;
     ImVec2 m_size;
 };
 
@@ -1813,17 +1813,17 @@ protected:
         }
         
         // Ensure buffer is large enough
-        if (m_buffer.size() < m_value.size() + 1024) {
-            m_buffer.resize(m_value.size() + 1024);
+        if (s_buffer.size() < m_value.size() + 1024) {
+            s_buffer.resize(m_value.size() + 1024);
         }
-        std::copy(m_value.begin(), m_value.end(), m_buffer.begin());
-        m_buffer[m_value.size()] = '\0';
+        std::copy(m_value.begin(), m_value.end(), s_buffer.begin());
+        s_buffer[m_value.size()] = '\0';
         
         bool changed = ImGui::InputTextMultiline(label ? label : "##textmultiline", 
-                                                 m_buffer.data(), m_buffer.size(), m_size);
+                                                 s_buffer.data(), s_buffer.size(), m_size);
         
         if (changed && is_editable()) {
-            this->set(std::string(m_buffer.data()));
+            this->set(std::string(s_buffer.data()));
         }
         
         if (m_edit_mode == EditMode::ReadOnly) {
@@ -1834,7 +1834,7 @@ protected:
     }
     
 private:
-    mutable std::vector<char> m_buffer;
+    static thread_local std::vector<char> s_buffer;
     ImVec2 m_size;
 };
 
@@ -1850,5 +1850,12 @@ using ImGuiUInt32 = ImDataSimpleUInt32;
 using ImGuiUInt64 = ImDataSimpleUInt64;
 using ImGuiString = ImDataSimpleString;
 using ImGuiTextMultiline = ImDataSimpleTextMultiline;
+
+// Thread-local buffer definitions for text string widgets
+thread_local std::vector<char> ImDataSimpleString::s_buffer;
+thread_local std::vector<char> ImDataMonitoredString::s_buffer;
+thread_local std::vector<char> ImDataConfigString::s_buffer;
+thread_local std::vector<char> ImDataSimpleTextMultiline::s_buffer;
+thread_local std::vector<char> ImDataMonitoredTextMultiline::s_buffer;
 
 } // namespace RC::ImDataControls
