@@ -2247,22 +2247,43 @@ namespace RC::GUI
         {
             return render_set_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
-        
-        // For non-container properties, display the offset and name
-        if (first_offset == -1)
+        // Check for primitive property types and use specialized renderers
+        else if (property->IsA<FBoolProperty>())
         {
-            ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+            return render_bool_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
-        else
+        else if (property->IsA<FNumericProperty>())
         {
-            ImGui::Text("0x%X%s %s:",
-                        first_offset,
-                        container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
-                        property_name.c_str());
+            return render_numeric_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
-        
-        if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
+        else if (property->IsA<FStrProperty>())
         {
+            return render_string_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FTextProperty>())
+        {
+            return render_text_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FNameProperty>())
+        {
+            return render_name_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        // Handle enum properties (including byte enums)
+        else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
+        {
+            // For non-container properties, display the offset and name
+            if (first_offset == -1)
+            {
+                ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+            }
+            else
+            {
+                ImGui::Text("0x%X%s %s:",
+                            first_offset,
+                            container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
+                            property_name.c_str());
+            }
+            
             UEnum* uenum{};
             if (property->IsA<FByteProperty>())
             {
@@ -2286,45 +2307,91 @@ namespace RC::GUI
             ImGui::SameLine();
             ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
             render_property_value_context_menu();
+            
+            if (last_property_in)
+            {
+                *last_property_in = property;
+            }
+
+            render_property_tooltip(property);
+
+            auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
+            StringType parent_name{};
+            if (container_type == ContainerType::Object)
+            {
+                parent_name = obj ? obj->GetName() : STR("None");
+            }
+            auto edit_property_value_modal_name = to_string(fmt::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
+
+            if (open_edit_value_popup)
+            {
+                // Defer the popup opening - store all necessary context
+                s_deferred_property_edit_popup.pending = true;
+                s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
+                s_deferred_property_edit_popup.initial_value = to_string(property_text.GetCharArray());
+                s_deferred_property_edit_popup.property = property;
+                s_deferred_property_edit_popup.container = container;
+                s_deferred_property_edit_popup.obj = obj;
+                s_deferred_property_edit_popup.container_type = container_type;
+            }
+
+            if (m_modal_edit_property_value_opened_this_frame)
+            {
+                m_modal_edit_property_value_opened_this_frame = false;
+            }
         }
         else
         {
+            // Fallback for any unhandled property types
+            if (first_offset == -1)
+            {
+                ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+            }
+            else
+            {
+                ImGui::Text("0x%X%s %s:",
+                            first_offset,
+                            container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
+                            property_name.c_str());
+            }
+            
             ImGui::SameLine();
             ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
             render_property_value_context_menu();
-        }
+            
+            if (last_property_in)
+            {
+                *last_property_in = property;
+            }
 
-        if (last_property_in)
-        {
-            *last_property_in = property;
-        }
+            render_property_tooltip(property);
 
-        render_property_tooltip(property);
+            auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
+            StringType parent_name{};
+            if (container_type == ContainerType::Object)
+            {
+                parent_name = obj ? obj->GetName() : STR("None");
+            }
+            auto edit_property_value_modal_name = to_string(fmt::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
 
-        auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
-        StringType parent_name{};
-        if (container_type == ContainerType::Object)
-        {
-            parent_name = obj ? obj->GetName() : STR("None");
-        }
-        auto edit_property_value_modal_name = to_string(fmt::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
+            if (open_edit_value_popup)
+            {
+                // Defer the popup opening - store all necessary context
+                s_deferred_property_edit_popup.pending = true;
+                s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
+                s_deferred_property_edit_popup.initial_value = to_string(property_text.GetCharArray());
+                s_deferred_property_edit_popup.property = property;
+                s_deferred_property_edit_popup.container = container;
+                s_deferred_property_edit_popup.obj = obj;
+                s_deferred_property_edit_popup.container_type = container_type;
+            }
 
-        if (open_edit_value_popup)
-        {
-            // Defer the popup opening - store all necessary context
-            s_deferred_property_edit_popup.pending = true;
-            s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
-            s_deferred_property_edit_popup.initial_value = to_string(property_text.GetCharArray());
-            s_deferred_property_edit_popup.property = property;
-            s_deferred_property_edit_popup.container = container;
-            s_deferred_property_edit_popup.obj = obj;
-            s_deferred_property_edit_popup.container_type = container_type;
+            if (m_modal_edit_property_value_opened_this_frame)
+            {
+                m_modal_edit_property_value_opened_this_frame = false;
+            }
         }
-
-        if (m_modal_edit_property_value_opened_this_frame)
-        {
-            m_modal_edit_property_value_opened_this_frame = false;
-        }
+        
         return next_item_to_render;
     }
 
