@@ -2338,15 +2338,7 @@ namespace RC::GUI
             *last_property_in = property;
         }
 
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
-            ImGui::Separator();
-            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-            ImGui::Text("Size: 0x%X", property->GetSize());
-            ImGui::EndTooltip();
-        }
+        render_property_tooltip(property);
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
         StringType parent_name{};
@@ -2470,15 +2462,7 @@ namespace RC::GUI
 
     auto LiveView::render_property_tooltip(FProperty* property) -> void
     {
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
-            ImGui::Separator();
-            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-            ImGui::Text("Size: 0x%X", property->GetSize());
-            ImGui::EndTooltip();
-        }
+        render_property_tooltip(property);
     }
 
     auto LiveView::render_unreflected_data(int32_t offset, int32_t size) -> void
