@@ -49,6 +49,7 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
+#include <Unreal/FString.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <IconsFontAwesome5.h>
@@ -2419,7 +2420,68 @@ namespace RC::GUI
 
     auto LiveView::render_property_tooltip(FProperty* property) -> void
     {
-        render_property_tooltip(property);
+        if (!property) return;
+        
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Type: %s", to_string(property->GetClass().GetName()).c_str());
+            ImGui::Text("Flags: 0x%llX", property->GetPropertyFlags());
+            ImGui::Text("Size: %d", property->GetSize());
+            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+            ImGui::Text("Array Dim: %d", property->GetArrayDim());
+            
+            // Add type-specific information
+            if (auto struct_prop = CastField<FStructProperty>(property))
+            {
+                if (auto ustruct = struct_prop->GetStruct())
+                {
+                    ImGui::Text("Struct: %s", to_string(ustruct->GetName()).c_str());
+                    ImGui::Text("Struct Size: %d", ustruct->GetPropertiesSize());
+                }
+            }
+            else if (auto array_prop = CastField<FArrayProperty>(property))
+            {
+                if (auto inner = array_prop->GetInner())
+                {
+                    ImGui::Text("Inner Type: %s", to_string(inner->GetClass().GetName()).c_str());
+                }
+            }
+            else if (auto map_prop = CastField<FMapProperty>(property))
+            {
+                if (auto key_prop = map_prop->GetKeyProp())
+                {
+                    ImGui::Text("Key Type: %s", to_string(key_prop->GetClass().GetName()).c_str());
+                }
+                if (auto value_prop = map_prop->GetValueProp())
+                {
+                    ImGui::Text("Value Type: %s", to_string(value_prop->GetClass().GetName()).c_str());
+                }
+            }
+            else if (auto object_prop = CastField<FObjectProperty>(property))
+            {
+                if (auto prop_class = object_prop->GetPropertyClass())
+                {
+                    ImGui::Text("Object Class: %s", to_string(prop_class->GetName()).c_str());
+                }
+            }
+            else if (auto enum_prop = CastField<FEnumProperty>(property))
+            {
+                if (auto uenum = enum_prop->GetEnum())
+                {
+                    ImGui::Text("Enum: %s", to_string(uenum->GetName()).c_str());
+                }
+            }
+            else if (auto byte_prop = CastField<FByteProperty>(property))
+            {
+                if (byte_prop->IsEnum() && byte_prop->GetEnum())
+                {
+                    ImGui::Text("Enum: %s", to_string(byte_prop->GetEnum()->GetName()).c_str());
+                }
+            }
+            
+            ImGui::EndTooltip();
+        }
     }
 
     // Helper function to format a compact struct preview
