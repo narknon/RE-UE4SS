@@ -2224,17 +2224,7 @@ namespace RC::GUI
             }
         };
 
-        if (first_offset == -1)
-        {
-            ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
-        }
-        else
-        {
-            ImGui::Text("0x%X%s %s:",
-                        first_offset,
-                        container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
-                        property_name.c_str());
-        }
+        // Check if this is a container property that will handle its own rendering
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
             return render_struct_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
@@ -2250,6 +2240,19 @@ namespace RC::GUI
         else if (auto set_property = CastField<FSetProperty>(property); set_property)
         {
             return render_set_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        
+        // For non-container properties, display the offset and name
+        if (first_offset == -1)
+        {
+            ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+        }
+        else
+        {
+            ImGui::Text("0x%X%s %s:",
+                        first_offset,
+                        container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
+                        property_name.c_str());
         }
         else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
         {
