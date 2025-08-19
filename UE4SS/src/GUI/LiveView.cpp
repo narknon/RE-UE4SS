@@ -34,6 +34,11 @@
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FClassProperty.hpp>
+#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/FLazyObjectProperty.hpp>
+#include <Unreal/Property/FSoftObjectProperty.hpp>
+#include <Unreal/Property/FInterfaceProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
@@ -2268,6 +2273,31 @@ namespace RC::GUI
         else if (property->IsA<FNameProperty>())
         {
             return render_name_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        // Handle object/reference properties
+        else if (property->IsA<FClassProperty>())
+        {
+            return render_class_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FWeakObjectProperty>())
+        {
+            return render_weak_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FLazyObjectProperty>())
+        {
+            return render_lazy_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FSoftObjectProperty>())
+        {
+            return render_soft_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FInterfaceProperty>())
+        {
+            return render_interface_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (property->IsA<FObjectProperty>())
+        {
+            return render_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
         // Handle enum properties (including byte enums)
         else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
