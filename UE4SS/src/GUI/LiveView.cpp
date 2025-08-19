@@ -38,6 +38,8 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
+#include <Unreal/Core/Containers/Map.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
