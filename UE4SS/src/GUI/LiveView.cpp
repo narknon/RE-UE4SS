@@ -2384,6 +2384,126 @@ namespace RC::GUI
         return next_item_to_render;
     }
 
+    auto LiveView::render_property_context_menu(FProperty* property,
+                                                const std::string& property_name,
+                                                ContainerType container_type,
+                                                void* container,
+                                                const FString& property_text,
+                                                bool& open_edit_value_popup,
+                                                bool* tried_to_open_nullptr_object,
+                                                std::variant<std::monostate, UObject*, FProperty*>& next_item_to_render,
+                                                bool is_watchable,
+                                                const std::string& id_override) -> void
+    {
+        if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : fmt::format("context-menu-{}", id_override).c_str()))
+        {
+            if (ImGui::MenuItem("Copy name"))
+            {
+                ImGui::SetClipboardText(property_name.c_str());
+            }
+            if (ImGui::MenuItem("Copy full name"))
+            {
+                ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+            }
+            if (ImGui::MenuItem("Copy value"))
+            {
+                ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+            }
+            if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
+            {
+                if (ImGui::MenuItem("Edit value"))
+                {
+                    open_edit_value_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+            }
+
+            if (is_watchable)
+            {
+                auto watch_id = WatchIdentifier{container, property};
+                auto property_watcher_it = s_watch_map.find(watch_id);
+                if (property_watcher_it == s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Watch value"))
+                    {
+                        add_watch(watch_id, static_cast<UObject*>(container), property);
+                    }
+                }
+                else
+                {
+                    ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
+                }
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Go to property"))
+            {
+                next_item_to_render = property;
+            }
+
+            if (property->IsA<FObjectProperty>())
+            {
+                if (ImGui::MenuItem("Go to object"))
+                {
+                    auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                    if (!hovered_object)
+                    {
+                        if (tried_to_open_nullptr_object)
+                        {
+                            *tried_to_open_nullptr_object = true;
+                        }
+                    }
+                    else
+                    {
+                        // Cannot go to another object in the middle of rendering properties.
+                        // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                        // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                        next_item_to_render = hovered_object;
+                    }
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    auto LiveView::render_expandable_header(const std::string& tree_node_id,
+                                           const std::string& label,
+                                           ImGuiTreeNodeFlags flags) -> bool
+    {
+        return ImGui_TreeNodeEx(label.c_str(), tree_node_id.c_str(), flags);
+    }
+
+    auto LiveView::render_property_tooltip(FProperty* property) -> void
+    {
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("%S", property->GetFullName().c_str());
+            ImGui::Separator();
+            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+            ImGui::Text("Size: 0x%X", property->GetSize());
+            ImGui::EndTooltip();
+        }
+    }
+
+    auto LiveView::render_unreflected_data(int32_t offset, int32_t size) -> void
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
+        ImGui::Text("0x%X: Unknown unreflected data", offset);
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Offset: 0x%X", offset);
+            ImGui::Text("Size: 0x%X", size);
+            ImGui::EndTooltip();
+        }
+    }
+
     auto LiveView::render_enum() -> void
     {
         const auto currently_selected_object = get_selected_object();
