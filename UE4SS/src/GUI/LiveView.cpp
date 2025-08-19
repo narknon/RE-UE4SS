@@ -3290,8 +3290,9 @@ namespace RC::GUI
                 edit_buffers[buffer_key] = buffer;
                 if (container_type == ContainerType::Object && fstring_ptr)
                 {
-                    *fstring_ptr = FString(STR(""));
-                    fstring_ptr->SetCharArray(File::StringType{buffer});
+                    // Convert std::string to FString
+                    std::wstring wide_str(buffer, buffer + strlen(buffer));
+                    *fstring_ptr = FString(wide_str.c_str());
                 }
             }
             
