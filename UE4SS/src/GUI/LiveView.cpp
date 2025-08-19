@@ -2279,24 +2279,9 @@ namespace RC::GUI
         {
             return render_class_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
-        else if (property->IsA<FWeakObjectProperty>())
+        else if (property->IsA<FObjectPropertyBase>() || property->IsA<FInterfaceProperty>())
         {
-            return render_weak_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
-        }
-        else if (property->IsA<FLazyObjectProperty>())
-        {
-            return render_lazy_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
-        }
-        else if (property->IsA<FSoftObjectProperty>())
-        {
-            return render_soft_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
-        }
-        else if (property->IsA<FInterfaceProperty>())
-        {
-            return render_interface_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
-        }
-        else if (property->IsA<FObjectProperty>())
-        {
+            // All object-based properties (including weak, lazy, soft, interface) are handled by the unified renderer
             return render_object_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
         // Handle enum properties (including byte enums)
@@ -5380,15 +5365,41 @@ namespace RC::GUI
                                          bool is_watchable,
                                          int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
     {
-        auto object_property = CastField<FObjectProperty>(property);
-        if (!object_property)
-        {
-            return std::monostate{};
-        }
-
+        // This unified renderer handles all FObjectPropertyBase types
         std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         std::string property_name = to_string(property->GetName());
+        
+        // Determine the specific object property type for display purposes
+        std::string type_indicator;
+        ImVec4 type_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        bool can_navigate = false;
+        
+        if (property->IsA<FWeakObjectProperty>())
+        {
+            type_indicator = " (Weak)";
+            type_color = ImVec4(0.7f, 0.7f, 1.0f, 1.0f);
+        }
+        else if (property->IsA<FLazyObjectProperty>())
+        {
+            type_indicator = " (Lazy)";
+            type_color = ImVec4(1.0f, 0.7f, 0.7f, 1.0f);
+        }
+        else if (property->IsA<FSoftObjectProperty>())
+        {
+            type_indicator = " (Soft)";
+            type_color = ImVec4(0.7f, 1.0f, 0.7f, 1.0f);
+        }
+        else if (property->IsA<FInterfaceProperty>())
+        {
+            type_indicator = " (Interface)";
+            type_color = ImVec4(1.0f, 0.7f, 1.0f, 1.0f);
+        }
+        else if (auto object_property = CastField<FObjectProperty>(property))
+        {
+            // Standard FObjectProperty - can navigate
+            can_navigate = true;
+        }
         
         // Calculate offset for display
         int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
@@ -5401,34 +5412,82 @@ namespace RC::GUI
         
         ImGui::SameLine();
         
-        // Get the object pointer
-        UObject* obj_value = *static_cast<UObject**>(container_ptr);
-        
-        // Format the object display
+        // Get the display text based on property type
         std::string display_text;
-        if (obj_value)
+        UObject* navigable_object = nullptr;
+        
+        if (property->IsA<FInterfaceProperty>())
         {
-            auto obj_class = obj_value->GetClassPrivate();
-            std::string class_name = obj_class ? to_string(obj_class->GetName()) : "Unknown";
-            std::string obj_name = to_string(obj_value->GetName());
-            display_text = fmt::format("{} '{}'", class_name, obj_name);
+            // Interface properties need special handling
+            auto interface_property = CastField<FInterfaceProperty>(property);
+            FString exported_text{};
+            property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            display_text = to_string(exported_text.GetCharArray());
             
-            // Add navigation button
-            if (ImGui::SmallButton(fmt::format("{}##nav_{}", ICON_FA_ARROW_RIGHT, property_name).c_str()))
+            if (!display_text.empty() && display_text != "None")
             {
-                next_item_to_render = obj_value;
+                if (auto interface_class = interface_property->GetInterfaceClass())
+                {
+                    std::string interface_name = to_string(interface_class->GetName());
+                    display_text = fmt::format("{} (Interface: {})", display_text, interface_name);
+                }
             }
-            ImGui::SameLine();
-            ImGui::Text("%s", display_text.c_str());
+        }
+        else if (property->IsA<FWeakObjectProperty>() || 
+                 property->IsA<FLazyObjectProperty>() || 
+                 property->IsA<FSoftObjectProperty>())
+        {
+            // These types export as text for display
+            FString exported_text{};
+            property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            display_text = to_string(exported_text.GetCharArray());
         }
         else
         {
-            ImGui::TextDisabled("None");
+            // Standard object property - direct pointer access
+            UObject* obj_value = *static_cast<UObject**>(container_ptr);
+            navigable_object = obj_value;
+            
+            if (obj_value)
+            {
+                auto obj_class = obj_value->GetClassPrivate();
+                std::string class_name = obj_class ? to_string(obj_class->GetName()) : "Unknown";
+                std::string obj_name = to_string(obj_value->GetName());
+                display_text = fmt::format("{} '{}'", class_name, obj_name);
+            }
+        }
+        
+        // Render the display
+        bool has_value = !display_text.empty() && display_text != "None";
+        
+        if (has_value)
+        {
+            // Add navigation button if applicable
+            if (can_navigate && navigable_object)
+            {
+                if (ImGui::SmallButton(fmt::format("{}##nav_{}", ICON_FA_ARROW_RIGHT, property_name).c_str()))
+                {
+                    next_item_to_render = navigable_object;
+                }
+                ImGui::SameLine();
+            }
+            
+            ImGui::Text("%s", display_text.c_str());
+            
+            if (!type_indicator.empty())
+            {
+                ImGui::SameLine();
+                ImGui::TextColored(type_color, "%s", type_indicator.c_str());
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("None%s", type_indicator.c_str());
         }
         
         // Render context menu
         bool open_edit_value_popup{};
-        FString property_text(to_string(display_text).c_str());
+        FString property_text(display_text.c_str());
         render_property_context_menu(property, property_name, container_type, container,
                                     property_text, open_edit_value_popup,
                                     tried_to_open_nullptr_object, next_item_to_render,
@@ -5522,276 +5581,6 @@ namespace RC::GUI
         return next_item_to_render;
     }
 
-    auto LiveView::render_weak_object_property(FProperty* property,
-                                              ContainerType container_type,
-                                              void* container,
-                                              FProperty** last_property_in,
-                                              bool* tried_to_open_nullptr_object,
-                                              bool is_watchable,
-                                              int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
-    {
-        auto weak_property = CastField<FWeakObjectProperty>(property);
-        if (!weak_property)
-        {
-            return std::monostate{};
-        }
-
-        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
-        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        std::string property_name = to_string(property->GetName());
-        
-        // Calculate offset for display
-        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
-        
-        // Display property name and offset
-        ImGui::Text("0x%X%s %s:",
-                    first_offset != -1 ? first_offset : property_offset,
-                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
-                    property_name.c_str());
-        
-        ImGui::SameLine();
-        
-        // For weak object properties, we need to handle them specially
-        // The actual implementation depends on how FWeakObjectPtr is structured in your codebase
-        // For now, export as text which should handle it properly
-        FString exported_text{};
-        property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        std::string display_text = to_string(exported_text.GetCharArray());
-        
-        // Check if it contains an object reference
-        bool is_valid = !display_text.empty() && display_text != "None";
-        
-        if (is_valid)
-        {
-            ImGui::Text("%s", display_text.c_str());
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "(Weak)");
-        }
-        else
-        {
-            ImGui::TextDisabled("None (Weak)");
-        }
-        
-        // Render context menu
-        bool open_edit_value_popup{};
-        FString property_text(display_text.c_str());
-        render_property_context_menu(property, property_name, container_type, container,
-                                    property_text, open_edit_value_popup,
-                                    tried_to_open_nullptr_object, next_item_to_render,
-                                    is_watchable);
-        
-        if (last_property_in)
-        {
-            *last_property_in = property;
-        }
-        
-        render_property_tooltip(property);
-        
-        return next_item_to_render;
-    }
-
-    auto LiveView::render_lazy_object_property(FProperty* property,
-                                              ContainerType container_type,
-                                              void* container,
-                                              FProperty** last_property_in,
-                                              bool* tried_to_open_nullptr_object,
-                                              bool is_watchable,
-                                              int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
-    {
-        auto lazy_property = CastField<FLazyObjectProperty>(property);
-        if (!lazy_property)
-        {
-            return std::monostate{};
-        }
-
-        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
-        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        std::string property_name = to_string(property->GetName());
-        
-        // Calculate offset for display
-        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
-        
-        // Display property name and offset
-        ImGui::Text("0x%X%s %s:",
-                    first_offset != -1 ? first_offset : property_offset,
-                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
-                    property_name.c_str());
-        
-        ImGui::SameLine();
-        
-        // Export the lazy object reference as text
-        FString exported_text{};
-        property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        std::string display_text = to_string(exported_text.GetCharArray());
-        
-        // Check if it contains an object reference
-        bool is_loaded = !display_text.empty() && display_text != "None";
-        
-        if (is_loaded)
-        {
-            ImGui::Text("%s", display_text.c_str());
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "(Lazy)");
-        }
-        else
-        {
-            ImGui::TextDisabled("None (Lazy - Not Loaded)");
-        }
-        
-        // Render context menu
-        bool open_edit_value_popup{};
-        FString property_text(display_text.c_str());
-        render_property_context_menu(property, property_name, container_type, container,
-                                    property_text, open_edit_value_popup,
-                                    tried_to_open_nullptr_object, next_item_to_render,
-                                    is_watchable);
-        
-        if (last_property_in)
-        {
-            *last_property_in = property;
-        }
-        
-        render_property_tooltip(property);
-        
-        return next_item_to_render;
-    }
-
-    auto LiveView::render_soft_object_property(FProperty* property,
-                                              ContainerType container_type,
-                                              void* container,
-                                              FProperty** last_property_in,
-                                              bool* tried_to_open_nullptr_object,
-                                              bool is_watchable,
-                                              int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
-    {
-        auto soft_property = CastField<FSoftObjectProperty>(property);
-        if (!soft_property)
-        {
-            return std::monostate{};
-        }
-
-        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
-        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        std::string property_name = to_string(property->GetName());
-        
-        // Calculate offset for display
-        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
-        
-        // Display property name and offset
-        ImGui::Text("0x%X%s %s:",
-                    first_offset != -1 ? first_offset : property_offset,
-                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
-                    property_name.c_str());
-        
-        ImGui::SameLine();
-        
-        // Export the soft object reference as text - this will include the path
-        FString exported_text{};
-        property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        std::string display_text = to_string(exported_text.GetCharArray());
-        
-        // Check if it contains a valid soft reference
-        bool has_reference = !display_text.empty() && display_text != "None";
-        
-        if (has_reference)
-        {
-            // Soft references typically show as paths like "/Game/Path/To/Asset.Asset"
-            ImGui::Text("%s", display_text.c_str());
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "(Soft)");
-        }
-        else
-        {
-            ImGui::TextDisabled("None (Soft)");
-        }
-        
-        // Render context menu
-        bool open_edit_value_popup{};
-        FString property_text(display_text.c_str());
-        render_property_context_menu(property, property_name, container_type, container,
-                                    property_text, open_edit_value_popup,
-                                    tried_to_open_nullptr_object, next_item_to_render,
-                                    is_watchable);
-        
-        if (last_property_in)
-        {
-            *last_property_in = property;
-        }
-        
-        render_property_tooltip(property);
-        
-        return next_item_to_render;
-    }
-
-    auto LiveView::render_interface_property(FProperty* property,
-                                            ContainerType container_type,
-                                            void* container,
-                                            FProperty** last_property_in,
-                                            bool* tried_to_open_nullptr_object,
-                                            bool is_watchable,
-                                            int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
-    {
-        auto interface_property = CastField<FInterfaceProperty>(property);
-        if (!interface_property)
-        {
-            return std::monostate{};
-        }
-
-        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
-        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        std::string property_name = to_string(property->GetName());
-        
-        // Calculate offset for display
-        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
-        
-        // Display property name and offset
-        ImGui::Text("0x%X%s %s:",
-                    first_offset != -1 ? first_offset : property_offset,
-                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
-                    property_name.c_str());
-        
-        ImGui::SameLine();
-        
-        // Export the interface reference as text
-        FString exported_text{};
-        property->ExportTextItem(exported_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        std::string display_text = to_string(exported_text.GetCharArray());
-        
-        // Check if interface is valid
-        bool has_interface = !display_text.empty() && display_text != "None";
-        
-        if (has_interface)
-        {
-            // Get the interface class if available
-            if (auto interface_class = interface_property->GetInterfaceClass())
-            {
-                std::string interface_name = to_string(interface_class->GetName());
-                display_text = fmt::format("{} (Interface: {})", display_text, interface_name);
-            }
-            ImGui::Text("%s", display_text.c_str());
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 1.0f, 1.0f), "(Interface)");
-        }
-        else
-        {
-            ImGui::TextDisabled("None (Interface)");
-        }
-        
-        // Render context menu
-        bool open_edit_value_popup{};
-        FString property_text(display_text.c_str());
-        render_property_context_menu(property, property_name, container_type, container,
-                                    property_text, open_edit_value_popup,
-                                    tried_to_open_nullptr_object, next_item_to_render,
-                                    is_watchable);
-        
-        if (last_property_in)
-        {
-            *last_property_in = property;
-        }
-        
-        render_property_tooltip(property);
-        
-        return next_item_to_render;
-    }
+    // The separate renderers for weak, lazy, soft, and interface have been removed.
+    // They are now handled by the unified render_object_property() above.
 } // namespace RC::GUI
