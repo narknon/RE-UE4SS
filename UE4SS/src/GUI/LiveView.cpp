@@ -2137,16 +2137,7 @@ namespace RC::GUI
             {
                 auto unreflected_size = property_offset - last_property_offset_with_alignment;
                 auto unreflected_offset = property_offset - unreflected_size;
-                ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
-                ImGui::Text("0x%X: Unknown unreflected data", unreflected_offset);
-                ImGui::PopStyleColor();
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("Offset: 0x%X", unreflected_offset);
-                    ImGui::Text("Size: 0x%X", unreflected_size);
-                    ImGui::EndTooltip();
-                }
+                render_unreflected_data(unreflected_offset, unreflected_size);
             }
         }
 
