@@ -37,6 +37,9 @@
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
+#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
+#include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/Core/Containers/Map.hpp>
