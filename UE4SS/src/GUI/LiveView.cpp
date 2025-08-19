@@ -34,6 +34,9 @@
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
@@ -2234,71 +2237,19 @@ namespace RC::GUI
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
-                {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
-                    ImGui::Indent();
-                    FProperty* last_struct_prop{};
-                    next_item_to_render = render_property_value(inner_property,
-                                                                ContainerType::Struct,
-                                                                container_ptr,
-                                                                &last_struct_prop,
-                                                                tried_to_open_nullptr_object,
-                                                                false,
-                                                                property_offset + inner_property->GetOffset_Internal());
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            return render_struct_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
         else if (auto array_property = CastField<FArrayProperty>(property); array_property)
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
-                auto inner_property = array_property->GetInner();
-                for (int32_t i = 0; i < script_array->Num(); ++i)
-                {
-                    auto element_offset = inner_property->GetElementSize() * i;
-                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
-                    ImGui::Text("[%i]:", i);
-                    ImGui::Indent();
-                    ImGui::SameLine();
-                    next_item_to_render =
-                            render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset);
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                if (script_array->Num() < 1)
-                {
-                    ImGui::Text("-- Empty --");
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            return render_array_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (auto map_property = CastField<FMapProperty>(property); map_property)
+        {
+            return render_map_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
+        }
+        else if (auto set_property = CastField<FSetProperty>(property); set_property)
+        {
+            return render_set_property(property, container_type, container, last_property_in, tried_to_open_nullptr_object, is_watchable, first_offset);
         }
         else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
         {
@@ -2463,6 +2414,364 @@ namespace RC::GUI
     auto LiveView::render_property_tooltip(FProperty* property) -> void
     {
         render_property_tooltip(property);
+    }
+
+    // Helper function to format a compact struct preview
+    static auto format_struct_preview(FStructProperty* struct_property, void* struct_ptr, size_t max_length = 50) -> std::string
+    {
+        if (!struct_property || !struct_ptr || !struct_property->GetStruct())
+        {
+            return "{}";
+        }
+
+        std::string preview = "{";
+        int property_count = 0;
+        size_t current_length = 1;  // Start with "{"
+        
+        for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+        {
+            if (property_count > 0)
+            {
+                preview += ", ";
+                current_length += 2;
+            }
+            
+            // Stop if we've shown enough properties or the string is getting too long
+            if (property_count >= 3 || current_length >= max_length)
+            {
+                if (property_count > 0)
+                {
+                    preview += "...";
+                }
+                break;
+            }
+            
+            std::string prop_name = to_string(inner_property->GetName());
+            FString prop_value_fstring{};
+            auto prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(struct_ptr);
+            inner_property->ExportTextItem(prop_value_fstring, prop_container_ptr, prop_container_ptr, nullptr, NULL);
+            std::string prop_value = to_string(prop_value_fstring.GetCharArray());
+            
+            // Truncate long values
+            if (prop_value.length() > 15)
+            {
+                prop_value = prop_value.substr(0, 12) + "...";
+            }
+            
+            std::string entry = prop_name + "=" + prop_value;
+            preview += entry;
+            current_length += entry.length();
+            property_count++;
+        }
+        
+        preview += "}";
+        return preview;
+    }
+
+    auto LiveView::render_struct_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         FProperty** last_property_in,
+                                         bool* tried_to_open_nullptr_object,
+                                         bool is_watchable,
+                                         int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto struct_property = CastField<FStructProperty>(property);
+        if (!struct_property || !struct_property->GetStruct())
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Generate compact preview
+        std::string preview = format_struct_preview(struct_property, container_ptr);
+        
+        // Create tree node with preview
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        bool node_open = render_expandable_header(tree_node_id, preview, ImGuiTreeNodeFlags_NoAutoOpenOnLog);
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        render_property_context_menu(property, property_name, container_type, container, 
+                                    FString(STR("")), open_edit_value_popup, 
+                                    tried_to_open_nullptr_object, next_item_to_render, 
+                                    is_watchable, tree_node_id);
+        
+        if (node_open)
+        {
+            // Render each property in the struct
+            for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+            {
+                ImGui::Indent();
+                FProperty* last_struct_prop{};
+                auto inner_result = render_property_value(inner_property,
+                                                         ContainerType::Struct,
+                                                         container_ptr,
+                                                         &last_struct_prop,
+                                                         tried_to_open_nullptr_object,
+                                                         false,
+                                                         property_offset + inner_property->GetOffset_Internal());
+                ImGui::Unindent();
+                
+                if (!std::holds_alternative<std::monostate>(inner_result))
+                {
+                    next_item_to_render = inner_result;
+                    break;
+                }
+            }
+            ImGui::TreePop();
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_array_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        FProperty** last_property_in,
+                                        bool* tried_to_open_nullptr_object,
+                                        bool is_watchable,
+                                        int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto array_property = CastField<FArrayProperty>(property);
+        if (!array_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Get array info
+        auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
+        int32_t num_elements = script_array ? script_array->Num() : 0;
+        
+        // Create display text with element count and preview
+        std::string display_text = fmt::format("[{} {}]", num_elements, num_elements == 1 ? "element" : "elements");
+        
+        // Add a small preview if there are elements and it's not too many
+        if (num_elements > 0 && num_elements <= 3 && array_property->GetInner())
+        {
+            display_text += " {";
+            auto inner_property = array_property->GetInner();
+            
+            for (int32_t i = 0; i < std::min(3, num_elements); ++i)
+            {
+                if (i > 0) display_text += ", ";
+                
+                auto element_offset = inner_property->GetElementSize() * i;
+                auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
+                
+                FString element_text{};
+                inner_property->ExportTextItem(element_text, element_container_ptr, element_container_ptr, nullptr, NULL);
+                std::string element_str = to_string(element_text.GetCharArray());
+                
+                // Truncate long values
+                if (element_str.length() > 10)
+                {
+                    element_str = element_str.substr(0, 7) + "...";
+                }
+                display_text += element_str;
+            }
+            
+            if (num_elements > 3)
+            {
+                display_text += ", ...";
+            }
+            display_text += "}";
+        }
+        
+        // Create tree node with preview
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        bool node_open = render_expandable_header(tree_node_id, display_text, ImGuiTreeNodeFlags_NoAutoOpenOnLog);
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        FString property_text(STR(""));
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, tree_node_id);
+        
+        if (node_open)
+        {
+            if (num_elements > 0)
+            {
+                auto inner_property = array_property->GetInner();
+                for (int32_t i = 0; i < num_elements; ++i)
+                {
+                    auto element_offset = inner_property->GetElementSize() * i;
+                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
+                    
+                    ImGui::Text("[%i]:", i);
+                    ImGui::Indent();
+                    ImGui::SameLine();
+                    auto inner_result = render_property_value(inner_property, ContainerType::Array, element_container_ptr, 
+                                                             nullptr, tried_to_open_nullptr_object, false, element_offset);
+                    ImGui::Unindent();
+                    
+                    if (!std::holds_alternative<std::monostate>(inner_result))
+                    {
+                        next_item_to_render = inner_result;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                ImGui::Text("-- Empty --");
+            }
+            ImGui::TreePop();
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_map_property(FProperty* property,
+                                      ContainerType container_type,
+                                      void* container,
+                                      FProperty** last_property_in,
+                                      bool* tried_to_open_nullptr_object,
+                                      bool is_watchable,
+                                      int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto map_property = CastField<FMapProperty>(property);
+        if (!map_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Get map info
+        auto script_map = std::bit_cast<FScriptMap*>(container_ptr);
+        int32_t num_entries = script_map ? script_map->Num() : 0;
+        
+        // Create display text with entry count
+        std::string display_text = fmt::format("{{{} {}}}", num_entries, num_entries == 1 ? "entry" : "entries");
+        
+        // Create tree node with preview
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        bool node_open = render_expandable_header(tree_node_id, display_text, ImGuiTreeNodeFlags_NoAutoOpenOnLog);
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        FString property_text(STR(""));
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, tree_node_id);
+        
+        if (node_open)
+        {
+            if (num_entries > 0)
+            {
+                // TODO: Iterate through map entries when we have proper map iteration support
+                // For now, just show the count
+                ImGui::Text("Map iteration not yet implemented");
+                ImGui::Text("Contains %d entries", num_entries);
+            }
+            else
+            {
+                ImGui::Text("-- Empty --");
+            }
+            ImGui::TreePop();
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_set_property(FProperty* property,
+                                      ContainerType container_type,
+                                      void* container,
+                                      FProperty** last_property_in,
+                                      bool* tried_to_open_nullptr_object,
+                                      bool is_watchable,
+                                      int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto set_property = CastField<FSetProperty>(property);
+        if (!set_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // For now, we'll just show that it's a set since FScriptSet support is limited
+        std::string display_text = "{Set}";
+        
+        // Create tree node with preview
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        bool node_open = render_expandable_header(tree_node_id, display_text, ImGuiTreeNodeFlags_NoAutoOpenOnLog);
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        FString property_text(STR(""));
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, tree_node_id);
+        
+        if (node_open)
+        {
+            // TODO: Implement set iteration when we have proper FScriptSet support
+            ImGui::Text("Set iteration not yet implemented");
+            ImGui::TreePop();
+        }
+        
+        return next_item_to_render;
     }
 
     auto LiveView::render_unreflected_data(int32_t offset, int32_t size) -> void
