@@ -182,6 +182,192 @@ namespace RC::GUI
                                    bool is_watchable = true,
                                    int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
 
+        // Property-specific render methods
+        
+        // Primitive property renderers
+        auto render_numeric_property(FProperty* property,
+                                     ContainerType container_type,
+                                     void* container,
+                                     FProperty** last_property_in,
+                                     bool* tried_to_open_nullptr_object,
+                                     bool is_watchable = true,
+                                     int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_bool_property(FProperty* property,
+                                 ContainerType container_type,
+                                 void* container,
+                                 FProperty** last_property_in,
+                                 bool* tried_to_open_nullptr_object,
+                                 bool is_watchable = true,
+                                 int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_string_property(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   bool is_watchable = true,
+                                   int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_text_property(FProperty* property,
+                                 ContainerType container_type,
+                                 void* container,
+                                 FProperty** last_property_in,
+                                 bool* tried_to_open_nullptr_object,
+                                 bool is_watchable = true,
+                                 int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_name_property(FProperty* property,
+                                 ContainerType container_type,
+                                 void* container,
+                                 FProperty** last_property_in,
+                                 bool* tried_to_open_nullptr_object,
+                                 bool is_watchable = true,
+                                 int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        // Object property renderers
+        auto render_object_property(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   bool is_watchable = true,
+                                   int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_class_property(FProperty* property,
+                                  ContainerType container_type,
+                                  void* container,
+                                  FProperty** last_property_in,
+                                  bool* tried_to_open_nullptr_object,
+                                  bool is_watchable = true,
+                                  int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_weak_object_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        FProperty** last_property_in,
+                                        bool* tried_to_open_nullptr_object,
+                                        bool is_watchable = true,
+                                        int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_lazy_object_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        FProperty** last_property_in,
+                                        bool* tried_to_open_nullptr_object,
+                                        bool is_watchable = true,
+                                        int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_soft_object_property(FProperty* property,
+                                        ContainerType container_type,
+                                        void* container,
+                                        FProperty** last_property_in,
+                                        bool* tried_to_open_nullptr_object,
+                                        bool is_watchable = true,
+                                        int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_interface_property(FProperty* property,
+                                      ContainerType container_type,
+                                      void* container,
+                                      FProperty** last_property_in,
+                                      bool* tried_to_open_nullptr_object,
+                                      bool is_watchable = true,
+                                      int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        // Container property renderers
+        auto render_array_property(FProperty* property,
+                                  ContainerType container_type,
+                                  void* container,
+                                  FProperty** last_property_in,
+                                  bool* tried_to_open_nullptr_object,
+                                  bool is_watchable = true,
+                                  int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_map_property(FProperty* property,
+                                ContainerType container_type,
+                                void* container,
+                                FProperty** last_property_in,
+                                bool* tried_to_open_nullptr_object,
+                                bool is_watchable = true,
+                                int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_set_property(FProperty* property,
+                                ContainerType container_type,
+                                void* container,
+                                FProperty** last_property_in,
+                                bool* tried_to_open_nullptr_object,
+                                bool is_watchable = true,
+                                int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_struct_property(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   bool is_watchable = true,
+                                   int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        // Special property renderers
+        auto render_enum_property(FProperty* property,
+                                 ContainerType container_type,
+                                 void* container,
+                                 FProperty** last_property_in,
+                                 bool* tried_to_open_nullptr_object,
+                                 bool is_watchable = true,
+                                 int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_byte_enum_property(FProperty* property,
+                                      ContainerType container_type,
+                                      void* container,
+                                      FProperty** last_property_in,
+                                      bool* tried_to_open_nullptr_object,
+                                      bool is_watchable = true,
+                                      int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_delegate_property(FProperty* property,
+                                     ContainerType container_type,
+                                     void* container,
+                                     FProperty** last_property_in,
+                                     bool* tried_to_open_nullptr_object,
+                                     bool is_watchable = true,
+                                     int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_multicast_delegate_property(FProperty* property,
+                                               ContainerType container_type,
+                                               void* container,
+                                               FProperty** last_property_in,
+                                               bool* tried_to_open_nullptr_object,
+                                               bool is_watchable = true,
+                                               int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_field_path_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       FProperty** last_property_in,
+                                       bool* tried_to_open_nullptr_object,
+                                       bool is_watchable = true,
+                                       int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        // Helper methods for property rendering
+        auto render_property_context_menu(FProperty* property,
+                                         const std::string& property_name,
+                                         ContainerType container_type,
+                                         void* container,
+                                         const FString& property_text,
+                                         bool& open_edit_value_popup,
+                                         bool* tried_to_open_nullptr_object,
+                                         std::variant<std::monostate, UObject*, FProperty*>& next_item_to_render,
+                                         bool is_watchable = true,
+                                         const std::string& id_override = "") -> void;
+        
+        auto render_expandable_header(const std::string& tree_node_id,
+                                     const std::string& label,
+                                     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoAutoOpenOnLog) -> bool;
+        
+        auto render_property_tooltip(FProperty* property) -> void;
+        
+        auto render_unreflected_data(int32_t offset, int32_t size) -> void;
+
       private:
         auto collapse_all_except(void* except_id) -> void;
         auto search() -> void;
