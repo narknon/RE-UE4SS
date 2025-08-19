@@ -2845,6 +2845,595 @@ namespace RC::GUI
         return next_item_to_render;
     }
 
+    auto LiveView::render_bool_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       FProperty** last_property_in,
+                                       bool* tried_to_open_nullptr_object,
+                                       bool is_watchable,
+                                       int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto bool_property = CastField<FBoolProperty>(property);
+        if (!bool_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Get the current boolean value
+        bool current_value = bool_property->GetPropertyValue(container_ptr);
+        bool value_copy = current_value;
+        
+        // Check if property is read-only
+        bool is_readonly = (property->GetPropertyFlags() & CPF_EditConst) != 0;
+        
+        // Use checkbox for interactive editing
+        if (is_readonly)
+        {
+            ImGui::BeginDisabled();
+        }
+        
+        std::string checkbox_id = fmt::format("##{}{}", static_cast<void*>(container_ptr), property_name);
+        if (ImGui::Checkbox(checkbox_id.c_str(), &value_copy))
+        {
+            // Value changed - update the property
+            if (!is_readonly && container_type == ContainerType::Object)
+            {
+                bool_property->SetPropertyValue(container_ptr, value_copy);
+            }
+        }
+        
+        if (is_readonly)
+        {
+            ImGui::EndDisabled();
+        }
+        
+        // Show the actual text value as well
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", current_value ? "true" : "false");
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        FString property_text(current_value ? STR("true") : STR("false"));
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, checkbox_id);
+        
+        // Render tooltip
+        render_property_tooltip(property);
+        
+        if (last_property_in)
+        {
+            *last_property_in = property;
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_numeric_property(FProperty* property,
+                                          ContainerType container_type,
+                                          void* container,
+                                          FProperty** last_property_in,
+                                          bool* tried_to_open_nullptr_object,
+                                          bool is_watchable,
+                                          int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto numeric_property = CastField<FNumericProperty>(property);
+        if (!numeric_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Check if property is read-only
+        bool is_readonly = (property->GetPropertyFlags() & CPF_EditConst) != 0;
+        
+        // Export the current value as text
+        FString property_text{};
+        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        std::string value_str = to_string(property_text.GetCharArray());
+        
+        // Use appropriate input widget based on type
+        std::string input_id = fmt::format("##{}{}", static_cast<void*>(container_ptr), property_name);
+        
+        if (is_readonly)
+        {
+            ImGui::BeginDisabled();
+        }
+        
+        bool value_changed = false;
+        
+        if (property->IsA<FFloatProperty>())
+        {
+            float value = *static_cast<float*>(container_ptr);
+            float value_copy = value;
+            
+            if (ImGui::DragFloat(input_id.c_str(), &value_copy, 0.1f))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<float*>(container_ptr) = value_copy;
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FDoubleProperty>())
+        {
+            double value = *static_cast<double*>(container_ptr);
+            float value_as_float = static_cast<float>(value);
+            float value_copy = value_as_float;
+            
+            if (ImGui::DragFloat(input_id.c_str(), &value_copy, 0.1f))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<double*>(container_ptr) = static_cast<double>(value_copy);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FInt8Property>())
+        {
+            int8_t value = *static_cast<int8_t*>(container_ptr);
+            int value_as_int = value;
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, -128, 127))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<int8_t*>(container_ptr) = static_cast<int8_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FInt16Property>())
+        {
+            int16_t value = *static_cast<int16_t*>(container_ptr);
+            int value_as_int = value;
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, -32768, 32767))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<int16_t*>(container_ptr) = static_cast<int16_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FIntProperty>())
+        {
+            int32_t value = *static_cast<int32_t*>(container_ptr);
+            
+            if (ImGui::DragInt(input_id.c_str(), &value, 1.0f))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FInt64Property>())
+        {
+            int64_t value = *static_cast<int64_t*>(container_ptr);
+            int value_as_int = static_cast<int>(value);
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<int64_t*>(container_ptr) = static_cast<int64_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FByteProperty>())
+        {
+            uint8_t value = *static_cast<uint8_t*>(container_ptr);
+            int value_as_int = value;
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0, 255))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<uint8_t*>(container_ptr) = static_cast<uint8_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FUInt16Property>())
+        {
+            uint16_t value = *static_cast<uint16_t*>(container_ptr);
+            int value_as_int = value;
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0, 65535))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<uint16_t*>(container_ptr) = static_cast<uint16_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FUInt32Property>())
+        {
+            uint32_t value = *static_cast<uint32_t*>(container_ptr);
+            int value_as_int = static_cast<int>(value);
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<uint32_t*>(container_ptr) = static_cast<uint32_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else if (property->IsA<FUInt64Property>())
+        {
+            uint64_t value = *static_cast<uint64_t*>(container_ptr);
+            int value_as_int = static_cast<int>(value);
+            
+            if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0))
+            {
+                if (!is_readonly && container_type == ContainerType::Object)
+                {
+                    *static_cast<uint64_t*>(container_ptr) = static_cast<uint64_t>(value_as_int);
+                    value_changed = true;
+                }
+            }
+        }
+        else
+        {
+            // Fallback for unknown numeric types - just display as text
+            ImGui::Text("%s", value_str.c_str());
+        }
+        
+        if (is_readonly)
+        {
+            ImGui::EndDisabled();
+        }
+        
+        // Show the raw value as tooltip
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Value: %s", value_str.c_str());
+            ImGui::Text("Type: %s", to_string(property->GetClass().GetName()).c_str());
+            ImGui::EndTooltip();
+        }
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, input_id);
+        
+        // Render tooltip
+        render_property_tooltip(property);
+        
+        if (last_property_in)
+        {
+            *last_property_in = property;
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_string_property(FProperty* property,
+                                         ContainerType container_type,
+                                         void* container,
+                                         FProperty** last_property_in,
+                                         bool* tried_to_open_nullptr_object,
+                                         bool is_watchable,
+                                         int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto string_property = CastField<FStrProperty>(property);
+        if (!string_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Get the current string value
+        FString* fstring_ptr = static_cast<FString*>(container_ptr);
+        std::string current_value = fstring_ptr ? to_string(fstring_ptr->GetCharArray()) : "";
+        
+        // Check if property is read-only
+        bool is_readonly = (property->GetPropertyFlags() & CPF_EditConst) != 0;
+        
+        // Truncate long strings for display
+        std::string display_value = current_value;
+        const size_t max_display_length = 50;
+        bool is_truncated = false;
+        if (display_value.length() > max_display_length)
+        {
+            display_value = display_value.substr(0, max_display_length);
+            display_value += "...";
+            is_truncated = true;
+        }
+        
+        // Use input text for inline editing
+        std::string input_id = fmt::format("##{}{}", static_cast<void*>(container_ptr), property_name);
+        
+        if (is_readonly)
+        {
+            // Just display the text
+            ImGui::Text("\"%s\"", display_value.c_str());
+        }
+        else
+        {
+            // Create a buffer for editing
+            static std::unordered_map<void*, std::string> edit_buffers;
+            auto buffer_key = container_ptr;
+            
+            if (edit_buffers.find(buffer_key) == edit_buffers.end())
+            {
+                edit_buffers[buffer_key] = current_value;
+            }
+            
+            char buffer[256] = {0};
+            strncpy(buffer, edit_buffers[buffer_key].c_str(), sizeof(buffer) - 1);
+            
+            if (ImGui::InputText(input_id.c_str(), buffer, sizeof(buffer)))
+            {
+                edit_buffers[buffer_key] = buffer;
+                if (container_type == ContainerType::Object && fstring_ptr)
+                {
+                    *fstring_ptr = FString(STR(""));
+                    fstring_ptr->SetCharArray(File::StringType{buffer});
+                }
+            }
+            
+            // Add a button to open full editor for long strings
+            if (is_truncated)
+            {
+                ImGui::SameLine();
+                if (ImGui::Button(fmt::format("Edit##{}", input_id).c_str()))
+                {
+                    // This would open a popup for editing long strings
+                    // For now, just show a tooltip
+                }
+            }
+        }
+        
+        // Show full value in tooltip if truncated
+        if (is_truncated && ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Full value:");
+            ImGui::TextWrapped("%s", current_value.c_str());
+            ImGui::EndTooltip();
+        }
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        FString property_text = fstring_ptr ? *fstring_ptr : FString(STR(""));
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, input_id);
+        
+        // Render tooltip
+        render_property_tooltip(property);
+        
+        if (last_property_in)
+        {
+            *last_property_in = property;
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_text_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       FProperty** last_property_in,
+                                       bool* tried_to_open_nullptr_object,
+                                       bool is_watchable,
+                                       int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto text_property = CastField<FTextProperty>(property);
+        if (!text_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Export the text value
+        FString property_text{};
+        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        std::string text_value = to_string(property_text.GetCharArray());
+        
+        // Check if property is read-only
+        bool is_readonly = (property->GetPropertyFlags() & CPF_EditConst) != 0;
+        
+        // Truncate long text for display
+        std::string display_value = text_value;
+        const size_t max_display_length = 50;
+        bool is_truncated = false;
+        if (display_value.length() > max_display_length)
+        {
+            display_value = display_value.substr(0, max_display_length);
+            display_value += "...";
+            is_truncated = true;
+        }
+        
+        // Display the text (FText is typically read-only in the editor)
+        ImGui::Text("\"%s\"", display_value.c_str());
+        
+        // Add localization info if available
+        ImGui::SameLine();
+        ImGui::TextDisabled("(FText)");
+        
+        // Show full value in tooltip
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            if (is_truncated)
+            {
+                ImGui::Text("Full text:");
+                ImGui::TextWrapped("%s", text_value.c_str());
+            }
+            ImGui::Text("Type: FText (Localized Text)");
+            ImGui::EndTooltip();
+        }
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        std::string context_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, context_id);
+        
+        // Render tooltip
+        render_property_tooltip(property);
+        
+        if (last_property_in)
+        {
+            *last_property_in = property;
+        }
+        
+        return next_item_to_render;
+    }
+
+    auto LiveView::render_name_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       FProperty** last_property_in,
+                                       bool* tried_to_open_nullptr_object,
+                                       bool is_watchable,
+                                       int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        auto name_property = CastField<FNameProperty>(property);
+        if (!name_property)
+        {
+            return std::monostate{};
+        }
+
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render = std::monostate{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        std::string property_name = to_string(property->GetName());
+        
+        // Calculate offset for display
+        int32_t property_offset = first_offset != -1 ? first_offset : property->GetOffset_Internal();
+        
+        // Display property name and offset
+        ImGui::Text("0x%X%s %s:",
+                    first_offset != -1 ? first_offset : property_offset,
+                    container_type == ContainerType::Array ? "" : fmt::format(" (0x{:X})", property_offset).c_str(),
+                    property_name.c_str());
+        
+        ImGui::SameLine();
+        
+        // Export the name value
+        FString property_text{};
+        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        std::string name_value = to_string(property_text.GetCharArray());
+        
+        // Check if it's a valid name
+        bool is_none = name_value == "None" || name_value.empty();
+        
+        // Display the name with appropriate coloring
+        if (is_none)
+        {
+            ImGui::TextDisabled("None");
+        }
+        else
+        {
+            ImGui::Text("\"%s\"", name_value.c_str());
+        }
+        
+        // Add FName indicator
+        ImGui::SameLine();
+        ImGui::TextDisabled("(FName)");
+        
+        // Show info in tooltip
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("FName: %s", name_value.c_str());
+            ImGui::Text("Valid: %s", is_none ? "No" : "Yes");
+            ImGui::EndTooltip();
+        }
+        
+        // Render context menu
+        bool open_edit_value_popup{};
+        std::string context_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+        render_property_context_menu(property, property_name, container_type, container,
+                                    property_text, open_edit_value_popup,
+                                    tried_to_open_nullptr_object, next_item_to_render,
+                                    is_watchable, context_id);
+        
+        // Render tooltip
+        render_property_tooltip(property);
+        
+        if (last_property_in)
+        {
+            *last_property_in = property;
+        }
+        
+        return next_item_to_render;
+    }
+
     auto LiveView::render_unreflected_data(int32_t offset, int32_t size) -> void
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
