@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <format>
 #include <limits>
 #include <memory>
@@ -3041,21 +3042,21 @@ namespace RC::GUI
         
         if (property->IsA<FFloatProperty>())
         {
-            float value = *static_cast<float*>(container_ptr);
+            float value = *reinterpret_cast<float*>(container_ptr);
             float value_copy = value;
             
             if (ImGui::DragFloat(input_id.c_str(), &value_copy, 0.1f))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<float*>(container_ptr) = value_copy;
+                    *reinterpret_cast<float*>(container_ptr) = value_copy;
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FDoubleProperty>())
         {
-            double value = *static_cast<double*>(container_ptr);
+            double value = *reinterpret_cast<double*>(container_ptr);
             float value_as_float = static_cast<float>(value);
             float value_copy = value_as_float;
             
@@ -3063,42 +3064,42 @@ namespace RC::GUI
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<double*>(container_ptr) = static_cast<double>(value_copy);
+                    *reinterpret_cast<double*>(container_ptr) = static_cast<double>(value_copy);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FInt8Property>())
         {
-            int8_t value = *static_cast<int8_t*>(container_ptr);
+            int8_t value = *reinterpret_cast<int8_t*>(container_ptr);
             int value_as_int = value;
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, -128, 127))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<int8_t*>(container_ptr) = static_cast<int8_t>(value_as_int);
+                    *reinterpret_cast<int8_t*>(container_ptr) = static_cast<int8_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FInt16Property>())
         {
-            int16_t value = *static_cast<int16_t*>(container_ptr);
+            int16_t value = *reinterpret_cast<int16_t*>(container_ptr);
             int value_as_int = value;
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, -32768, 32767))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<int16_t*>(container_ptr) = static_cast<int16_t>(value_as_int);
+                    *reinterpret_cast<int16_t*>(container_ptr) = static_cast<int16_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FIntProperty>())
         {
-            int32_t value = *static_cast<int32_t*>(container_ptr);
+            int32_t value = *reinterpret_cast<int32_t*>(container_ptr);
             
             if (ImGui::DragInt(input_id.c_str(), &value, 1.0f))
             {
@@ -3110,70 +3111,70 @@ namespace RC::GUI
         }
         else if (property->IsA<FInt64Property>())
         {
-            int64_t value = *static_cast<int64_t*>(container_ptr);
+            int64_t value = *reinterpret_cast<int64_t*>(container_ptr);
             int value_as_int = static_cast<int>(value);
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<int64_t*>(container_ptr) = static_cast<int64_t>(value_as_int);
+                    *reinterpret_cast<int64_t*>(container_ptr) = static_cast<int64_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FByteProperty>())
         {
-            uint8_t value = *static_cast<uint8_t*>(container_ptr);
+            uint8_t value = *reinterpret_cast<uint8_t*>(container_ptr);
             int value_as_int = value;
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0, 255))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<uint8_t*>(container_ptr) = static_cast<uint8_t>(value_as_int);
+                    *reinterpret_cast<uint8_t*>(container_ptr) = static_cast<uint8_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FUInt16Property>())
         {
-            uint16_t value = *static_cast<uint16_t*>(container_ptr);
+            uint16_t value = *reinterpret_cast<uint16_t*>(container_ptr);
             int value_as_int = value;
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0, 65535))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<uint16_t*>(container_ptr) = static_cast<uint16_t>(value_as_int);
+                    *reinterpret_cast<uint16_t*>(container_ptr) = static_cast<uint16_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FUInt32Property>())
         {
-            uint32_t value = *static_cast<uint32_t*>(container_ptr);
+            uint32_t value = *reinterpret_cast<uint32_t*>(container_ptr);
             int value_as_int = static_cast<int>(value);
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<uint32_t*>(container_ptr) = static_cast<uint32_t>(value_as_int);
+                    *reinterpret_cast<uint32_t*>(container_ptr) = static_cast<uint32_t>(value_as_int);
                     value_changed = true;
                 }
             }
         }
         else if (property->IsA<FUInt64Property>())
         {
-            uint64_t value = *static_cast<uint64_t*>(container_ptr);
+            uint64_t value = *reinterpret_cast<uint64_t*>(container_ptr);
             int value_as_int = static_cast<int>(value);
             
             if (ImGui::DragInt(input_id.c_str(), &value_as_int, 1.0f, 0))
             {
                 if (!is_readonly && container_type == ContainerType::Object)
                 {
-                    *static_cast<uint64_t*>(container_ptr) = static_cast<uint64_t>(value_as_int);
+                    *reinterpret_cast<uint64_t*>(container_ptr) = static_cast<uint64_t>(value_as_int);
                     value_changed = true;
                 }
             }
@@ -3246,7 +3247,7 @@ namespace RC::GUI
         ImGui::SameLine();
         
         // Get the current string value
-        FString* fstring_ptr = static_cast<FString*>(container_ptr);
+        FString* fstring_ptr = reinterpret_cast<FString*>(container_ptr);
         std::string current_value = fstring_ptr ? to_string(fstring_ptr->GetCharArray()) : "";
         
         // Check if property is read-only
@@ -3283,16 +3284,23 @@ namespace RC::GUI
             }
             
             char buffer[256] = {0};
-            strncpy(buffer, edit_buffers[buffer_key].c_str(), sizeof(buffer) - 1);
+            auto& edit_str = edit_buffers[buffer_key];
+            size_t copy_len = std::min(edit_str.length(), sizeof(buffer) - 1);
+            std::memcpy(buffer, edit_str.c_str(), copy_len);
+            buffer[copy_len] = '\0';
             
             if (ImGui::InputText(input_id.c_str(), buffer, sizeof(buffer)))
             {
                 edit_buffers[buffer_key] = buffer;
                 if (container_type == ContainerType::Object && fstring_ptr)
                 {
-                    // Convert std::string to FString
-                    std::wstring wide_str(buffer, buffer + strlen(buffer));
-                    *fstring_ptr = FString(wide_str.c_str());
+                    // Convert std::string to FString - create StringType from std::string
+                    std::string str_buffer(buffer);
+                    StringType native_str;
+                    for (char c : str_buffer) {
+                        native_str.push_back(static_cast<StringType::value_type>(c));
+                    }
+                    *fstring_ptr = FString(native_str.c_str());
                 }
             }
             
