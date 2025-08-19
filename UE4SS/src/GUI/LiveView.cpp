@@ -3246,8 +3246,8 @@ namespace RC::GUI
         
         ImGui::SameLine();
         
-        // Get the current string value
-        FString* fstring_ptr = reinterpret_cast<FString*>(container_ptr);
+        // Get the current string value - container_ptr already points to the FString
+        FString* fstring_ptr = static_cast<FString*>(container_ptr);
         std::string current_value = fstring_ptr ? to_string(fstring_ptr->GetCharArray()) : "";
         
         // Check if property is read-only
@@ -3294,13 +3294,9 @@ namespace RC::GUI
                 edit_buffers[buffer_key] = buffer;
                 if (container_type == ContainerType::Object && fstring_ptr)
                 {
-                    // Convert std::string to FString - create StringType from std::string
+                    // Convert std::string to FString
                     std::string str_buffer(buffer);
-                    StringType native_str;
-                    for (char c : str_buffer) {
-                        native_str.push_back(static_cast<StringType::value_type>(c));
-                    }
-                    *fstring_ptr = FString(native_str.c_str());
+                    *fstring_ptr = FString(ensure_str(str_buffer).c_str());
                 }
             }
             
@@ -3551,7 +3547,7 @@ namespace RC::GUI
         for (const auto name : names)
         {
             auto enum_name = name.Key.ToString();
-            auto enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
+            auto enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, static_cast<uint8>(name.Value));
 
             ImGui::TableNextRow();
             bool open_edit_name_popup{};
