@@ -208,11 +208,7 @@ void test_mutex_contention() {
     lua_pushcfunction(L, lua_function_with_mutex_error);
     lua_setglobal(L, "mutex_error");
     
-    // First, lock from main thread and verify it works
-    {
-        std::lock_guard<std::mutex> lock(g_test_mutex);
-        std::cout << "✓ Main thread can lock mutex" << std::endl;
-    }
+    std::cout << "Calling Lua function that locks mutex and then errors..." << std::endl;
     
     // Call Lua function that will lock mutex and error
     lua_getglobal(L, "mutex_error");
@@ -266,15 +262,13 @@ void test_mutex_contention() {
 // Test with multiple RAII objects to verify stack unwinding order
 int lua_function_with_stack(lua_State* L) {
     RAIITest obj1("Stack-1-Outer", nullptr);
-    {
-        RAIITest obj2("Stack-2-Middle", nullptr);
-        {
-            RAIITest obj3("Stack-3-Inner", nullptr);
-            
-            // Error happens here - should unwind in reverse order: 3, 2, 1
-            luaL_error(L, "Error in nested stack");
-        }
-    }
+    RAIITest obj2("Stack-2-Middle", nullptr);
+    RAIITest obj3("Stack-3-Inner", nullptr);
+    
+    // Error happens here - should unwind in reverse order: 3, 2, 1
+    luaL_error(L, "Error in nested stack");
+    
+    // This should never be reached
     return 0;
 }
 
