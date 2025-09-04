@@ -56,6 +56,9 @@ int lua_function_that_errors(lua_State* L) {
     // This is a known limitation when mixing C and C++
     RAIITest test("Inside Lua function", &destructor_count);
     
+    // Add print to prevent optimization
+    std::cout << "RAII object created, about to error..." << std::endl;
+    
     // Force a Lua error
     luaL_error(L, "Intentional error for testing RAII");
     
@@ -68,6 +71,7 @@ void test_cpp_lambda_raii(lua_State* L) {
     // Use a C++ lambda instead of extern "C" function
     auto cpp_function = [](lua_State* L) -> int {
         RAIITest test("Inside C++ lambda", &destructor_count);
+        std::cout << "Lambda RAII object created, about to error..." << std::endl;
         luaL_error(L, "Error from C++ lambda");
         return 0;
     };
