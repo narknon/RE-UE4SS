@@ -149,7 +149,6 @@ void test_mutex_safety() {
     std::cout << "\n=== Testing Mutex Safety ===" << std::endl;
     
     #ifdef _WIN32
-        #include <mutex>
         // This would crash with older msvcp140.dll if _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR is not defined
         try {
             std::mutex test_mutex;
@@ -168,6 +167,7 @@ int main() {
     std::cout << "======================================" << std::endl;
     
     test_compilation_mode();
+    test_mutex_safety();
     test_lua_raii_safety();
     test_lua_error_mechanism();
     

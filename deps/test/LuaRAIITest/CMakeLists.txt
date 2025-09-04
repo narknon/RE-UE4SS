@@ -10,6 +10,13 @@ add_executable(${TARGET}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
 )
 
+# Add additional test executable
+add_executable(test_lua_direct
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_direct.cpp"  
+)
+target_compile_features(test_lua_direct PRIVATE cxx_std_23)
+target_link_libraries(test_lua_direct PRIVATE LuaRaw)
+
 # Set C++23 standard
 target_compile_features(${TARGET} PRIVATE cxx_std_23)
 
