@@ -8,6 +8,7 @@ target(projectName)
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
+    -- Add all C files and force them to be compiled as C++
     add_files(
         "src/lapi.c", "src/lauxlib.c", "src/lbaselib.c", "src/lcode.c",
         "src/lcorolib.c", "src/lctype.c", "src/ldblib.c", "src/ldebug.c",
@@ -17,7 +18,7 @@ target(projectName)
         "src/loslib.c", "src/lparser.c", "src/lstate.c", "src/lstring.c",
         "src/lstrlib.c", "src/ltable.c", "src/ltablib.c", "src/ltm.c",
         "src/luauser.c", "src/lundump.c", "src/lutf8lib.c", "src/lvm.c",
-        "src/lzio.c"
+        "src/lzio.c", {sourcekind = "cxx"}
     )
 
     

@@ -8,7 +8,7 @@
 #include <chrono>
 #include <vector>
 
-// Include Lua headers via lua.hpp
+// Include Lua headers via lua.hpp (no extern "C" - Lua compiled as C++)
 #include <lua.hpp>
 
 // Global counter to track destructor calls

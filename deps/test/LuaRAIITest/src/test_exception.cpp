@@ -3,11 +3,7 @@
 #include <string>
 #include <vector>
 
-extern "C" {
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
-}
+#include <lua.hpp>
 
 // Simple RAII tracker
 class Tracker {

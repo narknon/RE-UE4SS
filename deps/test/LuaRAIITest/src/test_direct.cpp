@@ -3,11 +3,7 @@
 #include <exception>
 
 // Test if Lua headers declare functions with C or C++ linkage
-extern "C" {
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
-}
+#include <lua.hpp>
 
 // RAII test class
 class TestRAII {

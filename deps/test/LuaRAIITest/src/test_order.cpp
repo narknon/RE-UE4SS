@@ -2,10 +2,7 @@
 #include <mutex>
 #include <string>
 
-extern "C" {
-#include "lua.h"
-#include "lauxlib.h"
-}
+#include <lua.hpp>
 
 class OrderTest {
     std::string name;

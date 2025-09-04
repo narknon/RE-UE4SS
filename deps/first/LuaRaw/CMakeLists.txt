@@ -45,7 +45,6 @@ set(${TARGET}_Sources
 
 # This makes the .c files be compiled with the C++ compiler
 # This causes __cplusplus to be defined which is what Lua uses to determine whether it's compiled as C or C++
-# TODO: Decide if we want to compile Lua as C++ rather than C
 set_source_files_properties(${${TARGET}_Sources} PROPERTIES LANGUAGE CXX)
 
 string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
