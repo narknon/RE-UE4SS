@@ -3,6 +3,10 @@
 #include <string>
 #include <cassert>
 
+#ifdef _WIN32
+#include <mutex>
+#endif
+
 // Include Lua headers via lua.hpp
 #include <lua.hpp>
 
