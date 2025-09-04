@@ -22,6 +22,7 @@ Set-Location build_lua_test
 cmake --build . --target LuaRAIITest --config $Config
 cmake --build . --target test_exception --config $Config 2>$null
 cmake --build . --target test_order --config $Config 2>$null
+cmake --build . --target test_full_cpp --config $Config 2>$null
 
 Write-Host "`n--- CMake Build Test Output ---"
 # Find and run the test executable
@@ -58,6 +59,12 @@ if ($orderTest) {
     & $orderTest.FullName
 }
 
+Write-Host "`n--- Running Full C++ Test ---"
+$fullCppTest = Get-ChildItem -Path . -Recurse -Filter "test_full_cpp.exe" | Select-Object -First 1
+if ($fullCppTest) {
+    & $fullCppTest.FullName
+}
+
 Set-Location ..
 
 # Test with xmake
@@ -66,6 +73,7 @@ xmake f -m $Config
 xmake build LuaRAIITest
 xmake build test_exception 2>$null
 xmake build test_order 2>$null
+xmake build test_full_cpp 2>$null
 Write-Host "`n--- xmake Build Test Output ---"
 xmake run LuaRAIITest
 
@@ -75,6 +83,9 @@ xmake run test_exception
 
 Write-Host "`n--- Running Order Test (xmake) ---"
 xmake run test_order
+
+Write-Host "`n--- Running Full C++ Test (xmake) ---"
+xmake run test_full_cpp
 
 Write-Host "`n========================================"
 Write-Host "Test complete. Both builds should show:"

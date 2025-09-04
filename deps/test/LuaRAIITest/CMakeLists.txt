@@ -29,6 +29,12 @@ add_executable(test_order
 target_compile_features(test_order PRIVATE cxx_std_23)
 target_link_libraries(test_order PRIVATE LuaRaw)
 
+add_executable(test_full_cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_full_cpp.cpp"  
+)
+target_compile_features(test_full_cpp PRIVATE cxx_std_23)
+target_link_libraries(test_full_cpp PRIVATE LuaRaw)
+
 # Set C++23 standard
 target_compile_features(${TARGET} PRIVATE cxx_std_23)
 
