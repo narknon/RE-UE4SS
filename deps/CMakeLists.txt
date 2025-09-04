@@ -8,3 +8,8 @@ add_subdirectory("third")
 
 # Add first-party dependencies
 add_subdirectory("first")
+
+# Add test directory if it exists
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test")
+    add_subdirectory("test")
+endif()

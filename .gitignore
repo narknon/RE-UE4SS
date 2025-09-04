@@ -76,6 +76,7 @@ compile_commands.json
 
 # xmake generated projects
 vsxmake2022
+.xmake
 
 # xwin
 xwin/*

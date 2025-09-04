@@ -2,6 +2,10 @@
 includes("first")
 -- Third party dependencies
 includes("third")
+-- Test directory
+if os.exists("test") then
+    includes("test")
+end
 -- Third party dependencies repository
 -- Everything that is an xmake package should be inside of this repository
 add_repositories("third-party deps/third-repo", { rootdir = get_config("ue4ssRoot") })
