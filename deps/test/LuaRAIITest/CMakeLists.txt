@@ -17,6 +17,12 @@ add_executable(test_lua_direct
 target_compile_features(test_lua_direct PRIVATE cxx_std_23)
 target_link_libraries(test_lua_direct PRIVATE LuaRaw)
 
+add_executable(test_exception
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_exception.cpp"  
+)
+target_compile_features(test_exception PRIVATE cxx_std_23)
+target_link_libraries(test_exception PRIVATE LuaRaw)
+
 # Set C++23 standard
 target_compile_features(${TARGET} PRIVATE cxx_std_23)
 
