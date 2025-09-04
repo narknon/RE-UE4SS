@@ -265,6 +265,9 @@ int lua_function_with_stack(lua_State* L) {
     RAIITest obj2("Stack-2-Middle", nullptr);
     RAIITest obj3("Stack-3-Inner", nullptr);
     
+    // Add some actual work to prevent optimization
+    std::cout << "All objects created, about to error..." << std::endl;
+    
     // Error happens here - should unwind in reverse order: 3, 2, 1
     luaL_error(L, "Error in nested stack");
     
