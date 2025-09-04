@@ -12,15 +12,10 @@ target(projectName)
     set_basename("lua_raii_test")
     
     -- Inherit definitions from UE4SS if available
-    on_load(function (target)
-        local ue4ss = target:dep("UE4SS")
-        if ue4ss then
-            -- Copy compile definitions from UE4SS
-            local defs = ue4ss:get("defines")
-            if defs then
-                target:add("defines", defs)
-            end
-        end
+    after_load(function (target)
+        -- Don't try to inherit from UE4SS since it's not a dependency
+        -- The test only depends on LuaRaw
+        -- Build definitions should come from the build system automatically
     end)
     
     -- Run test after build

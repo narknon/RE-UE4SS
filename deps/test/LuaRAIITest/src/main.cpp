@@ -3,15 +3,18 @@
 #include <string>
 #include <cassert>
 
-#ifdef _WIN32
 #include <mutex>
-#endif
+#include <thread>
+#include <chrono>
 
 // Include Lua headers via lua.hpp
 #include <lua.hpp>
 
 // Global counter to track destructor calls
 static int destructor_count = 0;
+
+// Global mutex for testing
+static std::mutex g_test_mutex;
 
 // RAII test class
 class RAIITest {
@@ -181,21 +184,81 @@ void test_compilation_mode() {
     #endif
 }
 
-// Test 3: Mutex constructor safety test
-void test_mutex_safety() {
-    std::cout << "\n=== Testing Mutex Safety ===" << std::endl;
+// Lua function that locks a mutex and then errors
+int lua_function_with_mutex_error(lua_State* L) {
+    std::lock_guard<std::mutex> lock(g_test_mutex);
+    std::cout << "Mutex locked in Lua function" << std::endl;
     
-    #ifdef _WIN32
-        // This would crash with older msvcp140.dll if _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR is not defined
-        try {
-            std::mutex test_mutex;
-            std::cout << "✓ PASS: Mutex created without crash" << std::endl;
-        } catch (...) {
-            std::cout << "✗ FAIL: Mutex creation threw exception" << std::endl;
+    // Now error while mutex is locked
+    luaL_error(L, "Error while mutex is locked");
+    
+    // Never reached
+    return 0;
+}
+
+// Test 3: Mutex contention during Lua error
+void test_mutex_contention() {
+    std::cout << "\n=== Testing Mutex Contention with Lua Errors ===" << std::endl;
+    
+    lua_State* L = luaL_newstate();
+    
+    // Register our mutex test function
+    lua_pushcfunction(L, lua_function_with_mutex_error);
+    lua_setglobal(L, "mutex_error");
+    
+    // First, lock from main thread and verify it works
+    {
+        std::lock_guard<std::mutex> lock(g_test_mutex);
+        std::cout << "✓ Main thread can lock mutex" << std::endl;
+    }
+    
+    // Call Lua function that will lock mutex and error
+    lua_getglobal(L, "mutex_error");
+    int result = lua_pcall(L, 0, 0, 0);
+    
+    if (result != LUA_OK) {
+        std::cout << "Lua error (expected): " << lua_tostring(L, -1) << std::endl;
+        lua_pop(L, 1);
+    }
+    
+    // Now test if mutex is still locked (deadlock) or unlocked
+    std::cout << "\nTesting if mutex is unlocked after Lua error..." << std::endl;
+    
+    bool mutex_unlocked = false;
+    std::thread test_thread([&mutex_unlocked]() {
+        if (g_test_mutex.try_lock()) {
+            mutex_unlocked = true;
+            g_test_mutex.unlock();
+            std::cout << "✓ Thread successfully locked mutex" << std::endl;
+        } else {
+            std::cout << "✗ Thread CANNOT lock mutex - DEADLOCK!" << std::endl;
         }
-    #else
-        std::cout << "Skipping mutex test (not Windows)" << std::endl;
-    #endif
+    });
+    
+    test_thread.join();
+    
+    // Also try with timeout
+    if (!mutex_unlocked) {
+        std::cout << "Attempting timed lock..." << std::endl;
+        std::timed_mutex timed_test;
+        auto timeout = std::chrono::milliseconds(100);
+        
+        if (g_test_mutex.try_lock()) {
+            std::cout << "✓ Main thread can relock - mutex was properly unlocked" << std::endl;
+            g_test_mutex.unlock();
+            mutex_unlocked = true;
+        }
+    }
+    
+    lua_close(L);
+    
+    if (mutex_unlocked) {
+        std::cout << "\n✓ PASS: Mutex properly unlocked after Lua error" << std::endl;
+        std::cout << "This indicates Lua is compiled as C++ with proper RAII" << std::endl;
+    } else {
+        std::cout << "\n✗ FAIL: Mutex is deadlocked!" << std::endl;
+        std::cout << "This indicates Lua is using longjmp which bypasses destructors" << std::endl;
+    }
 }
 
 int main() {
@@ -204,7 +267,7 @@ int main() {
     std::cout << "======================================" << std::endl;
     
     test_compilation_mode();
-    test_mutex_safety();
+    test_mutex_contention();
     test_lua_raii_safety();
     test_lua_error_mechanism();
     
