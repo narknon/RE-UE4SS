@@ -20,6 +20,8 @@ if (-not (Test-Path "build_lua_test")) {
 
 Set-Location build_lua_test
 cmake --build . --target LuaRAIITest --config $Config
+cmake --build . --target test_exception --config $Config 2>$null
+cmake --build . --target test_order --config $Config 2>$null
 
 Write-Host "`n--- CMake Build Test Output ---"
 # Find and run the test executable
@@ -42,14 +44,37 @@ if ($testExe) {
         }
     }
 }
+
+# Run additional diagnostic tests
+Write-Host "`n--- Running Exception Diagnostic Test ---"
+$exceptionTest = Get-ChildItem -Path . -Recurse -Filter "test_exception.exe" | Select-Object -First 1
+if ($exceptionTest) {
+    & $exceptionTest.FullName
+}
+
+Write-Host "`n--- Running Order Test ---"
+$orderTest = Get-ChildItem -Path . -Recurse -Filter "test_order.exe" | Select-Object -First 1
+if ($orderTest) {
+    & $orderTest.FullName
+}
+
 Set-Location ..
 
 # Test with xmake
 Write-Host "`n`n=== Building with xmake ==="
 xmake f -m $Config
 xmake build LuaRAIITest
+xmake build test_exception 2>$null
+xmake build test_order 2>$null
 Write-Host "`n--- xmake Build Test Output ---"
 xmake run LuaRAIITest
+
+# Run additional xmake diagnostic tests
+Write-Host "`n--- Running Exception Diagnostic Test (xmake) ---"
+xmake run test_exception
+
+Write-Host "`n--- Running Order Test (xmake) ---"
+xmake run test_order
 
 Write-Host "`n========================================"
 Write-Host "Test complete. Both builds should show:"
