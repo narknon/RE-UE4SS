@@ -6,6 +6,7 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <vector>
 
 // Include Lua headers via lua.hpp
 #include <lua.hpp>
@@ -16,11 +17,12 @@ static int destructor_count = 0;
 // Global mutex for testing
 static std::mutex g_test_mutex;
 
-// RAII test class
+// RAII test class with order tracking
 class RAIITest {
 private:
     std::string name;
     int* counter;
+    static std::vector<std::string> destruction_order;
     
 public:
     RAIITest(const std::string& n, int* cnt) : name(n), counter(cnt) {
@@ -29,6 +31,7 @@ public:
     
     ~RAIITest() {
         std::cout << "Destructor: " << name << std::endl;
+        destruction_order.push_back(name);
         if (counter) {
             (*counter)++;
         }
@@ -37,7 +40,12 @@ public:
     // Delete copy operations to ensure no unexpected copies
     RAIITest(const RAIITest&) = delete;
     RAIITest& operator=(const RAIITest&) = delete;
+    
+    static void clearOrder() { destruction_order.clear(); }
+    static const std::vector<std::string>& getOrder() { return destruction_order; }
 };
+
+std::vector<std::string> RAIITest::destruction_order;
 
 // Lua C function that will error
 int lua_function_that_errors(lua_State* L) {
@@ -261,6 +269,99 @@ void test_mutex_contention() {
     }
 }
 
+// Test with multiple RAII objects to verify stack unwinding order
+int lua_function_with_stack(lua_State* L) {
+    RAIITest obj1("Stack-1-Outer", nullptr);
+    {
+        RAIITest obj2("Stack-2-Middle", nullptr);
+        {
+            RAIITest obj3("Stack-3-Inner", nullptr);
+            
+            // Error happens here - should unwind in reverse order: 3, 2, 1
+            luaL_error(L, "Error in nested stack");
+        }
+    }
+    return 0;
+}
+
+// Test 4: Stack unwinding order
+void test_stack_unwinding() {
+    std::cout << "\n=== Testing Stack Unwinding Order ===" << std::endl;
+    
+    // Test C++ native stack unwinding first
+    {
+        std::cout << "\n--- C++ Native Exception Test ---" << std::endl;
+        RAIITest::clearOrder();
+        
+        try {
+            RAIITest obj1("Native-1-Outer", nullptr);
+            {
+                RAIITest obj2("Native-2-Middle", nullptr);
+                {
+                    RAIITest obj3("Native-3-Inner", nullptr);
+                    throw std::runtime_error("Test exception");
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cout << "Caught exception: " << e.what() << std::endl;
+        }
+        
+        auto order = RAIITest::getOrder();
+        std::cout << "\nDestruction order:" << std::endl;
+        for (const auto& name : order) {
+            std::cout << "  " << name << std::endl;
+        }
+        
+        if (order.size() == 3 && 
+            order[0] == "Native-3-Inner" &&
+            order[1] == "Native-2-Middle" &&
+            order[2] == "Native-1-Outer") {
+            std::cout << "✓ PASS: C++ stack unwinding in correct LIFO order" << std::endl;
+        } else {
+            std::cout << "✗ FAIL: Incorrect unwinding order!" << std::endl;
+        }
+    }
+    
+    // Test Lua stack unwinding
+    {
+        std::cout << "\n--- Lua Error Stack Test ---" << std::endl;
+        RAIITest::clearOrder();
+        
+        lua_State* L = luaL_newstate();
+        
+        lua_pushcfunction(L, lua_function_with_stack);
+        lua_setglobal(L, "stack_test");
+        
+        lua_getglobal(L, "stack_test");
+        int result = lua_pcall(L, 0, 0, 0);
+        
+        if (result != LUA_OK) {
+            std::cout << "Lua error (expected): " << lua_tostring(L, -1) << std::endl;
+            lua_pop(L, 1);
+        }
+        
+        auto order = RAIITest::getOrder();
+        std::cout << "\nDestruction order:" << std::endl;
+        for (const auto& name : order) {
+            std::cout << "  " << name << std::endl;
+        }
+        
+        if (order.empty()) {
+            std::cout << "⚠ WARNING: No destructors called in Lua function" << std::endl;
+            std::cout << "This is expected with extern 'C' functions" << std::endl;
+        } else if (order.size() == 3 && 
+                   order[0] == "Stack-3-Inner" &&
+                   order[1] == "Stack-2-Middle" &&
+                   order[2] == "Stack-1-Outer") {
+            std::cout << "✓ PASS: Lua stack unwinding in correct LIFO order" << std::endl;
+        } else {
+            std::cout << "✗ FAIL: Incorrect or partial unwinding!" << std::endl;
+        }
+        
+        lua_close(L);
+    }
+}
+
 int main() {
     std::cout << "======================================" << std::endl;
     std::cout << "Lua RAII Safety Test" << std::endl;
@@ -270,6 +371,8 @@ int main() {
     test_mutex_contention();
     test_lua_raii_safety();
     test_lua_error_mechanism();
+    
+    test_stack_unwinding();
     
     std::cout << "\n======================================" << std::endl;
     
