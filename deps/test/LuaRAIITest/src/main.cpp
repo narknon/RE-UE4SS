@@ -62,7 +62,8 @@ void test_lua_raii_safety() {
     {
         RAIITest test("Before Lua call", &destructor_count);
         
-        // Try to call Lua function that will error
+        // Get our test function and call it
+        lua_getglobal(L, "test_error");
         int result = lua_pcall(L, 0, 0, 0);
         
         if (result != LUA_OK) {
@@ -129,6 +130,31 @@ void test_compilation_mode() {
         std::cout << "LuaRaw: Static build" << std::endl;
     #else
         std::cout << "LuaRaw: Dynamic build" << std::endl;
+    #endif
+    
+    // Check for mutex fix
+    #ifdef _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR
+        std::cout << "Mutex fix: ENABLED (safe from msvcp140.dll crashes)" << std::endl;
+    #else
+        std::cout << "Mutex fix: DISABLED (may crash with older msvcp140.dll)" << std::endl;
+    #endif
+}
+
+// Test 3: Mutex constructor safety test
+void test_mutex_safety() {
+    std::cout << "\n=== Testing Mutex Safety ===" << std::endl;
+    
+    #ifdef _WIN32
+        #include <mutex>
+        // This would crash with older msvcp140.dll if _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR is not defined
+        try {
+            std::mutex test_mutex;
+            std::cout << "✓ PASS: Mutex created without crash" << std::endl;
+        } catch (...) {
+            std::cout << "✗ FAIL: Mutex creation threw exception" << std::endl;
+        }
+    #else
+        std::cout << "Skipping mutex test (not Windows)" << std::endl;
     #endif
 }
 
