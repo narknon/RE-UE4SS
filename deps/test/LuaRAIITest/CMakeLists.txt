@@ -20,8 +20,17 @@ target_link_libraries(test_lua_direct PRIVATE LuaRaw)
 # Set C++23 standard
 target_compile_features(${TARGET} PRIVATE cxx_std_23)
 
-# Link with LuaRaw
+# Link with LuaRaw and inherit UE4SS definitions
 target_link_libraries(${TARGET} PRIVATE LuaRaw)
+
+# If UE4SS target exists, inherit its compile definitions
+if(TARGET UE4SS)
+    # Get UE4SS's interface compile definitions
+    get_target_property(UE4SS_INTERFACE_DEFS UE4SS INTERFACE_COMPILE_DEFINITIONS)
+    if(UE4SS_INTERFACE_DEFS)
+        target_compile_definitions(${TARGET} PRIVATE ${UE4SS_INTERFACE_DEFS})
+    endif()
+endif()
 
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
