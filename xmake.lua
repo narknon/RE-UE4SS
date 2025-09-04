@@ -73,3 +73,10 @@ option("ue4ssInput")
     add_defines("HAS_INPUT")
 
     set_description("Enable the input system.")
+
+option("lua_compile_as_cpp")
+    set_default(true)
+    set_showmenu(true)
+    set_values(true, false)
+    
+    set_description("Compile Lua as C++ instead of C")

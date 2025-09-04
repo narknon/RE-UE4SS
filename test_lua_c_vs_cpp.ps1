@@ -88,7 +88,7 @@ Set-Location ..
 # Test 3: xmake with Lua as C
 Write-Host "`n=== xmake - Building Lua as C ==="
 xmake f -m $Config --lua_compile_as_cpp=false -c
-xmake build LuaRAIITest test_exception test_order test_full_cpp
+xmake
 
 $XmakeCResults = @()
 $XmakeCResults += "=== xmake - Lua compiled as C ==="
@@ -107,7 +107,7 @@ $AllResults += "`n`n$($XmakeCResults -join "`n")"
 # Test 4: xmake with Lua as C++
 Write-Host "`n=== xmake - Building Lua as C++ ==="
 xmake f -m $Config --lua_compile_as_cpp=true -c
-xmake build LuaRAIITest test_exception test_order test_full_cpp
+xmake
 
 $XmakeCppResults = @()
 $XmakeCppResults += "=== xmake - Lua compiled as C++ ==="
