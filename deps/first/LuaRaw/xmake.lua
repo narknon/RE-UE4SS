@@ -7,19 +7,46 @@ target(projectName)
     add_rules("ue4ss.dependency")
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
+    
+    -- Check if we should compile as C++
+    local compile_as_cpp = get_config("lua_compile_as_cpp")
+    if compile_as_cpp == nil then compile_as_cpp = true end
+    
+    if compile_as_cpp then
+        add_defines("LUA_COMPILED_AS_CPP", { public = true })
+        print("Compiling Lua as C++")
+    else
+        print("Compiling Lua as C")
+    end
 
-    -- Add all C files and force them to be compiled as C++
-    add_files(
-        "src/lapi.c", "src/lauxlib.c", "src/lbaselib.c", "src/lcode.c",
-        "src/lcorolib.c", "src/lctype.c", "src/ldblib.c", "src/ldebug.c",
-        "src/ldo.c", "src/ldump.c", "src/lfunc.c", "src/lgc.c",
-        "src/linit.c", "src/liolib.c", "src/llex.c", "src/lmathlib.c",
-        "src/lmem.c", "src/loadlib.c", "src/lobject.c", "src/lopcodes.c",
-        "src/loslib.c", "src/lparser.c", "src/lstate.c", "src/lstring.c",
-        "src/lstrlib.c", "src/ltable.c", "src/ltablib.c", "src/ltm.c",
-        "src/luauser.c", "src/lundump.c", "src/lutf8lib.c", "src/lvm.c",
-        "src/lzio.c", {sourcekind = "cxx"}
-    )
+    -- Add all C files
+    if compile_as_cpp then
+        -- Force compilation as C++
+        add_files(
+            "src/lapi.c", "src/lauxlib.c", "src/lbaselib.c", "src/lcode.c",
+            "src/lcorolib.c", "src/lctype.c", "src/ldblib.c", "src/ldebug.c",
+            "src/ldo.c", "src/ldump.c", "src/lfunc.c", "src/lgc.c",
+            "src/linit.c", "src/liolib.c", "src/llex.c", "src/lmathlib.c",
+            "src/lmem.c", "src/loadlib.c", "src/lobject.c", "src/lopcodes.c",
+            "src/loslib.c", "src/lparser.c", "src/lstate.c", "src/lstring.c",
+            "src/lstrlib.c", "src/ltable.c", "src/ltablib.c", "src/ltm.c",
+            "src/luauser.c", "src/lundump.c", "src/lutf8lib.c", "src/lvm.c",
+            "src/lzio.c", {sourcekind = "cxx"}
+        )
+    else
+        -- Compile as C
+        add_files(
+            "src/lapi.c", "src/lauxlib.c", "src/lbaselib.c", "src/lcode.c",
+            "src/lcorolib.c", "src/lctype.c", "src/ldblib.c", "src/ldebug.c",
+            "src/ldo.c", "src/ldump.c", "src/lfunc.c", "src/lgc.c",
+            "src/linit.c", "src/liolib.c", "src/llex.c", "src/lmathlib.c",
+            "src/lmem.c", "src/loadlib.c", "src/lobject.c", "src/lopcodes.c",
+            "src/loslib.c", "src/lparser.c", "src/lstate.c", "src/lstring.c",
+            "src/lstrlib.c", "src/ltable.c", "src/ltablib.c", "src/ltm.c",
+            "src/luauser.c", "src/lundump.c", "src/lutf8lib.c", "src/lvm.c",
+            "src/lzio.c"
+        )
+    end
 
     
 
