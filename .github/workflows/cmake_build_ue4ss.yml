@@ -20,7 +20,7 @@ on:
         default: false
       artifact-retention-days:
         description: 'How many days to retain artifacts'
-        type: number
+        type: string
         default: 7
 defaults:
   run:
@@ -59,7 +59,6 @@ jobs:
           $buildDir = "build_cmake_$mode"
           echo "name=$buildDir" >> $env:GITHUB_OUTPUT
 
-      # FIXED: Combined Configure and Build, added proxy target
       - name: Configure and Build
         run: |
           Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
@@ -72,11 +71,12 @@ jobs:
             -DCMAKE_CXX_COMPILER=cl `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           
-          # Build both UE4SS and proxy targets
-          cmake --build ${{ steps.build_dir.outputs.name }} --target UE4SS
-          cmake --build ${{ steps.build_dir.outputs.name }} --target proxy
+          # List all available targets
+          Write-Host "Available targets:"
+          cmake --build ${{ steps.build_dir.outputs.name }} --target help
 
-      # FIXED: Collect all required artifacts including dwmapi.dll
+          cmake --build ${{ steps.build_dir.outputs.name }}
+
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
         if: ${{inputs.should-upload-artifact == true}}
