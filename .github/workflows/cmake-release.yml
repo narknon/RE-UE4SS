@@ -43,7 +43,7 @@ jobs:
           echo "release_tag=$testTag" >> $env:GITHUB_OUTPUT
           echo "Test release tag: $testTag"
 
-      - name: Configure CMake
+      - name: Configure and Build
         shell: pwsh
         run: |
           Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
@@ -54,10 +54,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 `
             -DCMAKE_C_COMPILER=cl `
             -DCMAKE_CXX_COMPILER=cl
-
-      - name: Build
-        shell: pwsh
-        run: |
+          
           cmake --build build_release --target UE4SS
 
       # The release script expects binaries in specific locations
