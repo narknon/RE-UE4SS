@@ -21,7 +21,7 @@ on:
       artifact-retention-days:
         description: 'How many days to retain artifacts'
         type: string
-        default: 7
+        default: '7'
 defaults:
   run:
     shell: pwsh
@@ -40,21 +40,31 @@ jobs:
       - name: Calculate cache key
         id: cache_key
         run: |
-          # Hash all CMakeLists.txt and .cmake files
-          $cmakeHash = Get-ChildItem -Path . -Include "CMakeLists.txt","*.cmake" -Recurse | 
-            Get-FileHash | 
-            ForEach-Object { $_.Hash } | 
-            Out-String | 
-            Get-FileHash | 
-            Select-Object -ExpandProperty Hash
+          # Get all CMakeLists.txt and .cmake files and create a combined hash
+          $files = Get-ChildItem -Path . -Include "CMakeLists.txt","*.cmake" -Recurse
+          $combinedContent = ""
+          foreach ($file in $files) {
+            $combinedContent += (Get-FileHash $file.FullName).Hash
+          }
           
-          # Get submodule commits
+          # Create a hash of the combined hashes using SHA256
+          $stringAsStream = [System.IO.MemoryStream]::new()
+          $writer = [System.IO.StreamWriter]::new($stringAsStream)
+          $writer.write($combinedContent)
+          $writer.Flush()
+          $stringAsStream.Position = 0
+          $cmakeHash = (Get-FileHash -InputStream $stringAsStream -Algorithm SHA256).Hash
+          
+          # Get submodule commits hash
           git submodule status > submodule_status.txt
-          $submoduleHash = Get-FileHash submodule_status.txt | Select-Object -ExpandProperty Hash
+          $submoduleHash = (Get-FileHash submodule_status.txt).Hash
           
-          # Combine hashes
+          # Combine hashes for final cache key
           $combinedHash = "$cmakeHash-$submoduleHash"
           echo "hash=$combinedHash" >> $env:GITHUB_OUTPUT
+          
+          # Clean up temp file
+          Remove-Item submodule_status.txt
 
       # Setup sccache for faster compilation
       - name: Setup sccache
@@ -128,7 +138,7 @@ jobs:
       - name: Build All Targets
         run: |
           Write-Host "Building all targets..."
-          # Build everything
+          # Build everything - this will build UE4SS, proxy, all mods, etc.
           cmake --build ${{ steps.build_dir.outputs.name }}
 
       # Collect all DLLs and PDBs automatically
@@ -210,5 +220,5 @@ jobs:
         with:
           name: CMAKE-${{inputs.build-mode}}
           path: ${{ steps.calc-files-artifact.outputs.artifact_dir }}
-          retention-days: ${{inputs.artifact-retention-days}}
+          retention-days: ${{ inputs.artifact-retention-days }}
           overwrite: true
