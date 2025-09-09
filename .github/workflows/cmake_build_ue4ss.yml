@@ -114,7 +114,6 @@ jobs:
           restore-keys: |
             cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
 
-      # Configure CMake WITHOUT sccache to avoid PDB conflicts
       - name: Configure CMake
         run: |
           $needs_reconfigure = $false
@@ -131,13 +130,16 @@ jobs:
             # Set environment variables for FetchContent to use a persistent location
             $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
             
-            # Configure WITHOUT sccache to avoid PDB conflicts
+            # Configure with incremental linking disabled
             cmake -B ${{ steps.build_dir.outputs.name }} `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
               -DCMAKE_C_COMPILER=cl `
               -DCMAKE_CXX_COMPILER=cl `
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+              -DCMAKE_EXE_LINKER_FLAGS="/INCREMENTAL:NO" `
+              -DCMAKE_MODULE_LINKER_FLAGS="/INCREMENTAL:NO" `
+              -DCMAKE_SHARED_LINKER_FLAGS="/INCREMENTAL:NO" `
               -DFETCHCONTENT_QUIET=OFF `
               -DFETCHCONTENT_FULLY_DISCONNECTED=OFF `
               -DFETCHCONTENT_UPDATES_DISCONNECTED=ON
@@ -147,12 +149,12 @@ jobs:
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build ALL targets - without sccache the PDB conflicts should be resolved
+      # Build ALL targets with verbose output to see what's happening
       - name: Build All Targets
         run: |
-          Write-Host "Building all targets..."
-          # Build everything - this will build UE4SS, proxy, all mods, etc.
-          cmake --build ${{ steps.build_dir.outputs.name }}
+          Write-Host "Building all targets with verbose output..."
+          # Build everything with verbose output to see compile/link flags
+          cmake --build ${{ steps.build_dir.outputs.name }} --verbose
 
       # Collect all DLLs and PDBs automatically
       - name: Calculate Files For Artifact Inclusion
