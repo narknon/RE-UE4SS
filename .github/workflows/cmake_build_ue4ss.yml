@@ -44,27 +44,40 @@ jobs:
           $files = Get-ChildItem -Path . -Include "CMakeLists.txt","*.cmake" -Recurse
           $combinedContent = ""
           foreach ($file in $files) {
+            # Include file content hash AND path for better cache invalidation
             $combinedContent += (Get-FileHash $file.FullName).Hash
+            $combinedContent += $file.FullName
           }
           
-          # Create a hash of the combined hashes using SHA256
-          $stringAsStream = [System.IO.MemoryStream]::new()
-          $writer = [System.IO.StreamWriter]::new($stringAsStream)
-          $writer.write($combinedContent)
-          $writer.Flush()
-          $stringAsStream.Position = 0
-          $cmakeHash = (Get-FileHash -InputStream $stringAsStream -Algorithm SHA256).Hash
+          # Create a hash of the combined content
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($combinedContent)
+          $hash = [System.Security.Cryptography.SHA256]::Create()
+          $hashBytes = $hash.ComputeHash($bytes)
+          $cmakeHash = [System.BitConverter]::ToString($hashBytes).Replace("-", "")
           
           # Get submodule commits hash
           git submodule status > submodule_status.txt
           $submoduleHash = (Get-FileHash submodule_status.txt).Hash
           
-          # Combine hashes for final cache key
-          $combinedHash = "$cmakeHash-$submoduleHash"
+          # Combine hashes for final cache key (shortened for readability)
+          $combinedHash = "$($cmakeHash.Substring(0, 16))-$($submoduleHash.Substring(0, 16))"
           echo "hash=$combinedHash" >> $env:GITHUB_OUTPUT
           
           # Clean up temp file
           Remove-Item submodule_status.txt
+
+      # Cache for third-party dependencies fetched by CMake
+      - name: Cache CMake Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cmake/packages
+            ~/AppData/Local/vcpkg/archives
+            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/_deps
+            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/ep_downloads
+          key: cmake-deps-${{ runner.os }}-${{ steps.cache_key.outputs.hash }}
+          restore-keys: |
+            cmake-deps-${{ runner.os }}-
 
       # Setup sccache for faster compilation
       - name: Setup sccache
@@ -101,12 +114,15 @@ jobs:
         uses: actions/cache@v4
         id: cache_build
         with:
-          path: ${{ steps.build_dir.outputs.name }}
+          path: |
+            ${{ steps.build_dir.outputs.name }}
+            !${{ steps.build_dir.outputs.name }}/_deps
+            !${{ steps.build_dir.outputs.name }}/ep_downloads
           key: cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
           restore-keys: |
             cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
 
-      # Configure CMake (only if needed)
+      # Configure CMake with FetchContent caching and PDB fix
       - name: Configure CMake
         run: |
           $needs_reconfigure = $false
@@ -120,26 +136,50 @@ jobs:
           }
           
           if ($needs_reconfigure) {
+            # Set environment variables for FetchContent to use a persistent location
+            $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
+            
+            # Configure with sccache disabled for C files to avoid PDB conflicts
             cmake -B ${{ steps.build_dir.outputs.name }} `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
               -DCMAKE_C_COMPILER=cl `
               -DCMAKE_CXX_COMPILER=cl `
-              -DCMAKE_C_COMPILER_LAUNCHER=sccache `
               -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
-              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+              -DFETCHCONTENT_QUIET=OFF `
+              -DFETCHCONTENT_FULLY_DISCONNECTED=OFF `
+              -DFETCHCONTENT_UPDATES_DISCONNECTED=ON
+              
+            # Note: We only use sccache for C++ files, not C files to avoid PDB conflicts
           } else {
             Write-Host "Using cached configuration - incremental build"
             # Just run cmake to ensure cache is valid
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build ALL targets (will be incremental if cache hit)
+      # Build ALL targets with limited parallelism for dependencies
       - name: Build All Targets
+        env:
+          SCCACHE_ERROR_LOG: sccache_error.log
+          SCCACHE_LOG: debug
         run: |
           Write-Host "Building all targets..."
-          # Build everything - this will build UE4SS, proxy, all mods, etc.
-          cmake --build ${{ steps.build_dir.outputs.name }}
+          
+          # First, try to build with normal parallelism
+          $buildFailed = $false
+          try {
+            cmake --build ${{ steps.build_dir.outputs.name }}
+          } catch {
+            Write-Host "Initial build failed, attempting with reduced parallelism..."
+            $buildFailed = $true
+          }
+          
+          # If build failed due to PDB conflicts, retry with limited parallelism
+          if ($buildFailed) {
+            Write-Host "Retrying build with limited parallelism to avoid PDB conflicts..."
+            cmake --build ${{ steps.build_dir.outputs.name }} --parallel 2
+          }
 
       # Collect all DLLs and PDBs automatically
       - name: Calculate Files For Artifact Inclusion
@@ -153,7 +193,8 @@ jobs:
           $excludedDlls = @(
             "kernel32.dll", "user32.dll", "advapi32.dll", "shell32.dll",
             "ole32.dll", "oleaut32.dll", "msvcrt.dll", "comctl32.dll",
-            "gdi32.dll", "rpcrt4.dll", "ws2_32.dll", "winmm.dll"
+            "gdi32.dll", "rpcrt4.dll", "ws2_32.dll", "winmm.dll",
+            "ntdll.dll", "setupapi.dll", "version.dll", "shlwapi.dll"
           )
           
           Write-Host "Collecting build artifacts from $buildDir..."
@@ -162,8 +203,14 @@ jobs:
           $dllFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
           $pdbFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
           
-          # Copy DLLs (excluding system DLLs)
+          # Copy DLLs (excluding system DLLs and those in _deps)
           foreach ($dll in $dllFiles) {
+            # Skip files in _deps (build dependencies) unless they're needed for distribution
+            if ($dll.FullName -like "*\_deps\*") {
+              Write-Host "⊘ Skipping dependency DLL: $($dll.Name)"
+              continue
+            }
+            
             if ($excludedDlls -notcontains $dll.Name.ToLower()) {
               Write-Host "✓ Found DLL: $($dll.Name) from $($dll.Directory.Name)"
               Copy-Item $dll.FullName -Destination $artifact_dir -Force
@@ -172,17 +219,21 @@ jobs:
             }
           }
           
-          # Copy all PDBs (debug symbols)
+          # Copy all PDBs (debug symbols) - excluding _deps
           foreach ($pdb in $pdbFiles) {
-            Write-Host "✓ Found PDB: $($pdb.Name)"
-            Copy-Item $pdb.FullName -Destination $artifact_dir -Force
+            if ($pdb.FullName -notlike "*\_deps\*") {
+              Write-Host "✓ Found PDB: $($pdb.Name)"
+              Copy-Item $pdb.FullName -Destination $artifact_dir -Force
+            }
           }
           
           # Also look for any .exe files that might be built
           $exeFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
           foreach ($exe in $exeFiles) {
-            Write-Host "✓ Found EXE: $($exe.Name)"
-            Copy-Item $exe.FullName -Destination $artifact_dir -Force
+            if ($exe.FullName -notlike "*\_deps\*") {
+              Write-Host "✓ Found EXE: $($exe.Name)"
+              Copy-Item $exe.FullName -Destination $artifact_dir -Force
+            }
           }
           
           # Special handling for specific required files
