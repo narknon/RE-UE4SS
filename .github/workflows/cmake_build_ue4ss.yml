@@ -79,14 +79,6 @@ jobs:
           restore-keys: |
             cmake-deps-${{ runner.os }}-
 
-      # Setup sccache for faster compilation
-      - name: Setup sccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: sccache-${{ inputs.build-mode }}-${{ runner.os }}
-          variant: sccache
-          max-size: 2G
-
       # Use pre-installed VS instead of downloading
       - name: Setup MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
@@ -122,7 +114,7 @@ jobs:
           restore-keys: |
             cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
 
-      # Configure CMake with FetchContent caching and PDB fix
+      # Configure CMake WITHOUT sccache to avoid PDB conflicts
       - name: Configure CMake
         run: |
           $needs_reconfigure = $false
@@ -139,47 +131,28 @@ jobs:
             # Set environment variables for FetchContent to use a persistent location
             $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
             
-            # Configure with sccache disabled for C files to avoid PDB conflicts
+            # Configure WITHOUT sccache to avoid PDB conflicts
             cmake -B ${{ steps.build_dir.outputs.name }} `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
               -DCMAKE_C_COMPILER=cl `
               -DCMAKE_CXX_COMPILER=cl `
-              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
               -DFETCHCONTENT_QUIET=OFF `
               -DFETCHCONTENT_FULLY_DISCONNECTED=OFF `
               -DFETCHCONTENT_UPDATES_DISCONNECTED=ON
-              
-            # Note: We only use sccache for C++ files, not C files to avoid PDB conflicts
           } else {
             Write-Host "Using cached configuration - incremental build"
             # Just run cmake to ensure cache is valid
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build ALL targets with limited parallelism for dependencies
+      # Build ALL targets - without sccache the PDB conflicts should be resolved
       - name: Build All Targets
-        env:
-          SCCACHE_ERROR_LOG: sccache_error.log
-          SCCACHE_LOG: debug
         run: |
           Write-Host "Building all targets..."
-          
-          # First, try to build with normal parallelism
-          $buildFailed = $false
-          try {
-            cmake --build ${{ steps.build_dir.outputs.name }}
-          } catch {
-            Write-Host "Initial build failed, attempting with reduced parallelism..."
-            $buildFailed = $true
-          }
-          
-          # If build failed due to PDB conflicts, retry with limited parallelism
-          if ($buildFailed) {
-            Write-Host "Retrying build with limited parallelism to avoid PDB conflicts..."
-            cmake --build ${{ steps.build_dir.outputs.name }} --parallel 2
-          }
+          # Build everything - this will build UE4SS, proxy, all mods, etc.
+          cmake --build ${{ steps.build_dir.outputs.name }}
 
       # Collect all DLLs and PDBs automatically
       - name: Calculate Files For Artifact Inclusion
