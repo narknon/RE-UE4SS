@@ -36,13 +36,40 @@ jobs:
           token: ${{ secrets.UEPSEUDO_PAT }}
           ref: ${{inputs.commit-sha}}
 
-      - name: Get current week as package key
+      # Calculate cache key based on CMakeLists and submodules
+      - name: Calculate cache key
         id: cache_key
-        run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
-        shell: bash
+        run: |
+          # Hash all CMakeLists.txt and .cmake files
+          $cmakeHash = Get-ChildItem -Path . -Include "CMakeLists.txt","*.cmake" -Recurse | 
+            Get-FileHash | 
+            ForEach-Object { $_.Hash } | 
+            Out-String | 
+            Get-FileHash | 
+            Select-Object -ExpandProperty Hash
+          
+          # Get submodule commits
+          git submodule status > submodule_status.txt
+          $submoduleHash = Get-FileHash submodule_status.txt | Select-Object -ExpandProperty Hash
+          
+          # Combine hashes
+          $combinedHash = "$cmakeHash-$submoduleHash"
+          echo "hash=$combinedHash" >> $env:GITHUB_OUTPUT
 
-      - name: Install VS2022 BuildTools 17.9.7
-        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+      # Setup sccache for faster compilation
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: sccache-${{ inputs.build-mode }}-${{ runner.os }}
+          variant: sccache
+          max-size: 2G
+
+      # Use pre-installed VS instead of downloading
+      - name: Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          vsversion: "2022"
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -59,24 +86,52 @@ jobs:
           $buildDir = "build_cmake_$mode"
           echo "name=$buildDir" >> $env:GITHUB_OUTPUT
 
-      - name: Configure and Build
-        run: |
-          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
-          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
-          
-          cmake -B ${{ steps.build_dir.outputs.name }} `
-            -G Ninja `
-            -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
-            -DCMAKE_C_COMPILER=cl `
-            -DCMAKE_CXX_COMPILER=cl `
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          
-          # List all available targets
-          Write-Host "Available targets:"
-          cmake --build ${{ steps.build_dir.outputs.name }} --target help
+      # Cache the build directory for incremental builds
+      - name: Cache CMake build directory
+        uses: actions/cache@v4
+        id: cache_build
+        with:
+          path: ${{ steps.build_dir.outputs.name }}
+          key: cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
+          restore-keys: |
+            cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
 
+      # Configure CMake (only if needed)
+      - name: Configure CMake
+        run: |
+          $needs_reconfigure = $false
+          
+          if ("${{ steps.cache_build.outputs.cache-hit }}" -ne "true") {
+            Write-Host "Cache miss - full configure needed"
+            $needs_reconfigure = $true
+          } elseif (-not (Test-Path "${{ steps.build_dir.outputs.name }}/CMakeCache.txt")) {
+            Write-Host "No CMakeCache.txt - full configure needed"
+            $needs_reconfigure = $true
+          }
+          
+          if ($needs_reconfigure) {
+            cmake -B ${{ steps.build_dir.outputs.name }} `
+              -G Ninja `
+              -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
+              -DCMAKE_C_COMPILER=cl `
+              -DCMAKE_CXX_COMPILER=cl `
+              -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          } else {
+            Write-Host "Using cached configuration - incremental build"
+            # Just run cmake to ensure cache is valid
+            cmake ${{ steps.build_dir.outputs.name }}
+          }
+
+      # Build ALL targets (will be incremental if cache hit)
+      - name: Build All Targets
+        run: |
+          Write-Host "Building all targets..."
+          # Build everything
           cmake --build ${{ steps.build_dir.outputs.name }}
 
+      # Collect all DLLs and PDBs automatically
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
         if: ${{inputs.should-upload-artifact == true}}
@@ -84,16 +139,67 @@ jobs:
           $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
           $buildDir = "${{ steps.build_dir.outputs.name }}"
           
-          # Find and copy UE4SS files
-          $files = @("UE4SS.dll", "UE4SS.pdb", "dwmapi.dll")
-          foreach ($fileName in $files) {
-            $filePath = Get-ChildItem -Path $buildDir -Recurse -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($filePath) {
-              Write-Host "Found: $($filePath.FullName)"
-              Copy-Item $filePath.FullName -Destination $artifact_dir
+          # System/Windows DLLs to exclude (add more as needed)
+          $excludedDlls = @(
+            "kernel32.dll", "user32.dll", "advapi32.dll", "shell32.dll",
+            "ole32.dll", "oleaut32.dll", "msvcrt.dll", "comctl32.dll",
+            "gdi32.dll", "rpcrt4.dll", "ws2_32.dll", "winmm.dll"
+          )
+          
+          Write-Host "Collecting build artifacts from $buildDir..."
+          
+          # Find all DLLs in the build directory
+          $dllFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
+          $pdbFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
+          
+          # Copy DLLs (excluding system DLLs)
+          foreach ($dll in $dllFiles) {
+            if ($excludedDlls -notcontains $dll.Name.ToLower()) {
+              Write-Host "✓ Found DLL: $($dll.Name) from $($dll.Directory.Name)"
+              Copy-Item $dll.FullName -Destination $artifact_dir -Force
             } else {
-              Write-Host "Warning: $fileName not found"
+              Write-Host "⊘ Skipping system DLL: $($dll.Name)"
             }
+          }
+          
+          # Copy all PDBs (debug symbols)
+          foreach ($pdb in $pdbFiles) {
+            Write-Host "✓ Found PDB: $($pdb.Name)"
+            Copy-Item $pdb.FullName -Destination $artifact_dir -Force
+          }
+          
+          # Also look for any .exe files that might be built
+          $exeFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
+          foreach ($exe in $exeFiles) {
+            Write-Host "✓ Found EXE: $($exe.Name)"
+            Copy-Item $exe.FullName -Destination $artifact_dir -Force
+          }
+          
+          # Special handling for specific required files
+          $requiredFiles = @("dwmapi.dll", "UE4SS.dll")
+          foreach ($required in $requiredFiles) {
+            $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
+            if (-not $found) {
+              # Try to find it in the source tree (for proxy dll)
+              $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($sourceFile) {
+                Write-Host "✓ Found required file in source: $required"
+                Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
+              } else {
+                Write-Host "⚠ Warning: Required file $required not found anywhere!"
+              }
+            }
+          }
+          
+          # Summary of collected artifacts
+          Write-Host "`n========== Artifact Summary =========="
+          $artifacts = Get-ChildItem -Path $artifact_dir
+          Write-Host "Total files collected: $($artifacts.Count)"
+          
+          # Group by extension
+          $artifacts | Group-Object Extension | ForEach-Object {
+            Write-Host "$($_.Name) files: $($_.Count)"
+            $_.Group | ForEach-Object { Write-Host "  - $($_.Name)" }
           }
           
           echo "artifact_dir=$artifact_dir" >> $env:GITHUB_OUTPUT
