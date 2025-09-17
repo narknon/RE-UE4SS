@@ -162,6 +162,30 @@ namespace RC::GUI
             Struct,
         };
 
+        // Context struct for property rendering to reduce parameter passing
+        struct PropertyRenderContext
+        {
+            FProperty* property{};
+            ContainerType container_type{};
+            void* container{};
+            void* container_ptr{}; // property->ContainerPtrToValuePtr(container)
+            FProperty** last_property_in{};
+            bool* tried_to_open_nullptr_object{};
+            bool is_watchable{true};
+            int32_t first_offset{-1};
+            
+            // Computed values
+            std::string property_name{};
+            FString property_text{};
+            int32_t property_offset{};
+            
+            // Function to render context menu
+            std::function<void(std::string_view)> render_context_menu{};
+            
+            // Return value
+            std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
+        };
+
       private:
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
@@ -181,6 +205,12 @@ namespace RC::GUI
                                    bool* tried_to_open_nullptr_object,
                                    bool is_watchable = true,
                                    int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+
+        // Property type-specific value renderers (only render the value part after property name)
+        auto render_struct_property_value(PropertyRenderContext& ctx) -> void;
+        auto render_array_property_value(PropertyRenderContext& ctx) -> void;
+        auto render_enum_property_value(PropertyRenderContext& ctx) -> void;
+        auto render_default_property_value(PropertyRenderContext& ctx) -> void;
 
       private:
         auto collapse_all_except(void* except_id) -> void;

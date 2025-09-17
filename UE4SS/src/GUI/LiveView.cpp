@@ -2241,106 +2241,40 @@ namespace RC::GUI
                         container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
                         property_name.c_str());
         }
-        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        // Create context for property-specific rendering
+        PropertyRenderContext ctx{};
+        ctx.property = property;
+        ctx.container_type = container_type;
+        ctx.container = container;
+        ctx.container_ptr = container_ptr;
+        ctx.last_property_in = last_property_in;
+        ctx.tried_to_open_nullptr_object = tried_to_open_nullptr_object;
+        ctx.is_watchable = is_watchable;
+        ctx.first_offset = first_offset;
+        ctx.property_name = property_name;
+        ctx.property_text = property_text;
+        ctx.property_offset = property_offset;
+        ctx.render_context_menu = render_property_value_context_menu;
+
+        // Dispatch to property-specific renderer
+        if (CastField<FStructProperty>(property))
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
-                {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
-                    ImGui::Indent();
-                    FProperty* last_struct_prop{};
-                    next_item_to_render = render_property_value(inner_property,
-                                                                ContainerType::Struct,
-                                                                container_ptr,
-                                                                &last_struct_prop,
-                                                                tried_to_open_nullptr_object,
-                                                                false,
-                                                                property_offset + inner_property->GetOffset_Internal());
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            render_struct_property_value(ctx);
         }
-        else if (auto array_property = CastField<FArrayProperty>(property); array_property)
+        else if (CastField<FArrayProperty>(property))
         {
-            ImGui::SameLine();
-            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
-            {
-                render_property_value_context_menu(tree_node_id);
-
-                auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
-                auto inner_property = array_property->GetInner();
-                for (int32_t i = 0; i < script_array->Num(); ++i)
-                {
-                    auto element_offset = inner_property->GetElementSize() * i;
-                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
-                    ImGui::Text("[%i]:", i);
-                    ImGui::Indent();
-                    ImGui::SameLine();
-                    next_item_to_render =
-                            render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset);
-                    ImGui::Unindent();
-
-                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
-                    {
-                        break;
-                    }
-                }
-                if (script_array->Num() < 1)
-                {
-                    ImGui::Text("-- Empty --");
-                }
-                ImGui::TreePop();
-            }
-            render_property_value_context_menu(tree_node_id);
+            render_array_property_value(ctx);
         }
         else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
         {
-            UEnum* uenum{};
-            if (property->IsA<FByteProperty>())
-            {
-                uenum = static_cast<FByteProperty*>(property)->GetEnum();
-            }
-            else
-            {
-                uenum = static_cast<FEnumProperty*>(property)->GetEnum();
-            }
-            auto value_raw = *std::bit_cast<uint8*>(container_ptr);
-            uint8 enum_index{};
-            for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
-            {
-                if (key_value_pair.Value == value_raw)
-                {
-                    enum_index = index;
-                    break;
-                }
-            }
-            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
-            ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
-            render_property_value_context_menu();
+            render_enum_property_value(ctx);
         }
         else
         {
-            ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
-            render_property_value_context_menu();
+            render_default_property_value(ctx);
         }
+        
+        next_item_to_render = ctx.next_item_to_render;
 
         if (last_property_in)
         {
@@ -2382,6 +2316,133 @@ namespace RC::GUI
             m_modal_edit_property_value_opened_this_frame = false;
         }
         return next_item_to_render;
+    }
+
+    auto LiveView::render_struct_property_value(PropertyRenderContext& ctx) -> void
+    {
+        auto struct_property = CastField<FStructProperty>(ctx.property);
+        if (!struct_property || !struct_property->GetStruct()->GetFirstProperty())
+        {
+            // Fallback to default rendering
+            render_default_property_value(ctx);
+            return;
+        }
+
+        ImGui::SameLine();
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(ctx.container_ptr), ctx.property_name);
+        if (ImGui_TreeNodeEx(fmt::format("{}", to_string(ctx.property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+        {
+            render_property_value_context_menu(tree_node_id);
+
+            for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+            {
+                FString struct_prop_text_item{};
+                auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(ctx.container_ptr);
+                inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
+
+                ImGui::Indent();
+                FProperty* last_struct_prop{};
+                ctx.next_item_to_render = render_property_value(inner_property,
+                                                            ContainerType::Struct,
+                                                            ctx.container_ptr,
+                                                            &last_struct_prop,
+                                                            ctx.tried_to_open_nullptr_object,
+                                                            false,
+                                                            ctx.property_offset + inner_property->GetOffset_Internal());
+                ImGui::Unindent();
+
+                if (!std::holds_alternative<std::monostate>(ctx.next_item_to_render))
+                {
+                    break;
+                }
+            }
+            ImGui::TreePop();
+        }
+        ctx.render_context_menu(tree_node_id);
+    }
+
+    auto LiveView::render_array_property_value(PropertyRenderContext& ctx) -> void
+    {
+        auto array_property = CastField<FArrayProperty>(ctx.property);
+        if (!array_property)
+        {
+            // Fallback to default rendering
+            render_default_property_value(ctx);
+            return;
+        }
+
+        ImGui::SameLine();
+        auto tree_node_id = fmt::format("{}{}", static_cast<void*>(ctx.container_ptr), ctx.property_name);
+        if (ImGui_TreeNodeEx(fmt::format("{}", to_string(ctx.property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+        {
+            render_property_value_context_menu(tree_node_id);
+
+            auto script_array = std::bit_cast<FScriptArray*>(ctx.container_ptr);
+            auto inner_property = array_property->GetInner();
+            for (int32_t i = 0; i < script_array->Num(); ++i)
+            {
+                auto element_offset = inner_property->GetElementSize() * i;
+                auto element_container_ptr = static_cast<uint8_t*>(*ctx.container_ptr) + element_offset;
+                ImGui::Text("[%i]:", i);
+                ImGui::Indent();
+                ImGui::SameLine();
+                ctx.next_item_to_render =
+                        render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, ctx.tried_to_open_nullptr_object, false, element_offset);
+                ImGui::Unindent();
+
+                if (!std::holds_alternative<std::monostate>(ctx.next_item_to_render))
+                {
+                    break;
+                }
+            }
+            if (script_array->Num() < 1)
+            {
+                ImGui::Text("-- Empty --");
+            }
+            ImGui::TreePop();
+        }
+        ctx.render_context_menu(tree_node_id);
+    }
+
+    auto LiveView::render_enum_property_value(PropertyRenderContext& ctx) -> void
+    {
+        UEnum* uenum{};
+        if (ctx.property->IsA<FByteProperty>())
+        {
+            uenum = static_cast<FByteProperty*>(ctx.property)->GetEnum();
+        }
+        else if (ctx.property->IsA<FEnumProperty>())
+        {
+            uenum = static_cast<FEnumProperty*>(ctx.property)->GetEnum();
+        }
+        else
+        {
+            // Not an enum property, fallback to default
+            render_default_property_value(ctx);
+            return;
+        }
+
+        auto value_raw = *std::bit_cast<uint8*>(ctx.container_ptr);
+        uint8 enum_index{};
+        for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
+        {
+            if (key_value_pair.Value == value_raw)
+            {
+                enum_index = index;
+                break;
+            }
+        }
+        auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
+        ImGui::SameLine();
+        ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
+        ctx.render_context_menu("");
+    }
+
+    auto LiveView::render_default_property_value(PropertyRenderContext& ctx) -> void
+    {
+        ImGui::SameLine();
+        ImGui::Text(fmt::format("{}", to_string(ctx.property_text.GetCharArray())).c_str());
+        ctx.render_context_menu("");
     }
 
     auto LiveView::render_enum() -> void
