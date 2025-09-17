@@ -7,6 +7,7 @@
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
+#include <GUI/HexViewer.hpp>
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
@@ -232,6 +233,7 @@ namespace RC::GUI
         std::unique_ptr<OSBackendBase> m_os_backend{};
         Console m_console{};
         LiveView m_live_view{};
+        HexViewer m_hex_viewer{};
         std::stop_token* m_thread_stop_token{};
         bool m_is_open{};
         bool m_exit_requested{};
@@ -271,6 +273,10 @@ namespace RC::GUI
         {
             return m_live_view;
         };
+        auto get_hex_viewer() -> HexViewer&
+        {
+            return m_hex_viewer;
+        };
         auto set_gfx_backend(GfxBackend) -> void;
         auto add_tab(std::shared_ptr<GUITab> tab) -> void;
         auto remove_tab(std::shared_ptr<GUITab> tab) -> void;
@@ -279,6 +285,7 @@ namespace RC::GUI
 
       private:
         auto on_update() -> void;
+        auto render_compatibility_mode_tab() -> void;
 
       private:
         // TODO: Move ImGui data saves to their own object

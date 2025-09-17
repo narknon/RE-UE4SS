@@ -150,5 +150,6 @@ namespace RC
         REGISTER_INT64_SETTING(Hooks.FExecVTableOffsetInLocalPlayer, section_hooks, FExecVTableOffsetInLocalPlayer)
 
         constexpr static File::CharType section_experimental_features[] = STR("ExperimentalFeatures");
+        REGISTER_BOOL_SETTING(Experimental.LaunchInCompatibilityMode, section_experimental_features, LaunchInCompatibilityMode)
     }
 } // namespace RC

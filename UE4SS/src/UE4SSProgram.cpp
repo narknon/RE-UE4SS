@@ -326,9 +326,13 @@ namespace RC
 
             setup_mod_directory_path();
 
-            setup_mods();
-            install_cpp_mods();
-            start_cpp_mods(IsInitialStartup::Yes);
+            // Skip mod loading in compatibility mode
+            if (!settings_manager.Experimental.LaunchInCompatibilityMode)
+            {
+                setup_mods();
+                install_cpp_mods();
+                start_cpp_mods(IsInitialStartup::Yes);
+            }
 
             if (m_has_game_specific_config)
             {
@@ -379,28 +383,37 @@ namespace RC
 
         try
         {
-            setup_unreal();
-
-            Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
-            auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
-            for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
+            // Check if we're in compatibility mode
+            if (settings_manager.Experimental.LaunchInCompatibilityMode)
             {
-                auto& module = SigScannerStaticData::m_modules_info.array[i];
-                // only log modules with unique addresses (non-modular builds have everything in MainExe)
-                if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
-                {
-                    auto module_name = ensure_str(ScanTargetToString(i));
-                    Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
-                }
+                Output::send(STR("Launching in Compatibility Mode - Skipping Unreal initialization\n"));
+                Output::send(STR("Use the Compatibility Mode tab in the GUI to perform manual scans\n"));
             }
+            else
+            {
+                setup_unreal();
 
-            fire_unreal_init_for_cpp_mods();
-            setup_unreal_properties();
-            UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
+                Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
+                auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
+                for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
+                {
+                    auto& module = SigScannerStaticData::m_modules_info.array[i];
+                    // only log modules with unique addresses (non-modular builds have everything in MainExe)
+                    if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
+                    {
+                        auto module_name = ensure_str(ScanTargetToString(i));
+                        Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
+                    }
+                }
 
-            output_all_member_offsets();
+                fire_unreal_init_for_cpp_mods();
+                setup_unreal_properties();
+                UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
-            share_lua_functions();
+                output_all_member_offsets();
+
+                share_lua_functions();
+            }
 
             // Only deal with the event loop thread here if the 'Test' constructor doesn't need to be called
 #ifndef RUN_TESTS

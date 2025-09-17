@@ -105,6 +105,7 @@ namespace RC
 
         struct ExperimentalFeatures
         {
+            bool LaunchInCompatibilityMode{false};
         } Experimental;
 
       public:

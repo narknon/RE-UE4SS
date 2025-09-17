@@ -14,6 +14,7 @@
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <PatternSleuthBindings.hpp>
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -23,6 +24,7 @@
 #include <imgui.h>
 #include <IconsFontAwesome5.h>
 #include <imgui_internal.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 namespace RC::GUI
 {
@@ -178,6 +180,16 @@ namespace RC::GUI
                     ImGui::EndTabItem();
                 }
 
+                // Compatibility Mode tab
+                if (UE4SSProgram::settings_manager.Experimental.LaunchInCompatibilityMode)
+                {
+                    if (ImGui::BeginTabItem(ICON_FA_WRENCH " Compatibility Mode"))
+                    {
+                        render_compatibility_mode_tab();
+                        ImGui::EndTabItem();
+                    }
+                }
+
                 {
                     std::lock_guard<std::mutex> guard(m_tabs_mutex);
                     for (const auto& tab : m_tabs)
@@ -203,6 +215,7 @@ namespace RC::GUI
             ImGui::End();
 
             m_live_view.process_watches();
+            m_hex_viewer.Render();
         }
     }
 
@@ -568,6 +581,186 @@ namespace RC::GUI
     {
         std::lock_guard<std::mutex> guard(m_tabs_mutex);
         m_tabs.erase(std::remove(m_tabs.begin(), m_tabs.end(), tab), m_tabs.end());
+    }
+
+    auto DebuggingGUI::render_compatibility_mode_tab() -> void
+    {
+        static std::string pattern_input;
+        static std::string string_input;
+        static std::wstring wstring_input;
+        static char xref_address_input[32] = "0x";
+        static std::vector<uint64_t> scan_results;
+        static std::string selected_resolver;
+
+        // Track resolver status
+        static struct ResolverStatus {
+            uint64_t address = 0;
+            bool found = false;
+        };
+        static std::unordered_map<std::string, ResolverStatus> resolver_status;
+
+        // Required resolvers for initialization
+        static const std::vector<std::string> required_resolvers = {
+            "EngineVersion",
+            "GUObjectArray",
+            "GMalloc",
+            "FName::ToString",
+            "FName::FName(wchar_t*)",
+            "StaticConstructObject_Internal"
+        };
+
+        ImGui::Text("PatternSleuth Scanner Controls");
+        ImGui::Separator();
+
+        // Show resolver status summary
+        if (ImGui::CollapsingHeader("Resolver Status", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            bool all_required_found = true;
+
+            for (const auto& resolver_name : required_resolvers)
+            {
+                auto it = resolver_status.find(resolver_name);
+                bool is_found = it != resolver_status.end() && it->second.found;
+
+                if (!is_found) all_required_found = false;
+
+                if (is_found)
+                {
+                    ImGui::TextColored(ImVec4(0, 1, 0, 1), "%s %s: 0x%llX", ICON_FA_CHECK_CIRCLE, resolver_name.c_str(), it->second.address);
+                }
+                else
+                {
+                    ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s %s: Not Found", ICON_FA_TIMES_CIRCLE, resolver_name.c_str());
+                }
+            }
+
+            if (all_required_found)
+            {
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0, 1, 0, 1), "All required resolvers found!");
+                if (ImGui::Button("Continue Initialization"))
+                {
+                    // TODO: Implement continue_init()
+                    Output::send(STR("TODO: Continue initialization with found resolvers\n"));
+                }
+            }
+            else
+            {
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "Some required resolvers are missing");
+            }
+        }
+
+        ImGui::Separator();
+
+        // Resolver Scanners Section
+        if (ImGui::CollapsingHeader("Resolver Scanners", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            auto resolver_names = PatternSleuthBindings::GetResolverNames();
+
+            for (const auto& resolver_name : resolver_names)
+            {
+                ImGui::PushID(resolver_name.c_str());
+
+                if (ImGui::Button("Scan"))
+                {
+                    uint64_t result = PatternSleuthBindings::ResolveByName(resolver_name);
+                    if (result != 0)
+                    {
+                        Output::send(STR("{} found at: 0x{:X}\n"), ensure_str(resolver_name), result);
+
+                        // Special handling for GUObjectArray
+                        if (resolver_name == "GUObjectArray" || resolver_name == "guobject_array")
+                        {
+                            selected_resolver = resolver_name;
+                            scan_results = {result};
+                        }
+                    }
+                    else
+                    {
+                        Output::send(STR("{} not found\n"), ensure_str(resolver_name));
+                    }
+                }
+
+                ImGui::SameLine();
+                ImGui::Text("%s", resolver_name.c_str());
+
+                ImGui::PopID();
+            }
+        }
+
+        // Pattern Scanner Section
+        if (ImGui::CollapsingHeader("Pattern Scanner"))
+        {
+            ImGui::InputText("Pattern", &pattern_input);
+            if (ImGui::Button("Scan Pattern"))
+            {
+                scan_results = PatternSleuthBindings::ScanPattern(pattern_input);
+                Output::send(STR("Pattern scan found {} results\n"), scan_results.size());
+            }
+        }
+
+        // String Scanner Section
+        if (ImGui::CollapsingHeader("String Scanner"))
+        {
+            ImGui::InputText("ASCII String", &string_input);
+            if (ImGui::Button("Scan ASCII"))
+            {
+                scan_results = PatternSleuthBindings::ScanString(string_input);
+                Output::send(STR("String scan found {} results\n"), scan_results.size());
+            }
+
+            // Wide string input (simplified for now)
+            static char wstring_buffer[256] = {0};
+            ImGui::InputText("Wide String", wstring_buffer, sizeof(wstring_buffer));
+            if (ImGui::Button("Scan Wide"))
+            {
+                wstring_input = ensure_str(wstring_buffer);
+                scan_results = PatternSleuthBindings::ScanWString(wstring_input);
+                Output::send(STR("Wide string scan found {} results\n"), scan_results.size());
+            }
+        }
+
+        // XRef Scanner Section
+        if (ImGui::CollapsingHeader("Cross-Reference Scanner"))
+        {
+            ImGui::InputText("Target Address", xref_address_input, sizeof(xref_address_input));
+            if (ImGui::Button("Find XRefs"))
+            {
+                uint64_t target = std::stoull(xref_address_input, nullptr, 16);
+                scan_results = PatternSleuthBindings::ScanXRef(target);
+                Output::send(STR("XRef scan found {} results\n"), scan_results.size());
+            }
+        }
+
+        // Results Display
+        if (!scan_results.empty())
+        {
+            ImGui::Separator();
+            ImGui::Text("Scan Results (%zu found):", scan_results.size());
+
+            // Show first 100 results
+            int display_count = std::min<int>(100, scan_results.size());
+            for (int i = 0; i < display_count; ++i)
+            {
+                ImGui::Text("  0x%llX", scan_results[i]);
+
+                // Add Browse Memory button for GUObjectArray
+                if (selected_resolver == "GUObjectArray" || selected_resolver == "guobject_array")
+                {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Browse Memory"))
+                    {
+                        m_hex_viewer.Open(scan_results[i]);
+                    }
+                }
+            }
+
+            if (scan_results.size() > 100)
+            {
+                ImGui::Text("  ... and %zu more", scan_results.size() - 100);
+            }
+        }
     }
 
     auto DebuggingGUI::uninitialize() -> void
