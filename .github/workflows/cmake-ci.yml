@@ -95,8 +95,6 @@ jobs:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
       should-upload-artifact: ${{ matrix.artifact }}
-      # List that declares which targets should have their output uploaded as an artifact.
-      artifact-list: '["UE4SS"]'
       artifact-retention-days: 14
   
   # Report artifacts as a pull request comment.

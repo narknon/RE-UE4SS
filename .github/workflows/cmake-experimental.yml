@@ -28,16 +28,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build:
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit
+    with:
+      build-mode: "Game__Shipping__Win64"
+      commit-sha: ${{ github.sha }}
+      should-upload-artifact: true
+      artifact-retention-days: 1
+
   make-release:
+    needs: build
     permissions: write-all
     runs-on: windows-2022
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0 # needed to get commits since last tag
+          fetch-depth: 0
           token: ${{ secrets.UEPSEUDO_PAT }}
 
       - name: Setup Python
@@ -45,47 +54,25 @@ jobs:
         with:
           python-version: '3.9'
 
-      # Specifically use MSVC toolset v19.39.33523
-      - name: Install VS2022 BuildTools 17.9.7
-        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
 
-      - name: Setup CMake and Ninja
-        run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-          choco install ninja
-
-      - name: Configure CMake
+      - name: Verify downloaded files
         shell: pwsh
         run: |
-          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
-          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
-          
-          cmake -B build_experimental `
-            -G Ninja `
-            -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 `
-            -DCMAKE_C_COMPILER=cl `
-            -DCMAKE_CXX_COMPILER=cl
+          Write-Host "Contents of build_output:"
+          Get-ChildItem -Path "build_output" -Recurse | ForEach-Object { Write-Host $_.FullName }
 
-      - name: Build
-        shell: pwsh
-        run: |
-          cmake --build build_experimental --target UE4SS
-
-      # The release script expects binaries in specific locations
-      - name: Prepare for packaging
-        shell: pwsh
-        run: |
-          # Find UE4SS.dll and ensure it's where the release script expects
-          $buildDir = "build_experimental"
-          
-          $dllPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.dll" | Select-Object -First 1
-          $pdbPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.pdb" | Select-Object -First 1
-          
-          if ($dllPath) {
-            Write-Host "Found UE4SS.dll at: $($dllPath.FullName)"
-          } else {
-            Write-Error "UE4SS.dll not found!"
-            exit 1
+          $requiredFiles = @("UE4SS.dll", "dwmapi.dll")
+          foreach ($file in $requiredFiles) {
+            $filePath = Get-ChildItem -Path "build_output" -Recurse -Filter $file -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $filePath) {
+              Write-Error "$file not found in downloaded artifacts!"
+              exit 1
+            }
           }
 
       - name: Package
