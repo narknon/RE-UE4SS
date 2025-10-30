@@ -19,14 +19,10 @@ on:
         description: 'Should build output be uploaded as an artifact?'
         type: boolean
         default: false
-      artifact-list:
-        description: 'List of targets to upload artifacts for'
-        type: string
-        default: '["UE4SS"]'
       artifact-retention-days:
         description: 'How many days to retain artifacts'
-        type: number
-        default: 7
+        type: string
+        default: '7'
 defaults:
   run:
     shell: pwsh
