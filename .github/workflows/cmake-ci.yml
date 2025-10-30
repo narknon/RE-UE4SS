@@ -28,22 +28,66 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Build UE4SS for each mode
+  # Dynamically calculate which modes to build from CMake configuration
+  calculate-matrix:
+    name: Calculate job matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.calculate-modes.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Extract CMake Build Modes
+        id: extract-modes
+        run: |
+          # Extract target types, configurations, and platforms from ProjectConfig.cmake
+          TARGET_TYPES=$(grep -oP 'set\(UE4SS_TARGET_TYPES\s+"\K[^"]+' cmake/modules/ProjectConfig.cmake | tr ' ' '\n')
+          CONFIG_TYPES=$(grep -oP 'set\(UE4SS_CONFIGURATION_TYPES\s+"\K[^"]+' cmake/modules/ProjectConfig.cmake | tr ' ' '\n')
+          PLATFORM_TYPES=$(grep -oP 'set\(UE4SS_PLATFORM_TYPES\s+"\K[^"]+' cmake/modules/ProjectConfig.cmake | tr ' ' '\n')
+
+          # Generate all combinations of Target__Config__Platform
+          MODES=()
+          for target in $TARGET_TYPES; do
+            for config in $CONFIG_TYPES; do
+              for platform in $PLATFORM_TYPES; do
+                MODES+=("${target}__${config}__${platform}")
+              done
+            done
+          done
+
+          # Output as JSON array
+          printf -v MODES_JSON '%s\n' "${MODES[@]}" | jq -R . | jq -s .
+          echo "all_modes=$MODES_JSON" >> $GITHUB_OUTPUT
+
+      - name: Finalize Mode Matrix
+        uses: actions/github-script@v7
+        id: calculate-modes
+        env:
+          ALL_MODES: '${{ steps.extract-modes.outputs.all_modes }}'
+          REQUESTED_MODES: '["Game__Shipping__Win64", "Game__Debug__Win64"]'
+        with:
+          result-encoding: string
+          script: |
+            const { ALL_MODES, REQUESTED_MODES } = process.env;
+            const requestedModes = JSON.parse(REQUESTED_MODES);
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({
+              mode: m,
+              artifact: requestedModes.includes(m)
+            }));
+            core.setOutput('matrix', JSON.stringify(modeSchema));
+
+  # Build UE4SS for each mode we received from the calculate-matrix job
   build:
     name: ${{ matrix.mode }}
+    needs: [calculate-matrix]
     strategy:
       fail-fast: false # Disable fast failing because we want to see results for all modes
-      matrix: 
-        mode: ["Game__Shipping__Win64", "Game__Debug__Win64", "Game__Dev__Win64", "CasePreserving__Shipping__Win64"]
-        include:
-          - mode: "Game__Shipping__Win64"
-            artifact: true
-          - mode: "Game__Debug__Win64"
-            artifact: true
-          - mode: "Game__Dev__Win64"
-            artifact: false
-          - mode: "CasePreserving__Shipping__Win64"
-            artifact: false
+      matrix:
+        include: ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
     uses: ./.github/workflows/cmake_build_ue4ss.yml
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UEPSEUDO_PAT` to our reusable workflow.
@@ -57,8 +101,8 @@ jobs:
   
   # Report artifacts as a pull request comment.
   report-artifacts:
-    if: ${{ always() }}
-    needs: [build]
+    if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
+    needs: [calculate-matrix, build]
     runs-on: ubuntu-latest
     steps:
       - name: "Report Artifacts"

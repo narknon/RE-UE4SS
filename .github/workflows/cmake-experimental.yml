@@ -1,5 +1,9 @@
 name: CMake Experimental Release
 
+# NOTE: This workflow creates CMake-specific experimental releases (cmake-experimental, cmake-experimental-latest)
+# These are separate from the xmake experimental releases to allow parallel testing
+# This is intentional during the CMake transition period
+
 on:
   workflow_dispatch:
   push:

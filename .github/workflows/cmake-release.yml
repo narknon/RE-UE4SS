@@ -35,6 +35,37 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
           choco install ninja
 
+      # NOTE: We intentionally do NOT call `release.py release_commit` here
+      # This is a TEST workflow for validating CMake builds, not for production releases
+      # Production releases should continue using the xmake-based release.yml workflow
+      # This creates timestamped test tags (cmake-test-YYYYMMDD-HHMMSS) instead of version tags
+      #
+      # When ready for production, replace the "Create Test Release Tag" step below with:
+      # - name: Release Commit
+      #   id: release_commit
+      #   run: python release.py release_commit ${{ github.actor }}
+      #   working-directory: ./tools/buildscripts
+      #
+      # And replace the "Create Test Release" step with:
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     tag_name: ${{ steps.release_commit.outputs.release_tag }}
+      #     body_path: release/release_notes.md
+      #     files: |
+      #       release/UE4SS_v*.zip
+      #       release/zDEV-UE4SS_v*.zip
+      #       release/zCustomGameConfigs.zip
+      #       release/zMapGenBP.zip
+      #
+      # And add a git push step:
+      # - name: Push changes
+      #   uses: ad-m/github-push-action@master
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     branch: ${{ github.ref }}
+      #     tags: true
+
       - name: Create Test Release Tag
         id: release_tag
         run: |
