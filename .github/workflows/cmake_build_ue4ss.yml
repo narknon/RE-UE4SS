@@ -132,7 +132,8 @@ jobs:
         id: build_dir
         run: |
           $mode = "${{inputs.build-mode}}"
-          $buildDir = "build_cmake_$mode"
+          $compiler = if ("${{ inputs.use-clang }}" -eq "true") { "clang" } else { "msvc" }
+          $buildDir = "build_cmake_${compiler}_$mode"
           echo "name=$buildDir" >> $env:GITHUB_OUTPUT
 
       # Cache the build directory for incremental builds
