@@ -215,11 +215,22 @@ jobs:
         if: ${{inputs.should-upload-artifact == true}}
         shell: bash
         run: |
-          # For PR builds, selectively include artifacts based on changed files
-          # For non-PR builds (workflow_dispatch, push), always include everything
-          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-            echo "PR build detected - checking changed files for selective artifact collection"
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+          # Only workflow_dispatch (manual) runs should include everything
+          # PRs and pushes should be selective based on changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual workflow_dispatch - including all artifacts"
+            echo "include_uvtd=true" >> $GITHUB_OUTPUT
+            echo "include_ue4ss=true" >> $GITHUB_OUTPUT
+          else
+            echo "Selective artifact collection based on changed files"
+
+            # Get changed files (PR or push)
+            if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+            else
+              # For push events, compare with previous commit
+              CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            fi
 
             echo "Changed files:"
             echo "$CHANGED_FILES"
@@ -231,17 +242,12 @@ jobs:
               echo "include_uvtd=false" >> $GITHUB_OUTPUT
             fi
 
-            # Check if UE4SS code was affected (excluding docs/assets)
-            if echo "$CHANGED_FILES" | grep -qv -E "^(docs|assets|README|LICENSE|\.github)/"; then
+            # Check if UE4SS code was affected (excluding docs/assets/UVTD)
+            if echo "$CHANGED_FILES" | grep -qv -E "^(UVTD|docs|assets|README|LICENSE|\.github)/"; then
               echo "include_ue4ss=true" >> $GITHUB_OUTPUT
             else
               echo "include_ue4ss=false" >> $GITHUB_OUTPUT
             fi
-          else
-            # Non-PR build (manual/workflow_dispatch/push) - always include everything
-            echo "Non-PR build detected - including all artifacts"
-            echo "include_uvtd=true" >> $GITHUB_OUTPUT
-            echo "include_ue4ss=true" >> $GITHUB_OUTPUT
           fi
 
       # Collect selective artifacts based on what changed
