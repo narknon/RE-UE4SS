@@ -256,9 +256,18 @@ jobs:
           $buildMode = "${{inputs.build-mode}}"
           $buildUE4SS = "${{ steps.build-targets.outputs.build_ue4ss }}" -eq "true"
           $buildUVTD = "${{ steps.build-targets.outputs.build_uvtd }}" -eq "true"
+          $buildProxy = $false
 
           Write-Host "Build UE4SS: $buildUE4SS"
           Write-Host "Build UVTD: $buildUVTD (only for Game__Shipping__Win64)"
+
+          # Proxy (dwmapi.dll) should only be built for Game__Shipping__Win64 and Game__Debug__Win64
+          if ($buildMode -eq "Game__Shipping__Win64" -or $buildMode -eq "Game__Debug__Win64") {
+            $buildProxy = $true
+            Write-Host "Build Proxy: True (dwmapi.dll for $buildMode)"
+          } else {
+            Write-Host "Build Proxy: False (not needed for $buildMode)"
+          }
 
           # UVTD should only be built for Game__Shipping__Win64
           if ($buildMode -ne "Game__Shipping__Win64") {
@@ -269,6 +278,7 @@ jobs:
           # Determine targets to build
           $targets = @()
           if ($buildUE4SS) { $targets += "UE4SS" }
+          if ($buildProxy) { $targets += "proxy" }
           if ($buildUVTD) { $targets += "UVTD" }
 
           if ($targets.Count -eq 0) {
@@ -276,14 +286,9 @@ jobs:
             exit 0
           }
 
-          if ($targets.Count -eq 2) {
-            Write-Host "Building all targets: UE4SS and UVTD"
-            cmake --build ${{ steps.build_dir.outputs.name }} --verbose
-          } else {
-            Write-Host "Building selective targets: $($targets -join ', ')"
-            foreach ($target in $targets) {
-              cmake --build ${{ steps.build_dir.outputs.name }} --target $target --verbose
-            }
+          Write-Host "Building targets: $($targets -join ', ')"
+          foreach ($target in $targets) {
+            cmake --build ${{ steps.build_dir.outputs.name }} --target $target --verbose
           }
 
       # Detect changed files to determine what artifacts to collect
@@ -334,17 +339,31 @@ jobs:
         run: |
           $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
           $buildDir = "${{ steps.build_dir.outputs.name }}"
+          $buildMode = "${{inputs.build-mode}}"
 
           $includeUE4SS = "${{ steps.detect-changes.outputs.include_ue4ss }}" -eq "true"
           $includeUVTD = "${{ steps.detect-changes.outputs.include_uvtd }}" -eq "true"
 
+          # Determine if we should have proxy (dwmapi.dll) for this build mode
+          $shouldHaveProxy = ($buildMode -eq "Game__Shipping__Win64") -or ($buildMode -eq "Game__Debug__Win64")
+
+          # Determine if we should have UVTD for this build mode
+          $shouldHaveUVTD = ($buildMode -eq "Game__Shipping__Win64")
+
           Write-Host "Collecting selective artifacts from $buildDir..."
+          Write-Host "Build Mode: $buildMode"
           Write-Host "Include UE4SS: $includeUE4SS"
           Write-Host "Include UVTD: $includeUVTD"
+          Write-Host "Should have proxy: $shouldHaveProxy"
+          Write-Host "Should have UVTD: $shouldHaveUVTD"
 
-          # Collect UE4SS.dll and dwmapi.dll (proxy)
+          # Collect UE4SS.dll and dwmapi.dll (proxy) if needed
           if ($includeUE4SS) {
-            $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb","dwmapi.dll" -ErrorAction SilentlyContinue
+            if ($shouldHaveProxy) {
+              $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb","dwmapi.dll" -ErrorAction SilentlyContinue
+            } else {
+              $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb" -ErrorAction SilentlyContinue
+            }
             foreach ($file in $ue4ssFiles) {
               if ($file.FullName -notlike "*\_deps\*") {
                 Write-Host "✓ Found UE4SS file: $($file.Name)"
@@ -353,8 +372,8 @@ jobs:
             }
           }
 
-          # Collect UVTD files
-          if ($includeUVTD) {
+          # Collect UVTD files (only for Game__Shipping__Win64)
+          if ($includeUVTD -and $shouldHaveUVTD) {
             $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb" -ErrorAction SilentlyContinue
             foreach ($file in $uvtdFiles) {
               if ($file.FullName -notlike "*\_deps\*") {
@@ -368,24 +387,23 @@ jobs:
           $missingFiles = @()
 
           if ($includeUE4SS) {
-            $requiredUE4SS = @("dwmapi.dll", "UE4SS.dll")
-            foreach ($required in $requiredUE4SS) {
-              $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
-              if (-not $found) {
-                # Try to find it in the source tree (for proxy dll)
-                $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($sourceFile) {
-                  Write-Host "✓ Found required file in source: $required"
-                  Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
-                } else {
-                  Write-Host "❌ ERROR: Required UE4SS file $required not found!"
-                  $missingFiles += $required
-                }
+            # Always require UE4SS.dll
+            if (-not (Test-Path "$artifact_dir\UE4SS.dll")) {
+              Write-Host "❌ ERROR: Required UE4SS.dll not found!"
+              $missingFiles += "UE4SS.dll"
+            }
+
+            # Only require dwmapi.dll for Shipping and Debug configs
+            if ($shouldHaveProxy) {
+              if (-not (Test-Path "$artifact_dir\dwmapi.dll")) {
+                Write-Host "❌ ERROR: Required dwmapi.dll not found for $buildMode!"
+                $missingFiles += "dwmapi.dll"
               }
             }
           }
 
-          if ($includeUVTD) {
+          # Only require UVTD.exe for Game__Shipping__Win64
+          if ($includeUVTD -and $shouldHaveUVTD) {
             if (-not (Test-Path "$artifact_dir\UVTD.exe")) {
               Write-Host "❌ ERROR: Required UVTD.exe not found!"
               $missingFiles += "UVTD.exe"
