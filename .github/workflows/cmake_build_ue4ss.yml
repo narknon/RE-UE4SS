@@ -184,11 +184,12 @@ jobs:
             }
 
             # Configure with incremental linking disabled
-            cmake -B ${{ steps.build_dir.outputs.name }} `
+            # Note: Must use double quotes for variables to expand properly
+            cmake -B "${{ steps.build_dir.outputs.name }}" `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
-              -DCMAKE_C_COMPILER=$c_compiler `
-              -DCMAKE_CXX_COMPILER=$cxx_compiler `
+              -DCMAKE_C_COMPILER="$c_compiler" `
+              -DCMAKE_CXX_COMPILER="$cxx_compiler" `
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
               -DCMAKE_EXE_LINKER_FLAGS="/INCREMENTAL:NO" `
               -DCMAKE_MODULE_LINKER_FLAGS="/INCREMENTAL:NO" `
