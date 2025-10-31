@@ -200,19 +200,80 @@ jobs:
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build targets based on configuration
+      # Determine which targets to build based on changed files
+      - name: Determine Build Targets
+        id: build-targets
+        shell: bash
+        run: |
+          # For workflow_dispatch (manual), build everything
+          # For PR/push, be selective based on changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual run - building all targets"
+            echo "build_ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build_uvtd=true" >> $GITHUB_OUTPUT
+          else
+            # Get changed files
+            if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+            else
+              CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            fi
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            # Check if UVTD or its dependencies changed
+            # UVTD depends on: deps/, cmake modules, and its own folder
+            if echo "$CHANGED_FILES" | grep -qE "^(UVTD|deps|cmake/modules)"; then
+              echo "build_uvtd=true" >> $GITHUB_OUTPUT
+            else
+              echo "build_uvtd=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check if UE4SS or its dependencies changed
+            # UE4SS is affected by anything except UVTD-only changes
+            if echo "$CHANGED_FILES" | grep -qvE "^(UVTD|docs|assets|README|LICENSE|\.github)/"; then
+              echo "build_ue4ss=true" >> $GITHUB_OUTPUT
+            else
+              echo "build_ue4ss=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      # Build targets based on what changed
       - name: Build Targets
         run: |
           Write-Host "Building targets with verbose output..."
           $buildMode = "${{inputs.build-mode}}"
+          $buildUE4SS = "${{ steps.build-targets.outputs.build_ue4ss }}" -eq "true"
+          $buildUVTD = "${{ steps.build-targets.outputs.build_uvtd }}" -eq "true"
+
+          Write-Host "Build UE4SS: $buildUE4SS"
+          Write-Host "Build UVTD: $buildUVTD (only for Game__Shipping__Win64)"
 
           # UVTD should only be built for Game__Shipping__Win64
-          if ($buildMode -eq "Game__Shipping__Win64") {
-            Write-Host "Building all targets (including UVTD) for Game__Shipping__Win64"
+          if ($buildMode -ne "Game__Shipping__Win64") {
+            $buildUVTD = $false
+            Write-Host "Disabling UVTD build - only built for Game__Shipping__Win64"
+          }
+
+          # Determine targets to build
+          $targets = @()
+          if ($buildUE4SS) { $targets += "UE4SS" }
+          if ($buildUVTD) { $targets += "UVTD" }
+
+          if ($targets.Count -eq 0) {
+            Write-Host "No targets to build based on changed files"
+            exit 0
+          }
+
+          if ($targets.Count -eq 2) {
+            Write-Host "Building all targets: UE4SS and UVTD"
             cmake --build ${{ steps.build_dir.outputs.name }} --verbose
           } else {
-            Write-Host "Building UE4SS target only (skipping UVTD for $buildMode)"
-            cmake --build ${{ steps.build_dir.outputs.name }} --target UE4SS --verbose
+            Write-Host "Building selective targets: $($targets -join ', ')"
+            foreach ($target in $targets) {
+              cmake --build ${{ steps.build_dir.outputs.name }} --target $target --verbose
+            }
           }
 
       # Detect changed files to determine what artifacts to collect
