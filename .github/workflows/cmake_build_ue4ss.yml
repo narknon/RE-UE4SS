@@ -279,7 +279,7 @@ jobs:
           $targets = @()
           if ($buildUE4SS) { $targets += "UE4SS" }
           if ($buildProxy) { $targets += "proxy" }
-          if ($buildUVTD) { $targets += "UVTD" }
+          if ($buildUVTD) { $targets += "UnrealVTableDumper" }
 
           if ($targets.Count -eq 0) {
             Write-Host "No targets to build based on changed files"
@@ -373,12 +373,19 @@ jobs:
           }
 
           # Collect UVTD files (only for Game__Shipping__Win64)
+          # CMake target is UnrealVTableDumper, so look for both possible names
           if ($includeUVTD -and $shouldHaveUVTD) {
-            $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb" -ErrorAction SilentlyContinue
+            $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb","UnrealVTableDumper.exe","UnrealVTableDumper.pdb" -ErrorAction SilentlyContinue
             foreach ($file in $uvtdFiles) {
               if ($file.FullName -notlike "*\_deps\*") {
                 Write-Host "✓ Found UVTD file: $($file.Name)"
-                Copy-Item $file.FullName -Destination $artifact_dir -Force
+                # Rename UnrealVTableDumper to UVTD for consistency
+                if ($file.Name -like "UnrealVTableDumper.*") {
+                  $newName = $file.Name -replace "UnrealVTableDumper", "UVTD"
+                  Copy-Item $file.FullName -Destination "$artifact_dir\$newName" -Force
+                } else {
+                  Copy-Item $file.FullName -Destination $artifact_dir -Force
+                }
               }
             }
           }
