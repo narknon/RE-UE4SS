@@ -203,12 +203,20 @@ jobs:
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build ALL targets with verbose output to see what's happening
-      - name: Build All Targets
+      # Build targets based on configuration
+      - name: Build Targets
         run: |
-          Write-Host "Building all targets with verbose output..."
-          # Build everything with verbose output to see compile/link flags
-          cmake --build ${{ steps.build_dir.outputs.name }} --verbose
+          Write-Host "Building targets with verbose output..."
+          $buildMode = "${{inputs.build-mode}}"
+
+          # UVTD should only be built for Game__Shipping__Win64
+          if ($buildMode -eq "Game__Shipping__Win64") {
+            Write-Host "Building all targets (including UVTD) for Game__Shipping__Win64"
+            cmake --build ${{ steps.build_dir.outputs.name }} --verbose
+          } else {
+            Write-Host "Building UE4SS target only (skipping UVTD for $buildMode)"
+            cmake --build ${{ steps.build_dir.outputs.name }} --target UE4SS --verbose
+          }
 
       # Detect changed files to determine what artifacts to collect
       - name: Detect Changed Files
