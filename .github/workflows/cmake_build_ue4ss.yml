@@ -215,29 +215,33 @@ jobs:
         if: ${{inputs.should-upload-artifact == true}}
         shell: bash
         run: |
-          # Get list of changed files (for PRs, compare against base branch)
+          # For PR builds, selectively include artifacts based on changed files
+          # For non-PR builds (workflow_dispatch, push), always include everything
           if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            echo "PR build detected - checking changed files for selective artifact collection"
             CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            # Check if UVTD folder was affected
+            if echo "$CHANGED_FILES" | grep -q "^UVTD/"; then
+              echo "include_uvtd=true" >> $GITHUB_OUTPUT
+            else
+              echo "include_uvtd=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check if UE4SS code was affected (excluding docs/assets)
+            if echo "$CHANGED_FILES" | grep -qv -E "^(docs|assets|README|LICENSE|\.github)/"; then
+              echo "include_ue4ss=true" >> $GITHUB_OUTPUT
+            else
+              echo "include_ue4ss=false" >> $GITHUB_OUTPUT
+            fi
           else
-            # For non-PR runs, just include everything
-            CHANGED_FILES=$(git ls-files)
-          fi
-
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-
-          # Check if UVTD folder was affected
-          if echo "$CHANGED_FILES" | grep -q "^UVTD/"; then
+            # Non-PR build (manual/workflow_dispatch/push) - always include everything
+            echo "Non-PR build detected - including all artifacts"
             echo "include_uvtd=true" >> $GITHUB_OUTPUT
-          else
-            echo "include_uvtd=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check if UE4SS code was affected (excluding docs/assets)
-          if echo "$CHANGED_FILES" | grep -qv -E "^(docs|assets|README|LICENSE|\.github)/"; then
             echo "include_ue4ss=true" >> $GITHUB_OUTPUT
-          else
-            echo "include_ue4ss=false" >> $GITHUB_OUTPUT
           fi
 
       # Collect selective artifacts based on what changed
